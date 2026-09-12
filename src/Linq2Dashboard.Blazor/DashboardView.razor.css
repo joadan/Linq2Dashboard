@@ -1,23 +1,56 @@
 /*
  * Root of the dashboard styling (design §9). Every component reads these custom properties with a
- * fallback, so a host restyles by setting them on .l2d-dashboard or any ancestor, without touching markup.
+ * fallback, so a host restyles by setting them on .l2d-dashboard or any ancestor, without touching
+ * markup. The full list lives here and nowhere else.
  */
 .l2d-dashboard {
+    /* layout */
     --l2d-gap: 0.375rem;
+    --l2d-section-gap: 1rem;
     --l2d-radius: 0.25rem;
-    --l2d-border: #d4d4d8;
+    --l2d-chip-radius: 999px;
+    --l2d-bar-height: 4rem;
+    --l2d-bucket-label-width: 6rem;
+    --l2d-metric-min-width: 9rem;
+    --l2d-metric-padding: 0.625rem 0.75rem;
+
+    /* type */
+    --l2d-font-size: 0.875rem;
+    --l2d-title-size: 0.9375rem;
+    --l2d-small-size: 0.8125rem;
+    --l2d-tiny-size: 0.6875rem;
+    --l2d-metric-size: 1.375rem;
+
+    /* colour */
+    --l2d-title-color: inherit;
     --l2d-muted: #71717a;
+    --l2d-border: #d4d4d8;
     --l2d-accent: #2563eb;
     --l2d-hover: rgba(0, 0, 0, 0.05);
     --l2d-selected-background: rgba(37, 99, 235, 0.12);
     --l2d-selected-color: inherit;
-    --l2d-title-size: 0.9375rem;
-    --l2d-small-size: 0.8125rem;
+    --l2d-bar: #2563eb;
+    --l2d-bar-total: rgba(0, 0, 0, 0.08);
+    --l2d-bar-track: transparent;
     --l2d-input-background: transparent;
+    --l2d-metric-background: transparent;
 
     display: flex;
     flex-direction: column;
-    gap: var(--l2d-section-gap, 1rem);
-    font-size: var(--l2d-font-size, 0.875rem);
+    gap: var(--l2d-section-gap);
+    font-size: var(--l2d-font-size);
     line-height: 1.4;
+}
+
+/* Neutral defaults for a dark page. A host that sets colour-scheme explicitly overrides these like any other. */
+@media (prefers-color-scheme: dark) {
+    .l2d-dashboard {
+        --l2d-muted: #a1a1aa;
+        --l2d-border: #3f3f46;
+        --l2d-accent: #60a5fa;
+        --l2d-hover: rgba(255, 255, 255, 0.08);
+        --l2d-selected-background: rgba(96, 165, 250, 0.2);
+        --l2d-bar: #60a5fa;
+        --l2d-bar-total: rgba(255, 255, 255, 0.12);
+    }
 }

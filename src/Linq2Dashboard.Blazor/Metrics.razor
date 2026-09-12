@@ -12,8 +12,15 @@
     @foreach (MetricState metric in Shown)
     {
         <div class="l2d-metric @(metric.HasValue ? null : "l2d-metric-empty")" data-key="@metric.Key">
-            <dt class="l2d-metric-title">@metric.Title</dt>
-            <dd class="l2d-metric-value">@Formatter.FormatMetric(metric)</dd>
+            @if (MetricTemplate is not null)
+            {
+                @MetricTemplate(metric)
+            }
+            else
+            {
+                <dt class="l2d-metric-title">@metric.Title</dt>
+                <dd class="l2d-metric-value">@Formatter.FormatMetric(metric)</dd>
+            }
         </div>
     }
 </dl>
@@ -22,6 +29,10 @@
     /// <summary>Metric keys to show, in this order. Default: every metric in definition order.</summary>
     [Parameter]
     public IReadOnlyList<string>? Keys { get; set; }
+
+    /// <summary>Replaces the title and value inside each tile. The tile element and its classes stay.</summary>
+    [Parameter]
+    public RenderFragment<MetricState>? MetricTemplate { get; set; }
 
     /// <summary>Prepend a tile with the number of matching rows (concept §3).</summary>
     [Parameter]

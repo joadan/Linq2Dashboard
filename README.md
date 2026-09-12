@@ -2,11 +2,11 @@
 
 Interactive exploration of large in-memory collections for .NET: facets with counts, metrics, and paged results that all update together on every click. The faceted-search experience of an e-commerce site, applied to any collection, with a LINQ-flavoured API.
 
-The core library has no UI dependency. A Blazor package on top of it is in progress.
+The core library has no UI dependency. A Blazor package renders it.
 
 ## Status
 
-The core engine is complete for the first version and meets its performance targets: a million rows with eight facets builds in about a second and recalculates in 5 to 20 ms per click. The Blazor package has its root component and a raw state view; the facet components are being built. The API may still change before a first release.
+The core engine is complete for the first version and meets its performance targets: a million rows with eight facets builds in about a second and recalculates in 5 to 20 ms per click. The Blazor package has every component from the plan: facets for each kind, active-selection chips, metric tiles and paged results, with templates and a custom-property stylesheet. The API may still change before a first release.
 
 ## Example
 
@@ -57,6 +57,36 @@ string bookmark = dashboard.Serializer.ToJson(selections);   // store, put in a 
 Selections restored = dashboard.Serializer.FromJson(bookmark);
 ```
 
+## Blazor
+
+`Linq2Dashboard.Blazor` renders a dashboard and turns clicks into selections. It never counts anything itself. Register the dashboard once, then:
+
+```razor
+<DashboardView T="Order" Dashboard="Dashboard" @bind-Selections="selections">
+    <aside>
+        <ValueFacet T="Order" Key="Country" />
+        <ValueFacet T="Order" Key="Customer" />           @* searchable, with an "Other" row *@
+        <RangeFacet T="Order" Key="Amount" />             @* histogram; bars keep their shape *@
+        <DateFacet  T="Order" Key="OrderDate" />          @* presets and periods *@
+    </aside>
+    <main>
+        <Metrics T="Order" IncludeMatchingCount="true" />
+        <ActiveSelections T="Order" />
+        <Results T="Order" Layout="ResultsLayout.Table" PageSize="25">
+            <HeaderTemplate><tr><th>Id</th><th>Country</th><th>Amount</th></tr></HeaderTemplate>
+            <RowTemplate Context="order"><tr><td>@order.Id</td><td>@order.Country</td><td>@order.Amount</td></tr></RowTemplate>
+        </Results>
+    </main>
+</DashboardView>
+```
+
+- **One formatter.** An `IDashboardFormatter` cascades from `DashboardView`; culture, number formats, the null label and preset names all come from it. Pass your own for other wording.
+- **Templates.** `HeaderTemplate` and `ValueTemplate` on the facets, `MetricTemplate` on the tiles, `RowTemplate`, `HeaderTemplate` and `EmptyTemplate` on the results.
+- **Styling.** Plain CSS. Every `--l2d-*` custom property is declared on `.l2d-dashboard`; set them on that element or any ancestor to restyle without touching markup. Dark-scheme neutrals are built in.
+- **Hosting.** Blazor Server is the primary target. WebAssembly works unchanged; the browser's memory sets the dataset size.
+
+The sample in `samples/` runs the components over 200 000 generated rows.
+
 ## How it behaves
 
 The rules are decisions, not options. They are spelled out in the [concept document](Linq2Dashboard-concept.md); the short version:
@@ -88,7 +118,7 @@ Every facet is a dictionary-encoded column; counting is one pass over the rows i
 
 ```text
 src/Linq2Dashboard/              the core library, net10.0, no dependencies
-src/Linq2Dashboard.Blazor/       Blazor components (in progress)
+src/Linq2Dashboard.Blazor/       Blazor components
 samples/Linq2Dashboard.Sample/   Blazor Server sample app
 tests/Linq2Dashboard.Tests/      xUnit; every behavioural rule has a named test
 tests/Linq2Dashboard.Blazor.Tests/   bUnit component tests

@@ -2,17 +2,19 @@
 @inherits DashboardComponentBase<T>
 
 <section class="l2d-facet l2d-range-facet l2d-range-@Layout.ToString().ToLowerInvariant()" data-key="@Key">
-    <header class="l2d-facet-header">
-        <h3 class="l2d-facet-title">@Facet.Title</h3>
-        @if (ShowBounds && !double.IsNaN(Facet.Min))
-        {
-            <span class="l2d-facet-bounds">@Formatter.FormatRangeSelection(RangeSelection.Between(Facet.Min, Facet.Max))</span>
-        }
-        @if (Facet.HasSelection)
-        {
-            <button type="button" class="l2d-facet-clear" @onclick="() => Context.ClearAsync(Key)">@ClearText</button>
-        }
-    </header>
+    @if (HeaderTemplate is not null)
+    {
+        @HeaderTemplate(Facet)
+    }
+    else
+    {
+        <FacetHeader Title="@Facet.Title" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)">
+            @if (ShowBounds && !double.IsNaN(Facet.Min))
+            {
+                <span class="l2d-facet-bounds">@Formatter.FormatRangeSelection(RangeSelection.Between(Facet.Min, Facet.Max))</span>
+            }
+        </FacetHeader>
+    }
 
     @if (Facet.Buckets.Count == 0 && Facet.Null.TotalCount == 0)
     {
@@ -28,6 +30,10 @@
     /// <summary>The facet key, as defined in the builder. Must be a range facet.</summary>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
+
+    /// <summary>Replaces the default header (title, bounds and clear link). Receives the facet state.</summary>
+    [Parameter]
+    public RenderFragment<RangeFacetState>? HeaderTemplate { get; set; }
 
     /// <summary>Vertical bars with labels beneath, or rows with an inline bar.</summary>
     [Parameter]

@@ -2,13 +2,14 @@
 @inherits DashboardComponentBase<T>
 
 <section class="l2d-facet l2d-date-facet l2d-date-@Layout.ToString().ToLowerInvariant()" data-key="@Key">
-    <header class="l2d-facet-header">
-        <h3 class="l2d-facet-title">@Facet.Title</h3>
-        @if (Facet.HasSelection)
-        {
-            <button type="button" class="l2d-facet-clear" @onclick="() => Context.ClearAsync(Key)">@ClearText</button>
-        }
-    </header>
+    @if (HeaderTemplate is not null)
+    {
+        @HeaderTemplate(Facet)
+    }
+    else
+    {
+        <FacetHeader Title="@Facet.Title" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)" />
+    }
 
     @if (ShowPresets && Facet.Presets.Count > 0)
     {
@@ -46,6 +47,10 @@
     /// <summary>The facet key, as defined in the builder. Must be a date facet.</summary>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
+
+    /// <summary>Replaces the default header (title and clear link). Receives the facet state.</summary>
+    [Parameter]
+    public RenderFragment<DateFacetState>? HeaderTemplate { get; set; }
 
     /// <summary>Vertical bars per period with labels beneath, or rows with an inline bar.</summary>
     [Parameter]

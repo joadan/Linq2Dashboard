@@ -2,13 +2,14 @@
 @inherits DashboardComponentBase<T>
 
 <section class="l2d-facet l2d-value-facet" data-key="@Key">
-    <header class="l2d-facet-header">
-        <h3 class="l2d-facet-title">@Facet.Title</h3>
-        @if (Facet.HasSelection)
-        {
-            <button type="button" class="l2d-facet-clear" @onclick="() => Context.ClearAsync(Key)">@ClearText</button>
-        }
-    </header>
+    @if (HeaderTemplate is not null)
+    {
+        @HeaderTemplate(Facet)
+    }
+    else
+    {
+        <FacetHeader Title="@Facet.Title" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)" />
+    }
 
     @if (Facet.IsSearchable)
     {
@@ -23,10 +24,17 @@
                 <button type="button" class="l2d-facet-value-button" aria-pressed="@(value.Selected ? "true" : "false")"
                         title="@Formatter.FormatCount(value.FilteredCount) / @Formatter.FormatCount(value.TotalCount)"
                         @onclick="() => Context.ToggleAsync(Key, value.Value)">
-                    <span class="l2d-facet-value-label">@Formatter.FormatValue(Facet, value.Value)</span>
-                    <span class="l2d-facet-value-count">
-                        @Formatter.FormatCount(value.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> / @Formatter.FormatCount(value.TotalCount)</span>}
-                    </span>
+                    @if (ValueTemplate is not null)
+                    {
+                        @ValueTemplate(value)
+                    }
+                    else
+                    {
+                        <span class="l2d-facet-value-label">@Formatter.FormatValue(Facet, value.Value)</span>
+                        <span class="l2d-facet-value-count">
+                            @Formatter.FormatCount(value.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> / @Formatter.FormatCount(value.TotalCount)</span>}
+                        </span>
+                    }
                 </button>
             </li>
         }
@@ -52,6 +60,14 @@
     /// <summary>The facet key, as defined in the builder. Must be a value or boolean facet.</summary>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
+
+    /// <summary>Replaces the default header (title and clear link). Receives the facet state.</summary>
+    [Parameter]
+    public RenderFragment<ValueFacetState>? HeaderTemplate { get; set; }
+
+    /// <summary>Replaces the label and count inside each value's button. The button and its click stay.</summary>
+    [Parameter]
+    public RenderFragment<FacetValue>? ValueTemplate { get; set; }
 
     /// <summary>Leave out values whose filtered count is zero. Off by default: the core keeps them (concept §4.3) and the UI decides.</summary>
     [Parameter]

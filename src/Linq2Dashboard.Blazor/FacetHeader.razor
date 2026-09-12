@@ -1,0 +1,28 @@
+@* The default header of every facet component: title, optional extra content, clear link when selected. *@
+
+<header class="l2d-facet-header">
+    <h3 class="l2d-facet-title">@Title</h3>
+    @ChildContent
+    @if (ShowClear)
+    {
+        <button type="button" class="l2d-facet-clear" @onclick="OnClear">@ClearText</button>
+    }
+</header>
+
+@code {
+    [Parameter, EditorRequired]
+    public string Title { get; set; } = string.Empty;
+
+    /// <summary>Extra content between the title and the clear link, such as a range facet's bounds.</summary>
+    [Parameter]
+    public RenderFragment? ChildContent { get; set; }
+
+    [Parameter]
+    public bool ShowClear { get; set; }
+
+    [Parameter]
+    public string ClearText { get; set; } = "Clear";
+
+    [Parameter]
+    public EventCallback OnClear { get; set; }
+}

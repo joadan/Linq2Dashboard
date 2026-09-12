@@ -1,6 +1,6 @@
 # Linq2Dashboard
 
-.NET library for interactive exploration of large in-memory collections: facets with counts, metrics, paged results. The core engine is complete; the Blazor package is in progress following design §9.
+.NET library for interactive exploration of large in-memory collections: facets with counts, metrics, paged results. The core engine and the Blazor package from design §9 are complete for the first version.
 
 ## Documents are the source of truth
 
@@ -50,7 +50,7 @@ dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --job sh
 - The dashboard is immutable after `Create` and holds no selection state. The UI owns `Selections`.
 - Null is a facet value. Zero-count values stay in the state. Filtered counts always sum to the facet's context count.
 - Parallel counting exists but is off by default.
-- The Blazor package follows the plan in design §9, component by component in the listed order. Components hold no state; everything goes through DashboardContext<T>.
+- Blazor components hold no dashboard state; everything goes through DashboardContext<T>. Facet defaults use the shared FacetHeader and BucketBars; styling goes through the --l2d-* properties declared in DashboardView.razor.css, never hard-coded values in components.
 
 ## Performance baseline
 

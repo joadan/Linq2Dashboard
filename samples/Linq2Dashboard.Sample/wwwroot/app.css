@@ -36,3 +36,44 @@ h1:focus {
 .form-floating > .form-control-plaintext:focus::placeholder, .form-floating > .form-control:focus::placeholder {
     text-align: start;
 }
+/* Sample page chrome. The dashboard itself is styled through the --l2d-* custom properties. */
+body {
+    margin: 0;
+    padding: 1.5rem 2rem;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    color: #18181b;
+    background: #fafafa;
+}
+
+h1 {
+    margin: 0 0 1rem;
+    font-size: 1.5rem;
+}
+
+details {
+    margin-top: 1.5rem;
+}
+
+details > summary {
+    cursor: pointer;
+    color: #71717a;
+}
+
+pre {
+    padding: 0.75rem;
+    background: #f4f4f5;
+    border-radius: 0.25rem;
+    font-size: 0.8125rem;
+    overflow: auto;
+}
+
+@media (prefers-color-scheme: dark) {
+    body {
+        color: #e4e4e7;
+        background: #18181b;
+    }
+
+    pre {
+        background: #27272a;
+    }
+}

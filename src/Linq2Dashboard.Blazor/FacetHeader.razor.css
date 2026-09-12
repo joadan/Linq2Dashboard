@@ -1,0 +1,31 @@
+.l2d-facet-header {
+    display: flex;
+    align-items: baseline;
+    gap: var(--l2d-gap, 0.375rem);
+}
+
+.l2d-facet-title {
+    margin: 0;
+    margin-right: auto;
+    font-size: var(--l2d-title-size, 0.9375rem);
+    font-weight: 600;
+    color: var(--l2d-title-color, inherit);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.l2d-facet-clear {
+    flex: none;
+    border: none;
+    background: none;
+    padding: 0;
+    font: inherit;
+    font-size: var(--l2d-small-size, 0.8125rem);
+    color: var(--l2d-accent, #2563eb);
+    cursor: pointer;
+}
+
+.l2d-facet-clear:hover {
+    text-decoration: underline;
+}
