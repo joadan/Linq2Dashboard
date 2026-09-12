@@ -124,9 +124,10 @@ Values inside `ValueSelection` are the facet's real value type, boxed. A selecti
 
 ```csharp
 DashboardState<T> state = dashboard.Calculate(selections);
+DashboardState<T> initial = dashboard.Calculate();          // nothing selected
 ```
 
-Pure, synchronous, thread-safe. Two calls with equal selections give equal states. The dashboard may cache internally (§5), but that is invisible.
+Pure, synchronous, thread-safe. Two calls with equal selections give equal states; recent ones return the same instance from the state cache (§5). A selection for a facet key the dashboard does not have is an error here, unlike in the serializer (§2.5), which drops it. Strict in code, lenient at the boundary where stale data arrives.
 
 ### 2.4 Reading the state
 
@@ -172,26 +173,32 @@ sealed class ValueFacetState : FacetState
 sealed class RangeFacetState : FacetState
 {
     double Min { get; }  double Max { get; }    // dataset bounds, fixed (§C5)
-    IReadOnlyList<Bucket> Buckets { get; }
-    FacetCount Null { get; }
+    IReadOnlyList<RangeBucket> Buckets { get; } // fixed at build; only counts change
+    FacetValue Null { get; }                    // the null value beside the buckets (§C4.8)
 }
 
 sealed class DateFacetState : FacetState
 {
-    DateGranularity Granularity { get; }
-    IReadOnlyList<Bucket> Buckets { get; }      // one per period present in the dataset
-    IReadOnlyList<PresetState> Presets { get; } // each resolved to its interval and counted
-    FacetCount Null { get; }
+    DateGranularity Granularity { get; }  TimeZoneInfo TimeZone { get; }
+    IReadOnlyList<DateBucket> Buckets { get; }  // one per period present in the dataset
+    IReadOnlyList<PresetState> Presets { get; } // each resolved to its interval as of this calculation and counted
+    FacetValue Null { get; }
 }
 
 sealed record FacetValue(object? Value, int TotalCount, int FilteredCount, bool Selected);
-sealed record FacetCount(int TotalCount, int FilteredCount);
-sealed record Bucket(double From, double To, string Label, int TotalCount, int FilteredCount, bool Selected);
-sealed record MetricState(string Key, string Title, double? Value);   // null = no value (§C4.4)
+sealed record FacetCount(int TotalCount, int FilteredCount);                       // "Other"
+sealed record RangeBucket(double From, double To, int TotalCount, int FilteredCount, bool Selected)
+    { RangeSelection ToSelection(); }                                                // [From, To), last bucket closed
+sealed record DateBucket(DateTimeOffset From, DateTimeOffset To, DateTime PeriodStart, int TotalCount, int FilteredCount, bool Selected)
+    { DateSelection ToSelection(); }                                                 // [From, To) instants; PeriodStart local, for labels
+sealed record PresetState(DatePreset Preset, DateTimeOffset From, DateTimeOffset To, int TotalCount, int FilteredCount, bool Selected);
+sealed record MetricState(string Key, string Title, Aggregation Aggregation, double? Value);   // null = no value (§C4.4)
 sealed record ResultPage<T>(IReadOnlyList<T> Items, int PageIndex, int PageSize, int MatchingCount);
 ```
 
-`Value` is `object?` on purpose. The UI formats it; the core does not know about cultures or labels. Boolean facets reuse `ValueFacetState`. `FacetKind` has `Value`, `Boolean`, `Range` and `Date` in the first version.
+`Value` is `object?` on purpose. The UI formats it; the core does not know about cultures or labels, which is also why buckets carry bounds rather than label strings. Boolean facets reuse `ValueFacetState`. `FacetKind` has `Value`, `Boolean`, `Range` and `Date` in the first version.
+
+A bucket or preset is `Selected` when the current interval fully covers it, so a wide interval lights up several buckets and a partial one lights up none. `ToSelection()` on a bucket gives exactly the selection a click should produce, so the UI never constructs interval bounds itself.
 
 ### 2.5 Serialising selections
 

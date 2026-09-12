@@ -29,6 +29,16 @@ internal abstract class FacetIndex
     /// <summary>Rows matching <paramref name="selection"/> (design §4.1). Throws if the selection is of the wrong kind.</summary>
     public abstract RowSet RowsMatching(Selection selection);
 
+    /// <summary>
+    /// Counts and presents the facet against <paramref name="context"/>, the rows with every other
+    /// facet's selection applied (concept §4.2). <paramref name="selection"/> is this facet's own,
+    /// used only for the selected flags (design §4.3–4.5).
+    /// </summary>
+    public abstract FacetState Present(RowSet context, Selection? selection);
+
+    protected TSelection? ExpectOrNull<TSelection>(Selection? selection) where TSelection : Selection =>
+        selection is null ? null : Expect<TSelection>(selection);
+
     protected TSelection Expect<TSelection>(Selection selection) where TSelection : Selection
     {
         ArgumentNullException.ThrowIfNull(selection);

@@ -17,6 +17,7 @@ public sealed class DashboardBuilder<T>
     private readonly List<MetricDefinition<T>> _metrics = [];
     private readonly List<SortKey<T>> _sort = [];
     private TimeProvider _timeProvider = TimeProvider.System;
+    private bool _parallelCounting;
     private bool _built;
 
     internal DashboardBuilder()
@@ -135,6 +136,18 @@ public sealed class DashboardBuilder<T>
         return this;
     }
 
+    /// <summary>
+    /// Count facets on separate threads during <see cref="Dashboard{T}.Calculate(Selections)"/>
+    /// (design §4.3). Off by default: it shortens one calculation but occupies several cores per
+    /// click, which can hurt a busy server.
+    /// </summary>
+    public DashboardBuilder<T> EnableParallelCounting(bool enabled = true)
+    {
+        EnsureMutable();
+        _parallelCounting = enabled;
+        return this;
+    }
+
     internal Dashboard<T> Build(IEnumerable<T> source)
     {
         EnsureMutable();
@@ -155,7 +168,7 @@ public sealed class DashboardBuilder<T>
         }
 
         int[]? sortedRows = SortOrder.Build(items, _sort);
-        return new Dashboard<T>(items, facets, metrics, sortedRows, _timeProvider);
+        return new Dashboard<T>(items, facets, metrics, sortedRows, _timeProvider, _parallelCounting);
     }
 
     private T[] Materialize(IEnumerable<T> source)
