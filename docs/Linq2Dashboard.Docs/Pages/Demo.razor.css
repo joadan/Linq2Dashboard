@@ -84,3 +84,13 @@
     display: flex;
     justify-content: flex-end;
 }
+
+.demo-note {
+    margin: 0 0 1rem;
+    padding: 0.625rem 0.875rem;
+    border-left: 3px solid var(--docs-accent);
+    background: var(--docs-surface);
+    color: var(--docs-muted);
+    font-size: 0.875rem;
+    max-width: 60rem;
+}

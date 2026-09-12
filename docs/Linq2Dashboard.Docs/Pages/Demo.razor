@@ -20,13 +20,16 @@
     }
 </div>
 
+<p class="demo-note">
+    This demo runs entirely in your browser on Blazor WebAssembly so it can be hosted as a static site. That is the
+    slow way to run it: a single interpreted or ahead-of-time compiled thread, and every row held in browser memory.
+    On Blazor Server, the primary target, the same library builds a million rows in about a second and recalculates
+    in 5 to 20 ms on a 4-core machine. Treat the timings here as an upper bound.
+</p>
+
 @if (dashboard is null)
 {
     <p class="demo-building">Generating @rows.ToString("N0") orders and building the dashboard in your browser…</p>
-    @if (rows >= 500_000)
-    {
-        <p class="demo-building">Large datasets take a few seconds here: the runtime is interpreted or ahead-of-time compiled WebAssembly on a single thread, and the browser holds every row in memory.</p>
-    }
 }
 else
 {
