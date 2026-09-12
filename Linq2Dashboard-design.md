@@ -411,6 +411,8 @@ For 1 M rows, ten facets, three of them with selections:
 
 Roughly 20 to 30 ms single-threaded, before any parallel gains. This is the number the benchmark suite must confirm or refute.
 
+**Measured** (see §8): 9.4 ms warm and 19.9 ms cold for three selected facets, single-threaded. The estimate held; the cold half is dominated by the three selection scans, which cost about 3 ms each rather than 1 ms. Counting is cheaper than estimated because its cost is proportional to the context size, not the row count, and every facet without a selection uses the matching set, which shrinks with each added selection. That is also why five selected facets calculate faster than one.
+
 ---
 
 ## 5. Caching and concurrency
@@ -515,6 +517,47 @@ The benchmark project is part of the first version, not an afterthought. It gene
 7. Everything above with parallel counting on and off.
 
 **Targets**: `Create` under 2 s. Warm `Calculate` under 50 ms in every scenario. Peak managed memory reported per facet kind. If a scenario misses its target, the per-facet timings say whether per-value bitmaps (§3.4) would help before any are added.
+
+### Measured, first version
+
+Intel Xeon W-2223 (4 cores), .NET 10, BenchmarkDotNet short job, 1 000 000 rows. Run with
+`dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --job short --filter *` and `-- --memory`.
+
+| Scenario | Sequential | Parallel counting | Target |
+|---|---|---|---|
+| `Create`, full dashboard | 1 040 ms | | < 2 s ✓ |
+| `Create` without sort order | 563 ms | | |
+| `Create`, date facet only | 189 ms | | |
+| `Create`, customer facet only (100 000 values) | 157 ms | | |
+| `Calculate`, no selection | 3.6 ms | 2.3 ms | < 50 ms ✓ |
+| `Calculate`, 1 facet, warm | 9.3 ms | 5.4 ms | ✓ |
+| `Calculate`, 3 facets, warm | 9.4 ms | 4.9 ms | ✓ |
+| `Calculate`, 5 facets, warm | 5.2 ms | 3.4 ms | ✓ |
+| `Calculate`, range + date interval, warm | 9.2 ms | 5.2 ms | ✓ |
+| `Calculate`, 3 facets, cold caches | 19.9 ms | 15.4 ms | ✓ |
+| `Calculate`, range + date, cold caches | 22.2 ms | 16.5 ms | ✓ |
+| A click: 3 facets cold, then one value toggled | 33.4 ms | 24.0 ms | ✓ (the click alone is the difference, ~13 ms) |
+| `Search` over 100 000 customer labels | 4.3 ms | | |
+| `GetPage`, first / middle / last of 2 200 pages | 0.001 / 2.1 / 4.0 ms | | |
+
+| Memory above the 7.8 MB row array | |
+|---|---|
+| Value or boolean facet, any cardinality up to 2 000 | 3.8 MB |
+| Customer facet, 100 000 values, searchable | 9.1 MB |
+| Range facet | 11.6 MB |
+| Date facet | 11.6 MB |
+| Metric column | 7.6 MB |
+| Sort order | 3.8 MB |
+| Full dashboard, 8 facets, 3 metrics, sort | 78 MB |
+
+Every target is met with margin, so per-value bitmaps stay out (§3.4). What the numbers say about where time goes:
+
+- **The sort order is half of the build.** 480 ms of the 1 040 ms is `Array.Sort` over a million row ids through a delegate comparison. A key-specialised sort (materialise the key into a primitive array and sort indices by it) would likely halve that. Not needed for the target; first candidate if build time matters.
+- **The date facet is the next build cost** at about 190 ms, from one time zone conversion per row. Caching the offset per calendar day would remove most of it.
+- **Selection scans cost about 3 ms each**, three times the estimate, because the value scan sets bits one at a time through a range-checked builder. A word-at-a-time scan would bring it to the estimate. Only cold calculations pay this.
+- **Date presets are rescanned on every calculation**, about 1 ms per preset, because their interval depends on "now". Caching the preset row set keyed by its resolved interval would make them free until midnight.
+- **Parallel counting gives 1.5 to 2× on four cores** for warm calculations. The default stays off as decided; the option is worth turning on for a desktop or single-user host.
+- **The no-selection state is unusually cheap** because a full context copies the precomputed totals instead of counting. It is not representative of a click.
 
 ---
 
