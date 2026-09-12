@@ -87,6 +87,16 @@ public sealed class Dashboard<T>
     /// <summary>The state with nothing selected.</summary>
     public DashboardState<T> Calculate() => Calculate(Selections.Empty);
 
+    /// <summary>Calculates without consulting or filling the state cache. For benchmarks; the row-set cache still applies.</summary>
+    internal DashboardState<T> CalculateUncached(Selections selections) => DashboardCalculator.Calculate(this, selections);
+
+    /// <summary>Empties both caches. For benchmarks that need a cold start.</summary>
+    internal void ClearCaches()
+    {
+        rowSets.Clear();
+        states.Clear();
+    }
+
     internal ReadOnlySpan<T> Items => items;
 
     internal T ItemAt(int row) => items[row];

@@ -30,6 +30,15 @@ internal sealed class LruCache<TKey, TValue> where TKey : notnull
         }
     }
 
+    public void Clear()
+    {
+        lock (gate)
+        {
+            map.Clear();
+            order.Clear();
+        }
+    }
+
     public bool TryGet(TKey key, out TValue value)
     {
         lock (gate)

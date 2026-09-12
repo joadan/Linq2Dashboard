@@ -10,4 +10,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Linq2Dashboard.Tests/Linq2Dashboard.Tests.csproj" />
   </Folder>
+  <Folder Name="/benchmarks/">
+    <Project Path="benchmarks/Linq2Dashboard.Benchmarks/Linq2Dashboard.Benchmarks.csproj" />
+  </Folder>
 </Solution>
