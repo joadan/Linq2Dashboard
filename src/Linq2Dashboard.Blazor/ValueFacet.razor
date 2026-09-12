@@ -1,73 +1,90 @@
 @typeparam T
 @inherits DashboardComponentBase<T>
 
-<section class="l2d-facet l2d-value-facet" data-key="@Key">
+<section class="l2d-facet l2d-value-facet @(collapsed ? "l2d-collapsed" : null)" data-key="@Key">
     @if (HeaderTemplate is not null)
     {
         @HeaderTemplate(Facet)
     }
     else
     {
-        <FacetHeader Title="@Facet.Title" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)" />
+        <FacetHeader Title="@Facet.Title" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)"
+                     Collapsible="Collapsible" Collapsed="collapsed" OnToggle="ToggleCollapsed" />
     }
 
-    @if (Facet.IsSearchable)
+    @if (!collapsed)
     {
-        <input type="search" class="l2d-facet-search" placeholder="@SearchPlaceholder" value="@searchText"
-               @oninput="e => searchText = e.Value?.ToString() ?? string.Empty" />
-    }
+        @if (Facet.IsSearchable)
+        {
+            <input type="search" class="l2d-facet-search" placeholder="@SearchPlaceholder" value="@searchText"
+                   @oninput="e => searchText = e.Value?.ToString() ?? string.Empty" />
+        }
 
-    <ul class="l2d-facet-values">
-        @foreach (FacetValue value in Displayed)
-        {
-            <li class="l2d-facet-value @(value.Selected ? "l2d-selected" : null) @(value.FilteredCount == 0 ? "l2d-zero" : null) @(value.IsNull ? "l2d-null" : null)">
-                <button type="button" class="l2d-facet-value-button" aria-pressed="@(value.Selected ? "true" : "false")"
-                        title="@Formatter.FormatCount(value.FilteredCount) / @Formatter.FormatCount(value.TotalCount)"
-                        @onclick="() => Context.ToggleAsync(Key, value.Value)">
-                    @if (ValueTemplate is not null)
-                    {
-                        @ValueTemplate(value)
-                    }
-                    else
-                    {
-                        <span class="l2d-facet-value-label">@Formatter.FormatValue(Facet, value.Value)</span>
-                        <span class="l2d-facet-value-count">
-                            @Formatter.FormatCount(value.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> / @Formatter.FormatCount(value.TotalCount)</span>}
-                        </span>
-                    }
-                </button>
-            </li>
-        }
-        @if (!IsSearching && Facet.Other is FacetCount other)
-        {
-            <li class="l2d-facet-other">
-                <span class="l2d-facet-value-label">@OtherText</span>
-                <span class="l2d-facet-value-count">
-                    @Formatter.FormatCount(other.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> / @Formatter.FormatCount(other.TotalCount)</span>}
-                </span>
-            </li>
-        }
-        @if (IsSearching && !Displayed.Any())
-        {
-            <li class="l2d-facet-empty">@NoMatchesText</li>
-        }
-    </ul>
+        <ul class="l2d-facet-values">
+            @foreach (FacetValue value in Displayed)
+            {
+                <li class="l2d-facet-value @(value.Selected ? "l2d-selected" : null) @(value.FilteredCount == 0 ? "l2d-zero" : null) @(value.IsNull ? "l2d-null" : null)">
+                    <button type="button" class="l2d-facet-value-button" aria-pressed="@(value.Selected ? "true" : "false")"
+                            title="@Formatter.FormatCount(value.FilteredCount) / @Formatter.FormatCount(value.TotalCount)"
+                            @onclick="() => Context.ToggleAsync(Key, value.Value)">
+                        @if (ValueTemplate is not null)
+                        {
+                            @ValueTemplate(value)
+                        }
+                        else
+                        {
+                            <span class="l2d-facet-value-label">@Formatter.FormatValue(Facet, value.Value)</span>
+                            <span class="l2d-facet-value-count">
+                                @Formatter.FormatCount(value.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> / @Formatter.FormatCount(value.TotalCount)</span>}
+                            </span>
+                        }
+                    </button>
+                </li>
+            }
+            @if (!IsSearching && Facet.Other is FacetCount other)
+            {
+                <li class="l2d-facet-other">
+                    <span class="l2d-facet-value-label">@OtherText</span>
+                    <span class="l2d-facet-value-count">
+                        @Formatter.FormatCount(other.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> / @Formatter.FormatCount(other.TotalCount)</span>}
+                    </span>
+                </li>
+            }
+            @if (IsSearching && !Displayed.Any())
+            {
+                <li class="l2d-facet-empty">@NoMatchesText</li>
+            }
+        </ul>
+    }
 </section>
 
 @code {
     private string searchText = string.Empty;
+    private bool collapsed;
+    private bool? lastCollapsedParameter;
 
     /// <summary>The facet key, as defined in the builder. Must be a value or boolean facet.</summary>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
 
-    /// <summary>Replaces the default header (title and clear link). Receives the facet state.</summary>
+    /// <summary>Replaces the default header (title and clear link). Receives the facet state. Collapsing is then controlled only through <see cref="Collapsed"/>.</summary>
     [Parameter]
     public RenderFragment<ValueFacetState>? HeaderTemplate { get; set; }
 
     /// <summary>Replaces the label and count inside each value's button. The button and its click stay.</summary>
     [Parameter]
     public RenderFragment<FacetValue>? ValueTemplate { get; set; }
+
+    /// <summary>Let the user collapse the facet from its header. Off by default.</summary>
+    [Parameter]
+    public bool Collapsible { get; set; }
+
+    /// <summary>Whether the body is hidden. Bindable: <c>@@bind-Collapsed</c> follows the user's toggling, and setting it applies from the host.</summary>
+    [Parameter]
+    public bool Collapsed { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> CollapsedChanged { get; set; }
 
     /// <summary>Leave out values whose filtered count is zero. Off by default: the core keeps them (concept §4.3) and the UI decides.</summary>
     [Parameter]
@@ -105,5 +122,21 @@
             IEnumerable<FacetValue> values = IsSearching ? Facet.Search(searchText, SearchLimit) : Facet.Values;
             return HideZeroCounts ? values.Where(v => v.FilteredCount > 0 || v.Selected) : values;
         }
+    }
+
+    protected override void OnParametersSet()
+    {
+        if (Collapsed != lastCollapsedParameter)
+        {
+            lastCollapsedParameter = Collapsed;
+            collapsed = Collapsed;
+        }
+    }
+
+    private Task ToggleCollapsed()
+    {
+        collapsed = !collapsed;
+        lastCollapsedParameter = collapsed;
+        return CollapsedChanged.InvokeAsync(collapsed);
     }
 }

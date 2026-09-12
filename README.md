@@ -82,6 +82,7 @@ Selections restored = dashboard.Serializer.FromJson(bookmark);
 
 - **One formatter.** An `IDashboardFormatter` cascades from `DashboardView`; culture, number formats, the null label and preset names all come from it. Pass your own for other wording.
 - **Templates.** `HeaderTemplate` and `ValueTemplate` on the facets, `MetricTemplate` on the tiles, `RowTemplate`, `HeaderTemplate` and `EmptyTemplate` on the results.
+- **Collapsing.** Each facet takes `Collapsible="true"` for a header toggle and a bindable `Collapsed` value, so a host can remember or set which facets are open.
 - **Results.** Paged by default; `Virtualize="true"` scrolls every matching row in a fixed-height container instead, rendering only the visible ones. `RangeFacet` gets a dual-handle slider with `ShowSlider="true"`.
 - **Styling.** Plain CSS. Every `--l2d-*` custom property is declared on `.l2d-dashboard`; set them on that element or any ancestor to restyle without touching markup. Dark-scheme neutrals are built in.
 - **Hosting.** Blazor Server is the primary target. WebAssembly works unchanged; the browser's memory sets the dataset size.

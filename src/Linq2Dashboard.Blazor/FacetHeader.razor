@@ -1,7 +1,17 @@
-@* The default header of every facet component: title, optional extra content, clear link when selected. *@
+@* The default header of every facet component: title (a toggle when collapsible), optional extra content, clear link when selected. *@
 
-<header class="l2d-facet-header">
-    <h3 class="l2d-facet-title">@Title</h3>
+<header class="l2d-facet-header @(Collapsible ? "l2d-collapsible" : null) @(Collapsed ? "l2d-collapsed" : null)">
+    @if (Collapsible)
+    {
+        <button type="button" class="l2d-facet-toggle" aria-expanded="@(Collapsed ? "false" : "true")" @onclick="OnToggle">
+            <span class="l2d-facet-chevron" aria-hidden="true"></span>
+            <h3 class="l2d-facet-title">@Title</h3>
+        </button>
+    }
+    else
+    {
+        <h3 class="l2d-facet-title">@Title</h3>
+    }
     @ChildContent
     @if (ShowClear)
     {
@@ -25,4 +35,14 @@
 
     [Parameter]
     public EventCallback OnClear { get; set; }
+
+    /// <summary>Render the title as a toggle that raises <see cref="OnToggle"/>.</summary>
+    [Parameter]
+    public bool Collapsible { get; set; }
+
+    [Parameter]
+    public bool Collapsed { get; set; }
+
+    [Parameter]
+    public EventCallback OnToggle { get; set; }
 }

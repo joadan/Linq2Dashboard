@@ -1,17 +1,21 @@
 @typeparam T
 @inherits DashboardComponentBase<T>
 
-<section class="l2d-facet l2d-date-facet l2d-date-@Layout.ToString().ToLowerInvariant()" data-key="@Key">
+<section class="l2d-facet l2d-date-facet l2d-date-@Layout.ToString().ToLowerInvariant() @(collapsed ? "l2d-collapsed" : null)" data-key="@Key">
     @if (HeaderTemplate is not null)
     {
         @HeaderTemplate(Facet)
     }
     else
     {
-        <FacetHeader Title="@Facet.Title" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)" />
+        <FacetHeader Title="@Facet.Title" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)"
+                     Collapsible="Collapsible" Collapsed="collapsed" OnToggle="ToggleCollapsed" />
     }
 
-    @if (ShowPresets && Facet.Presets.Count > 0)
+    @if (collapsed)
+    {
+    }
+    else if (ShowPresets && Facet.Presets.Count > 0)
     {
         <ul class="l2d-presets">
             @foreach (PresetState preset in Facet.Presets)
@@ -33,7 +37,10 @@
         </ul>
     }
 
-    @if (Facet.Buckets.Count == 0 && Facet.Null.TotalCount == 0)
+    @if (collapsed)
+    {
+    }
+    else if (Facet.Buckets.Count == 0 && Facet.Null.TotalCount == 0)
     {
         <p class="l2d-facet-empty">@NoValuesText</p>
     }
@@ -44,13 +51,27 @@
 </section>
 
 @code {
+    private bool collapsed;
+    private bool? lastCollapsedParameter;
+
     /// <summary>The facet key, as defined in the builder. Must be a date facet.</summary>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
 
-    /// <summary>Replaces the default header (title and clear link). Receives the facet state.</summary>
+    /// <summary>Replaces the default header (title and clear link). Receives the facet state. Collapsing is then controlled only through <see cref="Collapsed"/>.</summary>
     [Parameter]
     public RenderFragment<DateFacetState>? HeaderTemplate { get; set; }
+
+    /// <summary>Let the user collapse the facet from its header. Off by default.</summary>
+    [Parameter]
+    public bool Collapsible { get; set; }
+
+    /// <summary>Whether the body is hidden. Bindable: <c>@@bind-Collapsed</c> follows the user's toggling, and setting it applies from the host.</summary>
+    [Parameter]
+    public bool Collapsed { get; set; }
+
+    [Parameter]
+    public EventCallback<bool> CollapsedChanged { get; set; }
 
     /// <summary>Vertical bars per period with labels beneath, or rows with an inline bar.</summary>
     [Parameter]
@@ -106,4 +127,20 @@
 
     private Task ClickNull() =>
         Facet.Selection is DateSelection { OnlyNulls: true } ? Context.ClearAsync(Key) : Context.SelectAsync(Key, DateSelection.OnlyNull);
+
+    protected override void OnParametersSet()
+    {
+        if (Collapsed != lastCollapsedParameter)
+        {
+            lastCollapsedParameter = Collapsed;
+            collapsed = Collapsed;
+        }
+    }
+
+    private Task ToggleCollapsed()
+    {
+        collapsed = !collapsed;
+        lastCollapsedParameter = collapsed;
+        return CollapsedChanged.InvokeAsync(collapsed);
+    }
 }

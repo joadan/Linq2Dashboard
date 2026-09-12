@@ -15,11 +15,11 @@
             </ValueTemplate>  
             </ValueFacet>
             <ValueFacet T="SampleOrder" Key="Status" ShowTotals="true" />
-            <ValueFacet T="SampleOrder" Key="Category" />
-            <ValueFacet T="SampleOrder" Key="Customer" />
+            <ValueFacet T="SampleOrder" Key="Category" Collapsible="true" />
+            <ValueFacet T="SampleOrder" Key="Customer" Collapsible="true" Collapsed="true" />
             <ValueFacet T="SampleOrder" Key="IsActive" HideZeroCounts="true" />
             <RangeFacet T="SampleOrder" Key="Amount" ShowSlider="true" />
-            <DateFacet T="SampleOrder" Key="OrderDate" />
+            <DateFacet T="SampleOrder" Key="OrderDate" Collapsible="true" />
         </aside>
         <main class="sample-main">
             <Metrics T="SampleOrder" IncludeMatchingCount="true" />
