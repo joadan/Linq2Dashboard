@@ -5,15 +5,28 @@
     align-items: start;
 }
 
+/* The facets keep their own scrollbar and stay in view while the results scroll with the page. */
 .sample-facets {
     display: flex;
     flex-direction: column;
     gap: 1.25rem;
+    position: sticky;
+    top: 1rem;
+    max-height: calc(100vh - 2rem);
+    overflow-y: auto;
+    padding-right: 0.5rem;
+    scrollbar-width: thin;
 }
 
 @media (max-width: 48rem) {
     .sample-layout {
         grid-template-columns: 1fr;
+    }
+
+    .sample-facets {
+        position: static;
+        max-height: none;
+        overflow: visible;
     }
 }
 
