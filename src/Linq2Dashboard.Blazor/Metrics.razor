@@ -1,0 +1,35 @@
+@typeparam T
+@inherits DashboardComponentBase<T>
+
+<dl class="l2d-metrics">
+    @if (IncludeMatchingCount)
+    {
+        <div class="l2d-metric l2d-metric-matching" data-key="">
+            <dt class="l2d-metric-title">@MatchingCountTitle</dt>
+            <dd class="l2d-metric-value">@Formatter.FormatCount(State.MatchingCount)</dd>
+        </div>
+    }
+    @foreach (MetricState metric in Shown)
+    {
+        <div class="l2d-metric @(metric.HasValue ? null : "l2d-metric-empty")" data-key="@metric.Key">
+            <dt class="l2d-metric-title">@metric.Title</dt>
+            <dd class="l2d-metric-value">@Formatter.FormatMetric(metric)</dd>
+        </div>
+    }
+</dl>
+
+@code {
+    /// <summary>Metric keys to show, in this order. Default: every metric in definition order.</summary>
+    [Parameter]
+    public IReadOnlyList<string>? Keys { get; set; }
+
+    /// <summary>Prepend a tile with the number of matching rows (concept §3).</summary>
+    [Parameter]
+    public bool IncludeMatchingCount { get; set; }
+
+    [Parameter]
+    public string MatchingCountTitle { get; set; } = "Matching";
+
+    private IEnumerable<MetricState> Shown =>
+        Keys is null ? State.Metrics : Keys.Select(State.Metric);
+}
