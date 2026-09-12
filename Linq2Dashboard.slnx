@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path="CLAUDE.md" />
     <File Path="Linq2Dashboard-concept.md" />
     <File Path="Linq2Dashboard-design.md" />
     <File Path="README.md" />
