@@ -47,18 +47,22 @@ var dashboard = Dashboard.Create(orders, b =>
      .Granularity(DateGranularity.Month)
      .Presets(DatePreset.Today, DatePreset.Last7Days, DatePreset.ThisYear);
 
-    b.Metric("orders",  Metric.Count());
-    b.Metric("revenue", Metric.Sum(x => x.Amount));
-    b.Metric("average", Metric.Average(x => x.Amount));
+    b.Count("orders");
+    b.Sum("revenue", x => x.Amount);
+    b.Average("average", x => x.Amount).Title("Average order");
 
-    b.OrderByDescending(x => x.OrderDate);                     // application-defined sort (§C8)
+    b.OrderByDescending(x => x.OrderDate)                      // application-defined sort (§C8)
+     .ThenBy(x => x.Id);
 
-    b.TimeProvider(TimeProvider.System);                       // default; tests pass a fake
+    b.UseTimeProvider(TimeProvider.System);                    // default; tests pass a fake
 });
 ```
 
 - `Dashboard.Create` enumerates the source exactly once, applies fixed filters, and builds every column and index. After it returns, the dashboard is immutable and thread-safe.
-- Every builder method validates eagerly. Duplicate keys, a non-member selector without an explicit key, or a range facet over a non-numeric property throw at `Create`, not at first use.
+- Every builder method validates eagerly. Duplicate keys, a non-member selector without an explicit key, or a range facet over a non-numeric property throw at `Create`, not at first use. The builder and every facet builder refuse further configuration once the dashboard is built.
+- Metrics are builder methods (`Count`, `Sum`, `Average`, `Min`, `Max`) rather than a separate `Metric` factory, because C# cannot infer `T` for `Metric.Sum(x => x.Amount)` outside the builder.
+- Range and metric selectors accept any numeric property, nullable or not; the conversion to `double` is compiled into the selector. Date selectors accept `DateTime`, `DateTimeOffset`, `DateOnly` and their nullable forms; anything else is rejected at `Create`.
+- `Buckets(100, 500, 1000)` names cut points, not edges: it yields "below 100", "100 to 500", "500 to 1000" and "1000 and above", so every value lands in a bucket.
 - All facet builders return a typed builder so kind-specific options are discoverable; the shape above is the whole configuration surface for the first version.
 
 ### 2.2 Selections
@@ -69,7 +73,7 @@ var dashboard = Dashboard.Create(orders, b =>
 var selections = Selections.Empty
     .With("Country", ValueSelection.Of("SE", "NO"))
     .With("Amount",  RangeSelection.Between(100, 500))
-    .With("OrderDate", DateSelection.Preset(DatePreset.Last30Days));
+    .With("OrderDate", DateSelection.Relative(DatePreset.Last30Days));
 
 // convenience for the click case
 selections = selections.Toggle("Country", "DK");     // add if absent, remove if present
@@ -81,24 +85,33 @@ Selection types (§C5):
 ```csharp
 abstract record Selection;
 
-sealed record ValueSelection(IReadOnlyList<object?> Values) : Selection;
-//  null in Values selects the null facet value (§C4.8)
+sealed record ValueSelection : Selection            // ValueSelection.Of("SE", null)
+{
+    IReadOnlyList<object?> Values;                  // a set: order does not matter for equality
+    //  null in Values selects the null facet value (§C4.8)
+}
 
 sealed record RangeSelection(
     double? From, double? To,
     bool FromInclusive = true, bool ToInclusive = true,
     bool IncludeNull = false) : Selection;
 //  null bound = unbounded on that side
+//  RangeSelection.Between / AtLeast / AtMost; RangeSelection.OnlyNull selects the null rows alone
 
 sealed record DateSelection : Selection
 {
-    // exactly one of these is set
-    public DateTimeOffset? From { get; init; }   // inclusive
-    public DateTimeOffset? To   { get; init; }   // exclusive
-    public DatePreset?     Preset { get; init; } // resolved with TimeProvider at Calculate (§C5)
-    public bool IncludeNull { get; init; }
+    // exactly one form: absolute (From/To) or relative (Preset); built via factories
+    DateTimeOffset? From;    // inclusive        DateSelection.Between(from, to)
+    DateTimeOffset? To;      // exclusive
+    DatePreset?     Preset;  // resolved with TimeProvider at Calculate (§C5)   DateSelection.Relative(preset)
+    bool IncludeNull;
+    //  DateSelection.OnlyNull selects the null rows alone
 }
 ```
+
+`Selections` is keyed by facet key, compares by value, and treats an empty `ValueSelection` as "clear". `Toggle` uses default equality on the boxed value; the facet's comparer applies when values are mapped to codes, so `"se"` and `"SE"` may both sit in a selection and still select the same rows.
+
+Selection values reaching a value facet are brought to the facet's value type: an exact type match passes through, and primitives, decimals, strings and enums are converted, so a value that arrived as `long` or as a string from JSON still selects an `int` or enum facet value. A value that does not occur in the dataset selects nothing rather than failing (a stale bookmark degrades to fewer rows). A value that cannot be converted is an error.
 
 Interval conventions:
 
@@ -406,27 +419,26 @@ Roughly 20 to 30 ms single-threaded, before any parallel gains. This is the numb
 
 ## 6. Extensibility: custom facets
 
-Custom facets (§C5) are not part of the first version. The four built-in kinds are implemented against one **internal** interface so that the calculation pipeline (§4) treats every facet the same way:
+Custom facets (§C5) are not part of the first version. The four built-in kinds are implemented against two **internal** abstract classes so that the calculation pipeline (§4) treats every facet the same way:
 
 ```csharp
-internal interface IFacetDefinition<T>
+internal abstract class FacetDefinition<T>          // mutable while the builder runs, frozen at Create
 {
-    string Key { get; }
-    string Title { get; }
-    FacetKind Kind { get; }
-    IFacetIndex<T> Build(ReadOnlySpan<T> rows);        // once, at Create
+    string Key; string Title; FacetKind Kind;
+    abstract FacetIndex Build(T[] items, TimeProvider timeProvider);   // once, at Create
 }
 
-internal interface IFacetIndex<T>
+internal abstract class FacetIndex                  // immutable, non-generic
 {
-    RowSet RowsMatching(Selection selection);           // §4.1
-    FacetState Present(RowSet context, Selection? selection);   // §4.3–4.5
-    JsonValue Format(object? value);                     // §2.5
-    object? Parse(JsonValue value);
+    string Key; string Title; FacetKind Kind; int RowCount;
+    abstract RowSet RowsMatching(Selection selection);                 // §4.1
+    // to come with Calculate:
+    // FacetState Present(RowSet context, Selection? selection);       // §4.3–4.5
+    // JsonValue Format(object? value); object? Parse(JsonValue value); // §2.5
 }
 ```
 
-Keeping the interface internal means the built-ins can reshape it freely while they settle. When custom facets are added, the plan is to make this interface public as it stands then, together with a `FacetKind.Custom` value and a builder entry point. Nothing in the public API of the first version needs to change for that.
+Keeping these internal means the built-ins can reshape them freely while they settle. When custom facets are added, the plan is to make them public as they stand then, together with a `FacetKind.Custom` value and a builder entry point. Nothing in the public API of the first version needs to change for that.
 
 ---
 

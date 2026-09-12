@@ -8,7 +8,7 @@ internal static class ValueColumn
     /// ordinal, ignoring case, so "Sweden" and "sweden" are one facet value (design §3.3).
     /// Everything else uses default equality.
     /// </summary>
-    public static IEqualityComparer<TValue> DefaultComparer<TValue>() where TValue : notnull
+    public static IEqualityComparer<TValue> DefaultComparer<TValue>()
     {
         if (typeof(TValue) == typeof(string))
         {
@@ -24,7 +24,14 @@ internal static class ValueColumn
 /// 0 means null, and codes 1..V index the dictionary of distinct non-null values in first-seen
 /// order. Immutable once built.
 /// </summary>
-internal sealed class ValueColumn<TValue> where TValue : notnull
+/// <remarks>
+/// <typeparamref name="TValue"/> may be a reference type or a <see cref="Nullable{T}"/>. Null never
+/// reaches the dictionary: the <see cref="RowReader{TValue}"/> protocol reports null as "no value"
+/// and <see cref="TryGetCode"/> guards it, so the dictionary's notnull constraint is satisfied in
+/// practice even though it cannot be expressed on the type parameter.
+/// </remarks>
+#pragma warning disable CS8714 // Nullability of type argument doesn't match 'notnull' constraint (see remarks).
+internal sealed class ValueColumn<TValue>
 {
     private readonly int[] _codes;
     private readonly TValue[] _dictionary;
@@ -74,7 +81,16 @@ internal sealed class ValueColumn<TValue> where TValue : notnull
     }
 
     /// <summary>Looks up the code of a non-null value. False when the value does not occur in the dataset.</summary>
-    public bool TryGetCode(TValue value, out int code) => _codeOf.TryGetValue(value, out code);
+    public bool TryGetCode(TValue value, out int code)
+    {
+        if (value is null)
+        {
+            code = 0;
+            return false;
+        }
+
+        return _codeOf.TryGetValue(value, out code);
+    }
 
     /// <summary>
     /// Builds the column by reading every row once (design §3.3).
@@ -155,3 +171,4 @@ internal sealed class ValueColumn<TValue> where TValue : notnull
     public void CountInto(RowSet context, Span<int> counts) =>
         CodeColumn.CountInto(_codes, _totalCounts, context, counts);
 }
+#pragma warning restore CS8714

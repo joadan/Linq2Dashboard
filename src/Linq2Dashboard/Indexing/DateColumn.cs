@@ -154,8 +154,14 @@ internal sealed class DateColumn
         CodeColumn.CountInto(_bucketCodes, _totalCounts, context, counts);
 
     /// <summary>Converts a local date-time in the facet zone to an instant, using the zone's offset at that time.</summary>
-    public DateTimeOffset ToInstant(DateTime local) =>
-        new(DateTime.SpecifyKind(local, DateTimeKind.Unspecified), Zone.GetUtcOffset(local));
+    public DateTimeOffset ToInstant(DateTime local) => ToInstant(local, Zone);
+
+    /// <summary>Converts a local date-time in <paramref name="zone"/> to an instant, using the zone's offset at that time.</summary>
+    public static DateTimeOffset ToInstant(DateTime local, TimeZoneInfo zone)
+    {
+        DateTime unspecified = DateTime.SpecifyKind(local, DateTimeKind.Unspecified);
+        return new DateTimeOffset(unspecified, zone.GetUtcOffset(unspecified));
+    }
 
     /// <summary>Start of the period containing <paramref name="local"/>. ISO weeks start on Monday.</summary>
     internal static DateTime PeriodStart(DateTime local, DateGranularity granularity)
