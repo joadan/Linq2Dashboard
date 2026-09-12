@@ -1,4 +1,6 @@
+using System.Text.Json.Nodes;
 using Linq2Dashboard.Indexing;
+using Linq2Dashboard.Serialization;
 
 namespace Linq2Dashboard.Facets;
 
@@ -60,6 +62,80 @@ internal sealed class DateFacetIndex : FacetIndex
 
         var nullValue = new FacetValue(null, Column.TotalCounts[0], counts[0], date is { IncludeNull: true });
         return new DateFacetState(Key, Title, selection, context.Count, Column.Granularity, Column.Zone, buckets, presets, nullValue);
+    }
+
+    /// <summary>Design §2.5: <c>from</c>/<c>to</c> as ISO 8601 instants, or <c>preset</c> in camelCase; <c>{ "onlyNull": true }</c> for the null rows alone.</summary>
+    public override JsonObject Serialize(Selection selection)
+    {
+        DateSelection date = Expect<DateSelection>(selection);
+        var json = new JsonObject();
+        if (date.OnlyNulls)
+        {
+            json["onlyNull"] = true;
+            return json;
+        }
+
+        if (date.Preset is DatePreset preset)
+        {
+            json["preset"] = JsonValues.CamelCase(preset);
+        }
+        else
+        {
+            if (date.From is DateTimeOffset from)
+            {
+                json["from"] = JsonValues.Instant(from);
+            }
+
+            if (date.To is DateTimeOffset to)
+            {
+                json["to"] = JsonValues.Instant(to);
+            }
+        }
+
+        if (date.IncludeNull)
+        {
+            json["includeNull"] = true;
+        }
+
+        return json;
+    }
+
+    public override Selection? Deserialize(JsonObject json)
+    {
+        if (!JsonValues.TryGetBool(json, "onlyNull", false, out bool onlyNull))
+        {
+            return null;
+        }
+
+        if (onlyNull)
+        {
+            return DateSelection.OnlyNull;
+        }
+
+        if (!JsonValues.TryGetBool(json, "includeNull", false, out bool includeNull)
+            || !JsonValues.TryGetEnum(json, "preset", out DatePreset? preset)
+            || !JsonValues.TryGetInstant(json, "from", out DateTimeOffset? from)
+            || !JsonValues.TryGetInstant(json, "to", out DateTimeOffset? to))
+        {
+            return null;
+        }
+
+        if (preset is DatePreset p)
+        {
+            return DateSelection.Relative(p) with { IncludeNull = includeNull };
+        }
+
+        if (from is null && to is null && !includeNull)
+        {
+            return null;
+        }
+
+        if (from is DateTimeOffset f && to is DateTimeOffset t && f > t)
+        {
+            return null;
+        }
+
+        return DateSelection.Between(from, to) with { IncludeNull = includeNull };
     }
 
     /// <summary>The instant interval a preset means right now, in the facet's zone.</summary>

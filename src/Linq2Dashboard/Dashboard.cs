@@ -56,7 +56,11 @@ public sealed class Dashboard<T>
         All = RowSet.Full(items.Length);
         Facets = facets.Select(f => f.Info).ToArray();
         Metrics = metrics.Select(m => m.Info).ToArray();
+        Serializer = new SelectionSerializer(facets);
     }
+
+    /// <summary>Writes and reads <see cref="Selections"/> as JSON for storage and bookmarks (design §2.5).</summary>
+    public SelectionSerializer Serializer { get; }
 
     /// <summary>Rows in the dataset, after fixed filters (concept §4.3).</summary>
     public int TotalCount => items.Length;

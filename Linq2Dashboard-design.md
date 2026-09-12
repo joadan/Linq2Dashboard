@@ -211,16 +211,18 @@ Selections restored = dashboard.Serializer.FromJson(json);
 {
   "Country":   { "values": ["SE", "NO"] },
   "Amount":    { "from": 100, "to": 500, "toInclusive": false },
-  "OrderDate": { "preset": "last30days" },
+  "OrderDate": { "preset": "last30Days" },
+  "Shipped":   { "from": "2026-03-01T00:00:00.0000000+01:00", "includeNull": true },
+  "Discount":  { "onlyNull": true },
   "status":    { "values": [null, "Open"] }
 }
 ```
 
 - JSON is the only format in the first version. Applications that want selections in a URL encode the JSON themselves; a dedicated query-string format can be added later without changing the JSON.
-- Each facet definition owns a `Format(object?) → JsonValue` and `Parse(JsonValue) → object?` pair for its value type. Defaults cover primitives, enums, strings, `Guid`, and the date types; the builder allows an override.
-- Null in a value selection is JSON `null`. Omitted interval bounds mean unbounded. Omitted flags take the defaults from §2.2.
-- Unknown keys and unparseable values are dropped, not thrown. A stale bookmark should degrade to "fewer selections", never to an error page.
-- The serializer is built by the dashboard because parsing needs each facet's value type. It is otherwise stateless.
+- Each facet writes and reads its own shape. Value facets write values as JSON primitives: strings, booleans and numbers as themselves, enums by name, `Guid` and the date and time types as ISO 8601 strings. Reading brings a primitive back to the facet's value type, so `"5"` or `5.0` reads into an `int` facet and `"store"` into an enum facet; booleans and numbers do not convert into each other. The builder's `Serialize(format, parse)` replaces the default with an application-supplied string form for a facet.
+- Null in a value selection is JSON `null`. Omitted interval bounds mean unbounded. Omitted flags take the defaults from §2.2, so the common case reads cleanly. Presets are written in camelCase and read case-insensitively. Instants keep their offset.
+- Unknown facet keys, values that cannot be read, and shapes that do not fit the facet's kind are dropped, not thrown. A stale bookmark degrades to "fewer selections", never to an error page. Only text that is not JSON at all throws.
+- The serializer is built by the dashboard because parsing needs each facet's value type. It is otherwise stateless and exposed as `dashboard.Serializer`. `ToJsonObject` and `FromJsonObject` work on `System.Text.Json.Nodes` for callers that embed selections in a larger document.
 
 ---
 

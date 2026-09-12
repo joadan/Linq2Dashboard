@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using Linq2Dashboard.Indexing;
+using Linq2Dashboard.Serialization;
 
 namespace Linq2Dashboard.Facets;
 
@@ -22,6 +23,8 @@ internal sealed class ValueFacetDefinition<T, TProp> : FacetDefinition<T>
 
     public IEqualityComparer<TProp>? Comparer { get; set; }
 
+    public ValueFormatter<TProp>? Formatter { get; set; }
+
     public override FacetIndex Build(T[] items, TimeProvider timeProvider)
     {
         var column = ValueColumn<TProp>.Build(items.Length, (int row, out TProp value) =>
@@ -30,6 +33,6 @@ internal sealed class ValueFacetDefinition<T, TProp> : FacetDefinition<T>
             return value is not null;
         }, Comparer);
 
-        return new ValueFacetIndex<TProp>(Key, Title, Kind, column, Top, RankMode, Searchable);
+        return new ValueFacetIndex<TProp>(Key, Title, Kind, column, Top, RankMode, Searchable, Formatter);
     }
 }

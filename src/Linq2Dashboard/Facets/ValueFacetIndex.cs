@@ -1,5 +1,7 @@
 using System.Globalization;
+using System.Text.Json.Nodes;
 using Linq2Dashboard.Indexing;
+using Linq2Dashboard.Serialization;
 
 namespace Linq2Dashboard.Facets;
 
@@ -7,14 +9,18 @@ namespace Linq2Dashboard.Facets;
 internal sealed class ValueFacetIndex<TValue> : FacetIndex
 {
     private readonly Lazy<string[]> labels;
+    private readonly ValueFormatter<TValue>? formatter;
 
-    public ValueFacetIndex(string key, string title, FacetKind kind, ValueColumn<TValue> column, int? top, RankMode rankMode, bool searchable)
+    public ValueFacetIndex(
+        string key, string title, FacetKind kind, ValueColumn<TValue> column,
+        int? top, RankMode rankMode, bool searchable, ValueFormatter<TValue>? formatter)
         : base(key, title, kind, column.RowCount)
     {
         Column = column;
         Top = top;
         RankMode = rankMode;
         Searchable = searchable;
+        this.formatter = formatter;
         labels = new Lazy<string[]>(BuildLabels, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
@@ -109,6 +115,91 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
             (text, max) => Search(text, max, counts, selected));
     }
 
+    /// <summary>Design §2.5: <c>{ "values": [ ... ] }</c>, null written as JSON null.</summary>
+    public override JsonObject Serialize(Selection selection)
+    {
+        ValueSelection values = Expect<ValueSelection>(selection);
+        var array = new JsonArray();
+        foreach (object? value in values.Values)
+        {
+            array.Add(FormatValue(value));
+        }
+
+        return new JsonObject { ["values"] = array };
+    }
+
+    /// <summary>Reads <c>{ "values": [ ... ] }</c>; entries that cannot be read are dropped, and a wrong shape yields null.</summary>
+    public override Selection? Deserialize(JsonObject json)
+    {
+        if (!json.TryGetPropertyValue("values", out JsonNode? node) || node is not JsonArray array)
+        {
+            return null;
+        }
+
+        var values = new List<object?>();
+        foreach (JsonNode? element in array)
+        {
+            if (TryParseValue(element, out object? value))
+            {
+                values.Add(value);
+            }
+        }
+
+        return values.Count == 0 ? null : new ValueSelection(values);
+    }
+
+    /// <summary>A facet value as JSON: through the application's formatter when given, otherwise the defaults.</summary>
+    internal JsonNode? FormatValue(object? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        if (formatter is not null)
+        {
+            return JsonValue.Create(formatter.Format(ConvertValue(value)));
+        }
+
+        return JsonValues.Format(ConvertValue(value));
+    }
+
+    /// <summary>A JSON node as a facet value of <typeparamref name="TValue"/>; false when it cannot be read.</summary>
+    internal bool TryParseValue(JsonNode? node, out object? value)
+    {
+        value = null;
+        if (node is null)
+        {
+            return true;
+        }
+
+        if (!JsonValues.TryToPrimitive(node, out object? primitive) || primitive is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            if (formatter is not null)
+            {
+                if (primitive is not string text)
+                {
+                    return false;
+                }
+
+                value = formatter.Parse(text);
+                return true;
+            }
+
+            value = ConvertValue(primitive);
+            return true;
+        }
+        catch (Exception e) when (e is ArgumentException or FormatException or OverflowException or InvalidCastException)
+        {
+            return false;
+        }
+    }
+
     /// <summary>Design §4.4 search: values whose label contains the text, ranked, limited. Never the null value.</summary>
     private IReadOnlyList<FacetValue> Search(string text, int max, int[] counts, HashSet<int> selected)
     {
@@ -194,8 +285,9 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
 
     /// <summary>
     /// Brings a boxed selection value to <typeparamref name="TValue"/>. Exact matches pass through;
-    /// primitives, decimals, strings and enums are converted so a value that arrived as a
-    /// <see cref="long"/> or a <see cref="string"/> (JSON) still selects an <see cref="int"/> or enum facet value.
+    /// primitives, decimals, strings, enums, <see cref="Guid"/> and the date and time types are
+    /// converted, so a value that arrived as a <see cref="long"/> or a <see cref="string"/> (JSON)
+    /// still selects an <see cref="int"/>, enum or date facet value.
     /// </summary>
     internal TValue ConvertValue(object value)
     {
@@ -215,7 +307,19 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
                 return (TValue)converted;
             }
 
-            if (value is IConvertible && (target.IsPrimitive || target == typeof(decimal) || target == typeof(string)))
+            if (value is string s)
+            {
+                object? parsed = ParseText(s, target);
+                if (parsed is not null)
+                {
+                    return (TValue)parsed;
+                }
+            }
+
+            // Booleans and numbers do not convert into each other: JSON true for an int facet is a mistake, not a 1.
+            bool boolInvolved = value is bool || target == typeof(bool);
+            bool boolMismatch = boolInvolved && !(value is bool && target == typeof(bool)) && value is not string && target != typeof(string);
+            if (!boolMismatch && value is IConvertible && (target.IsPrimitive || target == typeof(decimal) || target == typeof(string)))
             {
                 return (TValue)Convert.ChangeType(value, target, CultureInfo.InvariantCulture);
             }
@@ -228,6 +332,39 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
 
         throw new ArgumentException(
             $"Facet '{Key}' holds {typeof(TValue).Name} values; got a {value.GetType().Name}.", nameof(value));
+    }
+
+    /// <summary>Text forms of the non-primitive value types the default formatter writes.</summary>
+    private static object? ParseText(string text, Type target)
+    {
+        var culture = CultureInfo.InvariantCulture;
+        const DateTimeStyles styles = DateTimeStyles.RoundtripKind;
+        if (target == typeof(Guid))
+        {
+            return Guid.Parse(text);
+        }
+
+        if (target == typeof(DateTimeOffset))
+        {
+            return DateTimeOffset.Parse(text, culture, styles);
+        }
+
+        if (target == typeof(DateTime))
+        {
+            return DateTime.Parse(text, culture, styles);
+        }
+
+        if (target == typeof(DateOnly))
+        {
+            return DateOnly.Parse(text, culture);
+        }
+
+        if (target == typeof(TimeOnly))
+        {
+            return TimeOnly.Parse(text, culture);
+        }
+
+        return null;
     }
 
     private readonly record struct RankKey(int Primary, int Secondary, int Order);

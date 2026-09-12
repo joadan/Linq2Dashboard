@@ -1,4 +1,6 @@
+using System.Text.Json.Nodes;
 using Linq2Dashboard.Indexing;
+using Linq2Dashboard.Serialization;
 
 namespace Linq2Dashboard.Facets;
 
@@ -42,6 +44,79 @@ internal sealed class RangeFacetIndex : FacetIndex
 
         var nullValue = new FacetValue(null, Column.TotalCounts[0], counts[0], range is { IncludeNull: true });
         return new RangeFacetState(Key, Title, selection, context.Count, Column.Min, Column.Max, buckets, nullValue);
+    }
+
+    /// <summary>Design §2.5: bounds and flags, defaults omitted; <c>{ "onlyNull": true }</c> for the null rows alone.</summary>
+    public override JsonObject Serialize(Selection selection)
+    {
+        RangeSelection range = Expect<RangeSelection>(selection);
+        var json = new JsonObject();
+        if (range.OnlyNulls)
+        {
+            json["onlyNull"] = true;
+            return json;
+        }
+
+        if (range.From is double from)
+        {
+            json["from"] = from;
+        }
+
+        if (range.To is double to)
+        {
+            json["to"] = to;
+        }
+
+        if (!range.FromInclusive)
+        {
+            json["fromInclusive"] = false;
+        }
+
+        if (!range.ToInclusive)
+        {
+            json["toInclusive"] = false;
+        }
+
+        if (range.IncludeNull)
+        {
+            json["includeNull"] = true;
+        }
+
+        return json;
+    }
+
+    public override Selection? Deserialize(JsonObject json)
+    {
+        if (!JsonValues.TryGetBool(json, "onlyNull", false, out bool onlyNull))
+        {
+            return null;
+        }
+
+        if (onlyNull)
+        {
+            return RangeSelection.OnlyNull;
+        }
+
+        if (!JsonValues.TryGetDouble(json, "from", out double? from)
+            || !JsonValues.TryGetDouble(json, "to", out double? to)
+            || !JsonValues.TryGetBool(json, "fromInclusive", true, out bool fromInclusive)
+            || !JsonValues.TryGetBool(json, "toInclusive", true, out bool toInclusive)
+            || !JsonValues.TryGetBool(json, "includeNull", false, out bool includeNull))
+        {
+            return null;
+        }
+
+        if (from is null && to is null && !includeNull)
+        {
+            return null;
+        }
+
+        if (from is double f && to is double t && f > t)
+        {
+            return null;
+        }
+
+        return new RangeSelection(from, to, fromInclusive, toInclusive, includeNull);
     }
 
     /// <summary>Whether the selected interval contains every value the bucket can hold.</summary>

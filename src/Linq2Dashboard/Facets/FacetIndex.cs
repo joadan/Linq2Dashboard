@@ -1,3 +1,4 @@
+using System.Text.Json.Nodes;
 using Linq2Dashboard.Indexing;
 
 namespace Linq2Dashboard.Facets;
@@ -35,6 +36,15 @@ internal abstract class FacetIndex
     /// used only for the selected flags (design §4.3–4.5).
     /// </summary>
     public abstract FacetState Present(RowSet context, Selection? selection);
+
+    /// <summary>Writes a selection of this facet's kind as its JSON shape (design §2.5).</summary>
+    public abstract JsonObject Serialize(Selection selection);
+
+    /// <summary>
+    /// Reads a selection from its JSON shape. Returns null when the shape does not fit this facet or
+    /// nothing usable remains, so a stale bookmark degrades to fewer selections (design §2.5).
+    /// </summary>
+    public abstract Selection? Deserialize(JsonObject json);
 
     protected TSelection? ExpectOrNull<TSelection>(Selection? selection) where TSelection : Selection =>
         selection is null ? null : Expect<TSelection>(selection);

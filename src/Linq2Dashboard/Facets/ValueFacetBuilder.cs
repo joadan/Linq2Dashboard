@@ -1,4 +1,5 @@
 using Linq2Dashboard.Facets;
+using Linq2Dashboard.Serialization;
 
 namespace Linq2Dashboard;
 
@@ -64,6 +65,20 @@ public sealed class ValueFacetBuilder<T, TProp>
         ArgumentNullException.ThrowIfNull(comparer);
         ensureMutable();
         definition.Comparer = comparer;
+        return this;
+    }
+
+    /// <summary>
+    /// How this facet's values are written to and read from JSON selections (design §2.5), as
+    /// strings. The default handles primitives, strings, enums, <see cref="Guid"/> and the date and
+    /// time types; supply this for anything else, or for a different text form.
+    /// </summary>
+    public ValueFacetBuilder<T, TProp> Serialize(Func<TProp, string> format, Func<string, TProp> parse)
+    {
+        ArgumentNullException.ThrowIfNull(format);
+        ArgumentNullException.ThrowIfNull(parse);
+        ensureMutable();
+        definition.Formatter = new ValueFormatter<TProp>(format, parse);
         return this;
     }
 }
