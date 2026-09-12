@@ -22,13 +22,13 @@
             {
                 <li class="l2d-preset @(preset.Selected ? "l2d-selected" : null) @(preset.FilteredCount == 0 ? "l2d-zero" : null)">
                     <button type="button" class="l2d-preset-button" aria-pressed="@(preset.Selected ? "true" : "false")"
-                            title="@Formatter.FormatCount(preset.FilteredCount) / @Formatter.FormatCount(preset.TotalCount)"
+                            title="@Formatter.FormatCount(preset.FilteredCount) (@Formatter.FormatCount(preset.TotalCount))"
                             @onclick="() => ClickPreset(preset)">
                         <span class="l2d-preset-label">@Formatter.FormatPreset(preset.Preset)</span>
                         @if (ShowCounts)
                         {
                             <span class="l2d-preset-count">
-                                @Formatter.FormatCount(preset.FilteredCount)@if (ShowTotals) {<span class="l2d-preset-total"> / @Formatter.FormatCount(preset.TotalCount)</span>}
+                                @Formatter.FormatCount(preset.FilteredCount)@if (ShowTotals) {<span class="l2d-preset-total"> (@Formatter.FormatCount(preset.TotalCount))</span>}
                             </span>
                         }
                     </button>
@@ -84,7 +84,7 @@
     [Parameter]
     public bool ShowCounts { get; set; } = true;
 
-    /// <summary>Show "filtered / total" instead of the filtered count alone.</summary>
+    /// <summary>Show the total in parentheses after the filtered count, "filtered (total)", instead of the filtered count alone.</summary>
     [Parameter]
     public bool ShowTotals { get; set; }
 

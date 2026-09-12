@@ -130,7 +130,7 @@ public class ValueFacetTests : BunitContext
     {
         var cut = RenderFacet("Country", Selections.Empty.With("Status", ValueSelection.Of("Open")), configure: f => f.Add(x => x.ShowTotals, true));
 
-        Assert.Equal("2 / 3", Count(Items(cut).Single(li => Label(li) == "SE")));
+        Assert.Equal("2 (3)", Count(Items(cut).Single(li => Label(li) == "SE")));
     }
 
     [Fact]

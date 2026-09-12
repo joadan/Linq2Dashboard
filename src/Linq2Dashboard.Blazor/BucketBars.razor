@@ -9,14 +9,14 @@
         <li class="l2d-bucket @(bar.Selected ? "l2d-selected" : null) @(bar.FilteredCount == 0 ? "l2d-zero" : null) @(bar.IsNull ? "l2d-null" : null)"
             style="--l2d-total: @Share(bar.TotalCount, scale); --l2d-filtered: @Share(bar.FilteredCount, scale);">
             <button type="button" class="l2d-bucket-button" aria-pressed="@(bar.Selected ? "true" : "false")"
-                    title="@bar.Label: @Formatter.FormatCount(bar.FilteredCount) / @Formatter.FormatCount(bar.TotalCount)"
+                    title="@bar.Label: @Formatter.FormatCount(bar.FilteredCount) (@Formatter.FormatCount(bar.TotalCount))"
                     @onclick="bar.Click">
                 <span class="l2d-bucket-bar"><span class="l2d-bucket-bar-total"></span><span class="l2d-bucket-bar-filtered"></span></span>
                 <span class="l2d-bucket-label">@bar.Label</span>
                 @if (ShowCounts)
                 {
                     <span class="l2d-bucket-count">
-                        @Formatter.FormatCount(bar.FilteredCount)@if (ShowTotals) {<span class="l2d-bucket-total"> / @Formatter.FormatCount(bar.TotalCount)</span>}
+                        @Formatter.FormatCount(bar.FilteredCount)@if (ShowTotals) {<span class="l2d-bucket-total"> (@Formatter.FormatCount(bar.TotalCount))</span>}
                     </span>
                 }
             </button>

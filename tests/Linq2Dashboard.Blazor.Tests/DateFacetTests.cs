@@ -116,8 +116,8 @@ public class DateFacetTests : BunitContext
         var cut = RenderFacet("OrderDate", Selections.Empty.With("Country", ValueSelection.Of("SE")), configure: f => f.Add(x => x.ShowTotals, true));
 
         // SE orders: Jan 15, Mar 1, Mar 31.
-        Assert.Equal(["1 / 1", "0 / 2", "2 / 3", "0 / 2"], Buckets(cut).Select(Count));
-        Assert.Equal(["2 / 3", "0 / 1"], Presets(cut).Select(Count));
+        Assert.Equal(["1 (1)", "0 (2)", "2 (3)", "0 (2)"], Buckets(cut).Select(Count));
+        Assert.Equal(["2 (3)", "0 (1)"], Presets(cut).Select(Count));
         Assert.Contains("l2d-zero", Buckets(cut)[1].ClassName);
     }
 

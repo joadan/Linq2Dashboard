@@ -130,7 +130,7 @@ public class RangeFacetTests : BunitContext
         var cut = RenderFacet("Amount", Selections.Empty.With("Country", ValueSelection.Of("SE")), configure: f => f.Add(x => x.ShowTotals, true));
 
         // SE amounts: 100, 999.5, 2500
-        Assert.Equal(["0 / 2", "1 / 2", "1 / 2", "1 / 2"], Buckets(cut).Select(Count));
+        Assert.Equal(["0 (2)", "1 (2)", "1 (2)", "1 (2)"], Buckets(cut).Select(Count));
     }
 
     [Fact]

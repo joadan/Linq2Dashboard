@@ -25,7 +25,7 @@
             {
                 <li class="l2d-facet-value @(value.Selected ? "l2d-selected" : null) @(value.FilteredCount == 0 ? "l2d-zero" : null) @(value.IsNull ? "l2d-null" : null)">
                     <button type="button" class="l2d-facet-value-button" aria-pressed="@(value.Selected ? "true" : "false")"
-                            title="@Formatter.FormatCount(value.FilteredCount) / @Formatter.FormatCount(value.TotalCount)"
+                            title="@Formatter.FormatCount(value.FilteredCount) (@Formatter.FormatCount(value.TotalCount))"
                             @onclick="() => Context.ToggleAsync(Key, value.Value)">
                         @if (ValueTemplate is not null)
                         {
@@ -35,7 +35,7 @@
                         {
                             <span class="l2d-facet-value-label">@Formatter.FormatValue(Facet, value.Value)</span>
                             <span class="l2d-facet-value-count">
-                                @Formatter.FormatCount(value.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> / @Formatter.FormatCount(value.TotalCount)</span>}
+                                @Formatter.FormatCount(value.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> (@Formatter.FormatCount(value.TotalCount))</span>}
                             </span>
                         }
                     </button>
@@ -46,7 +46,7 @@
                 <li class="l2d-facet-other">
                     <span class="l2d-facet-value-label">@OtherText</span>
                     <span class="l2d-facet-value-count">
-                        @Formatter.FormatCount(other.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> / @Formatter.FormatCount(other.TotalCount)</span>}
+                        @Formatter.FormatCount(other.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> (@Formatter.FormatCount(other.TotalCount))</span>}
                     </span>
                 </li>
             }
@@ -90,7 +90,7 @@
     [Parameter]
     public bool HideZeroCounts { get; set; }
 
-    /// <summary>Show "filtered / total" instead of the filtered count alone.</summary>
+    /// <summary>Show the total in parentheses after the filtered count, "filtered (total)", instead of the filtered count alone.</summary>
     [Parameter]
     public bool ShowTotals { get; set; }
 
