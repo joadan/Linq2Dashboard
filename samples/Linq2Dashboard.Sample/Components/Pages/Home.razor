@@ -6,7 +6,20 @@
 
 <h1>Orders</h1>
 
-<DashboardView T="SampleOrder" Dashboard="Dashboard" @bind-Selections="selections" />
+<DashboardView T="SampleOrder" Dashboard="Dashboard" @bind-Selections="selections">
+    <div class="sample-layout">
+        <aside class="sample-facets">
+            <ValueFacet T="SampleOrder" Key="Country" />
+            <ValueFacet T="SampleOrder" Key="Status" ShowTotals="true" />
+            <ValueFacet T="SampleOrder" Key="Category" />
+            <ValueFacet T="SampleOrder" Key="Customer" />
+            <ValueFacet T="SampleOrder" Key="IsActive" HideZeroCounts="true" />
+        </aside>
+        <main class="sample-main">
+            <StateSummary T="SampleOrder" />
+        </main>
+    </div>
+</DashboardView>
 
 <details>
     <summary>Selections as JSON</summary>

@@ -1,0 +1,18 @@
+.sample-layout {
+    display: grid;
+    grid-template-columns: 16rem 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+.sample-facets {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+@media (max-width: 48rem) {
+    .sample-layout {
+        grid-template-columns: 1fr;
+    }
+}
