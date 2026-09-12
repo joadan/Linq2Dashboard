@@ -646,6 +646,10 @@ tests/Linq2Dashboard.Blazor.Tests/   bUnit: each component renders a given state
 
 9. **Collapsing (added after the first version).** Every facet component takes `Collapsible`, which renders the title as a toggle with a chevron in the shared header, and a bindable `Collapsed` value with `CollapsedChanged`, so a host can set or remember which facets are open. Collapsed hides the body only; the header, including the clear link and a range facet's bounds, stays. The value is component-local UI state synced from the parameter the way the results page index is, so it survives state changes and works without a binding. A header template replaces the toggle, leaving `Collapsed` as the only control.
 
+### Code layout
+
+Every component is a `.razor` file holding markup and directives only, with a `.razor.cs` partial class beside it holding parameters, state and methods. No `@code` blocks anywhere in the repository.
+
 ### State flow
 
 `Calculate` runs inline in the click handler, then `StateHasChanged`. The component keeps no derived data of its own, so nothing can drift from the state. A back click is a state-cache hit and costs nothing.

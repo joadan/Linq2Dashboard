@@ -22,7 +22,7 @@ public sealed class SampleOrder
 }
 
 /// <summary>Deterministic sample data: a smaller cousin of the benchmark generator, with nulls sprinkled in.</summary>
-public static class SampleData
+public static class SampleOrders
 {
     private static readonly string[] Countries = ["Sweden", "Norway", "Denmark", "Finland", "Germany", "Netherlands", "Poland", "France", "Spain", "Italy", "United Kingdom", "Ireland"];
     private static readonly string[] Statuses = ["Open", "Pending", "Shipped", "Closed", "Cancelled"];

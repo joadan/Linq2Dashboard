@@ -40,6 +40,7 @@ dotnet pack src/Linq2Dashboard/Linq2Dashboard.csproj -c Release -o artifacts   #
 ## Conventions
 
 - Private fields are plain camelCase, never `_prefixed`. Use `this.field = field` in constructors when a parameter shares the name.
+- Blazor components are always split: markup in `X.razor`, everything else in a `X.razor.cs` partial class. No `@code` blocks, in the library, the docs site or the sample. `@typeparam`, `@inherits` and `@inject` stay in the `.razor` file; the partial class repeats the type parameter and omits the base class.
 - Zero build warnings. Nullable is enabled everywhere; do not suppress warnings except the documented `CS8714` in `ValueColumn`.
 - Every behavioural rule in the concept has a named test. A new rule or an edge case gets a test in the same commit.
 - Validate eagerly in the builder so mistakes surface inside `Dashboard.Create`, not at first use.

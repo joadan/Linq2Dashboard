@@ -8,7 +8,7 @@ builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
 // One dashboard for the whole application: immutable, thread-safe, built once at startup (concept §4.9).
-builder.Services.AddSingleton<Dashboard<SampleOrder>>(_ => SampleData.BuildDashboard(rows: 200_000));
+builder.Services.AddSingleton<Dashboard<SampleOrder>>(_ => SampleOrders.BuildDashboard(rows: 200_000));
 
 var app = builder.Build();
 
