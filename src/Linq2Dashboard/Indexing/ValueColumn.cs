@@ -152,32 +152,6 @@ internal sealed class ValueColumn<TValue> where TValue : notnull
     /// Filtered counts per code over the rows in <paramref name="context"/> (design §4.3).
     /// <paramref name="counts"/> must have length V + 1; it is cleared first. Index 0 is null.
     /// </summary>
-    public void CountInto(RowSet context, Span<int> counts)
-    {
-        ArgumentNullException.ThrowIfNull(context);
-        if (context.Length != RowCount)
-        {
-            throw new ArgumentException(
-                $"Context has {context.Length} rows but the column has {RowCount}.", nameof(context));
-        }
-
-        if (counts.Length != DistinctCount + 1)
-        {
-            throw new ArgumentException(
-                $"Counts span must have length {DistinctCount + 1} but has {counts.Length}.", nameof(counts));
-        }
-
-        if (context.IsFull)
-        {
-            _totalCounts.CopyTo(counts);
-            return;
-        }
-
-        counts.Clear();
-        ReadOnlySpan<int> codes = _codes;
-        foreach (int row in context)
-        {
-            counts[codes[row]]++;
-        }
-    }
+    public void CountInto(RowSet context, Span<int> counts) =>
+        CodeColumn.CountInto(_codes, _totalCounts, context, counts);
 }
