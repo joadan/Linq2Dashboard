@@ -658,7 +658,7 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 
 ## 10. Open questions
 
-None at the moment. New questions raised during implementation go here.
+1. **Metrics declared in Blazor markup.** Should `<Metric>` be able to define its aggregation and selector, not only place a metric defined in the builder? Two routes were weighed on 2026-09-12: computing in the component over the matching rows (pure, but the UI calculates and pays per render), or registering a column lazily on the dashboard (fast, but mutates a dashboard the design promises is immutable and misses states already cached). Kept as is for now: definition in the builder, placement in Blazor, like the facets. To be revisited.
 
 ### Decided
 
