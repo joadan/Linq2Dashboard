@@ -1,0 +1,107 @@
+@typeparam T
+@inherits DashboardComponentBase<T>
+
+<section class="l2d-facet l2d-range-facet l2d-range-@Layout.ToString().ToLowerInvariant()" data-key="@Key">
+    <header class="l2d-facet-header">
+        <h3 class="l2d-facet-title">@Facet.Title</h3>
+        @if (ShowBounds && !double.IsNaN(Facet.Min))
+        {
+            <span class="l2d-facet-bounds">@Formatter.FormatRangeSelection(RangeSelection.Between(Facet.Min, Facet.Max))</span>
+        }
+        @if (Facet.HasSelection)
+        {
+            <button type="button" class="l2d-facet-clear" @onclick="() => Context.ClearAsync(Key)">@ClearText</button>
+        }
+    </header>
+
+    @if (Facet.Buckets.Count == 0 && Facet.Null.TotalCount == 0)
+    {
+        <p class="l2d-facet-empty">@NoValuesText</p>
+    }
+    else
+    {
+        int scale = Math.Max(1, Math.Max(Facet.Buckets.Count == 0 ? 0 : Facet.Buckets.Max(b => b.TotalCount), Facet.Null.TotalCount));
+
+        <ol class="l2d-buckets">
+            @foreach (RangeBucket bucket in Facet.Buckets)
+            {
+                <li class="l2d-bucket @(bucket.Selected ? "l2d-selected" : null) @(bucket.FilteredCount == 0 ? "l2d-zero" : null)"
+                    style="--l2d-total: @Share(bucket.TotalCount, scale); --l2d-filtered: @Share(bucket.FilteredCount, scale);">
+                    <button type="button" class="l2d-bucket-button" aria-pressed="@(bucket.Selected ? "true" : "false")"
+                            title="@Formatter.FormatRangeBucket(bucket): @Formatter.FormatCount(bucket.FilteredCount) / @Formatter.FormatCount(bucket.TotalCount)"
+                            @onclick="() => ClickBucket(bucket)">
+                        <span class="l2d-bucket-bar"><span class="l2d-bucket-bar-total"></span><span class="l2d-bucket-bar-filtered"></span></span>
+                        <span class="l2d-bucket-label">@Formatter.FormatRangeBucket(bucket)</span>
+                        @if (ShowCounts)
+                        {
+                            <span class="l2d-bucket-count">
+                                @Formatter.FormatCount(bucket.FilteredCount)@if (ShowTotals) {<span class="l2d-bucket-total"> / @Formatter.FormatCount(bucket.TotalCount)</span>}
+                            </span>
+                        }
+                    </button>
+                </li>
+            }
+            @if (Facet.Null.TotalCount > 0)
+            {
+                <li class="l2d-bucket l2d-null @(Facet.Null.Selected ? "l2d-selected" : null) @(Facet.Null.FilteredCount == 0 ? "l2d-zero" : null)"
+                    style="--l2d-total: @Share(Facet.Null.TotalCount, scale); --l2d-filtered: @Share(Facet.Null.FilteredCount, scale);">
+                    <button type="button" class="l2d-bucket-button" aria-pressed="@(Facet.Null.Selected ? "true" : "false")"
+                            title="@Formatter.NullLabel: @Formatter.FormatCount(Facet.Null.FilteredCount) / @Formatter.FormatCount(Facet.Null.TotalCount)"
+                            @onclick="ClickNull">
+                        <span class="l2d-bucket-bar"><span class="l2d-bucket-bar-total"></span><span class="l2d-bucket-bar-filtered"></span></span>
+                        <span class="l2d-bucket-label">@Formatter.NullLabel</span>
+                        @if (ShowCounts)
+                        {
+                            <span class="l2d-bucket-count">
+                                @Formatter.FormatCount(Facet.Null.FilteredCount)@if (ShowTotals) {<span class="l2d-bucket-total"> / @Formatter.FormatCount(Facet.Null.TotalCount)</span>}
+                            </span>
+                        }
+                    </button>
+                </li>
+            }
+        </ol>
+    }
+</section>
+
+@code {
+    /// <summary>The facet key, as defined in the builder. Must be a range facet.</summary>
+    [Parameter, EditorRequired]
+    public string Key { get; set; } = default!;
+
+    /// <summary>Vertical bars with labels beneath, or rows with an inline bar.</summary>
+    [Parameter]
+    public BucketLayout Layout { get; set; } = BucketLayout.Histogram;
+
+    /// <summary>Show the dataset's min and max in the header (concept §5, fixed values).</summary>
+    [Parameter]
+    public bool ShowBounds { get; set; } = true;
+
+    [Parameter]
+    public bool ShowCounts { get; set; } = true;
+
+    /// <summary>Show "filtered / total" instead of the filtered count alone.</summary>
+    [Parameter]
+    public bool ShowTotals { get; set; }
+
+    [Parameter]
+    public string ClearText { get; set; } = "Clear";
+
+    [Parameter]
+    public string NoValuesText { get; set; } = "No values";
+
+    private RangeFacetState Facet => State.Facet(Key) as RangeFacetState
+        ?? throw new InvalidOperationException($"Facet '{Key}' is not a range facet; use the component for its kind.");
+
+    /// <summary>A click selects the bucket's interval; a second click on the selected bucket clears the facet.</summary>
+    private Task ClickBucket(RangeBucket bucket)
+    {
+        RangeSelection selection = bucket.ToSelection();
+        return selection.Equals(Facet.Selection) ? Context.ClearAsync(Key) : Context.SelectAsync(Key, selection);
+    }
+
+    private Task ClickNull() =>
+        Facet.Selection is RangeSelection { OnlyNulls: true } ? Context.ClearAsync(Key) : Context.SelectAsync(Key, RangeSelection.OnlyNull);
+
+    private static string Share(int count, int scale) =>
+        ((double)count / scale).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+}
