@@ -17,7 +17,34 @@
         </aside>
         <main class="sample-main">
             <ActiveSelections T="SampleOrder" />
-            <StateSummary T="SampleOrder" />
+
+            <Results T="SampleOrder" Layout="ResultsLayout.Table" PageSize="25">
+                <HeaderTemplate>
+                    <tr>
+                        <th>Id</th>
+                        <th>Date</th>
+                        <th>Country</th>
+                        <th>Status</th>
+                        <th>Customer</th>
+                        <th class="sample-number">Amount</th>
+                    </tr>
+                </HeaderTemplate>
+                <RowTemplate Context="order">
+                    <tr>
+                        <td>@order.Id</td>
+                        <td>@order.OrderDate?.ToString("yyyy-MM-dd")</td>
+                        <td>@order.Country</td>
+                        <td>@order.Status</td>
+                        <td>@(order.Customer ?? "–")</td>
+                        <td class="sample-number">@(order.Amount?.ToString("N2") ?? "–")</td>
+                    </tr>
+                </RowTemplate>
+            </Results>
+
+            <details>
+                <summary>Raw state</summary>
+                <StateSummary T="SampleOrder" />
+            </details>
         </main>
     </div>
 </DashboardView>

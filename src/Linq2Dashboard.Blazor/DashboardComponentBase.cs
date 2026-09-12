@@ -36,5 +36,14 @@ public abstract class DashboardComponentBase<T> : ComponentBase, IDisposable
         GC.SuppressFinalize(this);
     }
 
-    private void OnStateChanged() => InvokeAsync(StateHasChanged);
+    /// <summary>Called on the renderer's thread when the state changed, before re-rendering. Override to reset component-local UI state such as a page index.</summary>
+    protected virtual void OnDashboardStateChanged()
+    {
+    }
+
+    private void OnStateChanged() => InvokeAsync(() =>
+    {
+        OnDashboardStateChanged();
+        StateHasChanged();
+    });
 }

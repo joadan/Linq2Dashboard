@@ -16,3 +16,14 @@
         grid-template-columns: 1fr;
     }
 }
+
+.sample-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.sample-main ::deep .sample-number {
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+}
