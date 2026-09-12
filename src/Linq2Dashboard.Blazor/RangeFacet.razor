@@ -23,6 +23,12 @@
     else
     {
         <BucketBars Bars="Bars()" Formatter="Formatter" Layout="Layout" ShowCounts="ShowCounts" ShowTotals="ShowTotals" />
+
+        @if (ShowSlider && !double.IsNaN(Facet.Min) && Facet.Max > Facet.Min)
+        {
+            <RangeSlider Min="Facet.Min" Max="Facet.Max" From="SliderFrom" To="SliderTo" Step="SliderStep"
+                         Formatter="Formatter" ShowInputs="SliderInputs" OnChange="ApplySlider" />
+        }
     }
 </section>
 
@@ -50,6 +56,21 @@
     [Parameter]
     public bool ShowTotals { get; set; }
 
+    /// <summary>
+    /// A dual-handle slider beneath the buckets for a continuous interval (concept §5). Applies on
+    /// release as a closed interval; dragging both handles to the ends clears the facet.
+    /// </summary>
+    [Parameter]
+    public bool ShowSlider { get; set; }
+
+    /// <summary>Slider step. Default: a power of ten near one hundredth of the range.</summary>
+    [Parameter]
+    public double? SliderStep { get; set; }
+
+    /// <summary>Number inputs beside the slider for precise entry. Default true.</summary>
+    [Parameter]
+    public bool SliderInputs { get; set; } = true;
+
     [Parameter]
     public string ClearText { get; set; } = "Clear";
 
@@ -58,6 +79,11 @@
 
     private RangeFacetState Facet => State.Facet(Key) as RangeFacetState
         ?? throw new InvalidOperationException($"Facet '{Key}' is not a range facet; use the component for its kind.");
+
+    /// <summary>Slider handles follow the current interval selection; anything else puts them at the ends.</summary>
+    private double? SliderFrom => Facet.Selection is RangeSelection { OnlyNulls: false } range ? range.From : null;
+
+    private double? SliderTo => Facet.Selection is RangeSelection { OnlyNulls: false } range ? range.To : null;
 
     private IReadOnlyList<BucketBar> Bars()
     {
@@ -86,4 +112,15 @@
 
     private Task ClickNull() =>
         Facet.Selection is RangeSelection { OnlyNulls: true } ? Context.ClearAsync(Key) : Context.SelectAsync(Key, RangeSelection.OnlyNull);
+
+    private Task ApplySlider((double From, double To) interval)
+    {
+        RangeFacetState facet = Facet;
+        if (interval.From <= facet.Min && interval.To >= facet.Max)
+        {
+            return Context.ClearAsync(Key);
+        }
+
+        return Context.SelectAsync(Key, RangeSelection.Between(interval.From, interval.To));
+    }
 }

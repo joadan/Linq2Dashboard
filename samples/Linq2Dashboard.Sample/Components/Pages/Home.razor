@@ -9,12 +9,16 @@
 <DashboardView T="SampleOrder" Dashboard="Dashboard" @bind-Selections="selections">
     <div class="sample-layout">
         <aside class="sample-facets">
-            <ValueFacet T="SampleOrder" Key="Country" />
+            <ValueFacet T="SampleOrder" Key="Country">
+            <ValueTemplate>
+                    @context.Value  @context.FilteredCount (@context.TotalCount)
+            </ValueTemplate>  
+            </ValueFacet>
             <ValueFacet T="SampleOrder" Key="Status" ShowTotals="true" />
             <ValueFacet T="SampleOrder" Key="Category" />
             <ValueFacet T="SampleOrder" Key="Customer" />
             <ValueFacet T="SampleOrder" Key="IsActive" HideZeroCounts="true" />
-            <RangeFacet T="SampleOrder" Key="Amount" />
+            <RangeFacet T="SampleOrder" Key="Amount" ShowSlider="true" />
             <DateFacet T="SampleOrder" Key="OrderDate" />
         </aside>
         <main class="sample-main">
