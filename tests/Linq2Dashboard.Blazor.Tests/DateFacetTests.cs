@@ -93,7 +93,7 @@ public class DateFacetTests : BunitContext
         Assert.Contains("l2d-selected", Presets(cut)[1].ClassName);
         Assert.Equal("true", Presets(cut)[1].QuerySelector("button")!.GetAttribute("aria-pressed"));
         // Last 7 days is 9 to 16 March: inside March but not covering it, so no period is selected.
-        Assert.Empty(Buckets(cut).Where(b => b.ClassList.Contains("l2d-selected")));
+        Assert.DoesNotContain(Buckets(cut), b => b.ClassList.Contains("l2d-selected"));
 
         Presets(cut)[1].QuerySelector("button")!.Click();
         Assert.Equal(Selections.Empty, raised);

@@ -1,0 +1,33 @@
+<Project>
+
+  <!-- Shared by every project in the repository. Package metadata applies to the projects that set IsPackable. -->
+  <PropertyGroup>
+    <LangVersion>latest</LangVersion>
+    <Authors>Joakim Dangården</Authors>
+    <Company>Joakim Dangården</Company>
+    <Product>Linq2Dashboard</Product>
+    <Copyright>Copyright (c) Joakim Dangården</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://joadan.github.io/Linq2Dashboard/</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/joadan/Linq2Dashboard</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <GeneratePackageOnBuild>false</GeneratePackageOnBuild>
+  </PropertyGroup>
+
+  <!-- Source Link (built into the SDK since .NET 8) and symbols so stack traces and debugging point back at the exact commit. -->
+  <PropertyGroup>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <DebugType>portable</DebugType>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <!-- Versions come from version.json and the git height (Nerdbank.GitVersioning). -->
+  <ItemGroup>
+    <PackageReference Include="Nerdbank.GitVersioning" Version="3.9.50" PrivateAssets="all" />
+  </ItemGroup>
+
+</Project>

@@ -1,5 +1,9 @@
 # Linq2Dashboard
 
+[![CI](https://github.com/joadan/Linq2Dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/joadan/Linq2Dashboard/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/Linq2Dashboard.svg?label=Linq2Dashboard)](https://www.nuget.org/packages/Linq2Dashboard/)
+[![NuGet](https://img.shields.io/nuget/v/Linq2Dashboard.Blazor.svg?label=Linq2Dashboard.Blazor)](https://www.nuget.org/packages/Linq2Dashboard.Blazor/)
+
 Interactive exploration of large in-memory collections for .NET: facets with counts, metrics, and paged results that all update together on every click. The faceted-search experience of an e-commerce site, applied to any collection, with a LINQ-flavoured API.
 
 The core library has no UI dependency. A Blazor package renders it. **Docs and a live demo:** [joadan.github.io/Linq2Dashboard](https://joadan.github.io/Linq2Dashboard/), a Blazor WebAssembly site that builds the dashboard in your browser.
@@ -7,6 +11,15 @@ The core library has no UI dependency. A Blazor package renders it. **Docs and a
 ## Status
 
 The core engine is complete for the first version and meets its performance targets: a million rows with eight facets builds in about a second and recalculates in 5 to 20 ms per click. The Blazor package has every component from the plan: facets for each kind, active-selection chips, metric tiles and paged results, with templates and a custom-property stylesheet. The API may still change before a first release.
+
+## Install
+
+```powershell
+dotnet add package Linq2Dashboard          # the engine, no UI dependency
+dotnet add package Linq2Dashboard.Blazor   # the components
+```
+
+Versions come from [Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning): `version.json` holds the major.minor and the prerelease tag, the build height supplies the patch. Releases are cut manually from the **Create Release** workflow, which tests, packs, pushes to NuGet and tags the commit.
 
 ## Example
 

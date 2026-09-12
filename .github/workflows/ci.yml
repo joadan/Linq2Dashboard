@@ -1,0 +1,106 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+  workflow_dispatch:
+
+env:
+  NETCORE_VERSION: '10.0.x'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build and test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # Nerdbank.GitVersioning needs the full history for the version height
+
+      - name: Setup .NET ${{ env.NETCORE_VERSION }}
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: ${{ env.NETCORE_VERSION }}
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
+          restore-keys: ${{ runner.os }}-nuget-
+
+      - name: Restore packages
+        run: dotnet restore Linq2Dashboard.slnx
+
+      - name: Build solution
+        run: dotnet build Linq2Dashboard.slnx --configuration Release --no-restore
+
+      - name: Test
+        run: dotnet test Linq2Dashboard.slnx --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
+
+      - name: Upload coverage artifact
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: code-coverage
+          path: ./coverage/**/coverage.cobertura.xml
+          if-no-files-found: ignore
+
+      - name: Pack (verifies the packages build; nothing is pushed here)
+        run: |
+          dotnet pack src/Linq2Dashboard/Linq2Dashboard.csproj -c Release --no-build -o artifacts
+          dotnet pack src/Linq2Dashboard.Blazor/Linq2Dashboard.Blazor.csproj -c Release --no-build -o artifacts
+
+      - name: Upload packages artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: artifacts/*.nupkg
+
+      - name: Install the WebAssembly tools workload (ahead-of-time compilation)
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        run: dotnet workload install wasm-tools
+
+      - name: Publish the docs site
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        run: dotnet publish docs/Linq2Dashboard.Docs -c Release -o publish -p:RunAOTCompilation=true
+
+      - name: Prepare for GitHub Pages
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        run: |
+          # A project site lives under the repository name.
+          sed -i 's|<base href="/" />|<base href="/Linq2Dashboard/" />|' publish/wwwroot/index.html
+          # Deep links load the app rather than a Pages 404.
+          cp publish/wwwroot/index.html publish/wwwroot/404.html
+          # Pages ignores folders starting with an underscore unless told not to.
+          touch publish/wwwroot/.nojekyll
+
+      - name: Upload Pages artifact
+        if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: publish/wwwroot
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

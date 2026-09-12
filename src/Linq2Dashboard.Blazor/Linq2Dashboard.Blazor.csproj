@@ -5,8 +5,15 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>Linq2Dashboard.Blazor</RootNamespace>
+    <IsPackable>true</IsPackable>
     <PackageId>Linq2Dashboard.Blazor</PackageId>
-    <Description>Blazor components for Linq2Dashboard: facets, metrics and paged results over a DashboardState.</Description>
+    <Description>Blazor components for Linq2Dashboard: value, range and date facets, active-selection chips, metric tiles and paged or virtualised results over a DashboardState. Plain CSS with custom properties; one formatter for culture.</Description>
+    <PackageTags>blazor;blazor-components;faceted-search;facets;dashboard;linq</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -19,6 +26,10 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Linq2Dashboard\Linq2Dashboard.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

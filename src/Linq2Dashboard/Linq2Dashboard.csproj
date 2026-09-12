@@ -6,9 +6,20 @@
     <Nullable>enable</Nullable>
     <RootNamespace>Linq2Dashboard</RootNamespace>
     <AssemblyName>Linq2Dashboard</AssemblyName>
+    <IsPackable>true</IsPackable>
     <PackageId>Linq2Dashboard</PackageId>
-    <Description>Interactive exploration of large in-memory collections: facets, counts, metrics and paging.</Description>
+    <Description>Faceted exploration of large in-memory collections: facets with total and filtered counts, metrics and paged results that update together on every selection. The engine only; no UI dependency.</Description>
+    <PackageTags>faceted-search;facets;dashboard;linq;in-memory;analytics;filtering</PackageTags>
   </PropertyGroup>
+
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Linq2Dashboard.Tests" />
