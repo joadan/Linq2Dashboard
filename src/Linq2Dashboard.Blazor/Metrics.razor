@@ -1,26 +1,13 @@
 @typeparam T
 @inherits DashboardComponentBase<T>
 
-<dl class="l2d-metrics">
+<div class="l2d-metrics">
     @if (IncludeMatchingCount)
     {
-        <div class="l2d-metric l2d-metric-matching" data-key="">
-            <dt class="l2d-metric-title">@MatchingCountTitle</dt>
-            <dd class="l2d-metric-value">@Formatter.FormatCount(State.MatchingCount)</dd>
-        </div>
+        <MatchingCount T="T" Title="@MatchingCountTitle" />
     }
     @foreach (MetricState metric in Shown)
     {
-        <div class="l2d-metric @(metric.HasValue ? null : "l2d-metric-empty")" data-key="@metric.Key">
-            @if (MetricTemplate is not null)
-            {
-                @MetricTemplate(metric)
-            }
-            else
-            {
-                <dt class="l2d-metric-title">@metric.Title</dt>
-                <dd class="l2d-metric-value">@Formatter.FormatMetric(metric)</dd>
-            }
-        </div>
+        <Metric T="T" Key="@metric.Key" MetricTemplate="MetricTemplate" />
     }
-</dl>
+</div>

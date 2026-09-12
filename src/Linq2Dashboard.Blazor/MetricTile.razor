@@ -1,0 +1,13 @@
+@* The tile shared by Metric and MatchingCount: a title over a value, or custom content. *@
+
+<div class="l2d-metric @CssClass @(IsEmpty ? "l2d-metric-empty" : null)" data-key="@Key">
+    @if (ChildContent is not null)
+    {
+        @ChildContent
+    }
+    else
+    {
+        <span class="l2d-metric-title">@Title</span>
+        <span class="l2d-metric-value">@Value</span>
+    }
+</div>

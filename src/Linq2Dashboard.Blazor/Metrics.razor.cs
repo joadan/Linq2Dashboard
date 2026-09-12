@@ -2,6 +2,10 @@ using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
 
+/// <summary>
+/// Every metric as a grid of tiles, one <see cref="Metric{T}"/> per key. Place <see cref="Metric{T}"/>
+/// and <see cref="MatchingCount{T}"/> yourself instead when the layout needs tiles in different places.
+/// </summary>
 public partial class Metrics<T>
 {
     /// <summary>Metric keys to show, in this order. Default: every metric in definition order.</summary>

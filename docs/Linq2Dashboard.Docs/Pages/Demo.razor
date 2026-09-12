@@ -50,7 +50,11 @@ else
                 </div>
                
                 <ActiveSelections T="SampleOrder" />
-                <Metrics T="SampleOrder" IncludeMatchingCount="true" />
+                <div class="demo-metrics">
+                    <MatchingCount T="SampleOrder" Title="Orders matching" />
+                    <Metric T="SampleOrder" Key="revenue" />
+                    <Metric T="SampleOrder" Key="average" />
+                </div>
                 <Results T="SampleOrder" Layout="ResultsLayout.Table" Virtualize="true" ItemSize="33">
                     <HeaderTemplate>
                         <tr>

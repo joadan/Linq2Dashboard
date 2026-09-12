@@ -2,33 +2,4 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(var(--l2d-metric-min-width, 9rem), 1fr));
     gap: var(--l2d-gap, 0.375rem);
-    margin: 0;
-}
-
-.l2d-metric {
-    display: flex;
-    flex-direction: column;
-    gap: 0.125rem;
-    padding: var(--l2d-metric-padding, 0.625rem 0.75rem);
-    border: 1px solid var(--l2d-border, #d4d4d8);
-    border-radius: var(--l2d-radius, 0.25rem);
-    background: var(--l2d-metric-background, transparent);
-}
-
-.l2d-metric-title {
-    margin: 0;
-    font-size: var(--l2d-small-size, 0.8125rem);
-    color: var(--l2d-muted, #71717a);
-}
-
-.l2d-metric-value {
-    margin: 0;
-    font-size: var(--l2d-metric-size, 1.375rem);
-    font-weight: 600;
-    font-variant-numeric: tabular-nums;
-    line-height: 1.2;
-}
-
-.l2d-metric-empty .l2d-metric-value {
-    color: var(--l2d-muted, #71717a);
 }
