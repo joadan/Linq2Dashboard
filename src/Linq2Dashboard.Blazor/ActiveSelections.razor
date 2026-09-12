@@ -1,0 +1,112 @@
+@typeparam T
+@inherits DashboardComponentBase<T>
+
+@if (State.Selections.IsEmpty)
+{
+    @if (!HideWhenEmpty)
+    {
+        <div class="l2d-active l2d-active-empty">@EmptyText</div>
+    }
+}
+else
+{
+    <div class="l2d-active">
+        <ul class="l2d-active-chips">
+            @foreach (Chip chip in Chips())
+            {
+                <li class="l2d-chip" data-key="@chip.Key">
+                    @if (ShowFacetTitle)
+                    {
+                        <span class="l2d-chip-facet">@chip.FacetTitle</span>
+                    }
+                    <span class="l2d-chip-label">@chip.Label</span>
+                    <button type="button" class="l2d-chip-remove" aria-label="@RemoveText @chip.Label" title="@RemoveText" @onclick="chip.Remove">×</button>
+                </li>
+            }
+        </ul>
+        <button type="button" class="l2d-active-clear-all" @onclick="() => Context.ClearAllAsync()">@ClearAllText</button>
+    </div>
+}
+
+@code {
+    /// <summary>Render nothing when there is no selection. Default true.</summary>
+    [Parameter]
+    public bool HideWhenEmpty { get; set; } = true;
+
+    /// <summary>Prefix each chip with its facet's title. Default true.</summary>
+    [Parameter]
+    public bool ShowFacetTitle { get; set; } = true;
+
+    [Parameter]
+    public string EmptyText { get; set; } = "No selections";
+
+    [Parameter]
+    public string ClearAllText { get; set; } = "Clear all";
+
+    [Parameter]
+    public string RemoveText { get; set; } = "Remove";
+
+    private IEnumerable<Chip> Chips()
+    {
+        foreach (FacetState facet in State.Facets)
+        {
+            switch (facet.Selection)
+            {
+                case null:
+                    continue;
+
+                case ValueSelection values:
+                    // One chip per value; removing it toggles that value off (concept §4.1).
+                    foreach (object? value in values.Values)
+                    {
+                        object? captured = value;
+                        yield return new Chip(facet.Key, facet.Title, Formatter.FormatValue(facet, value), () => Context.ToggleAsync(facet.Key, captured));
+                    }
+
+                    break;
+
+                case RangeSelection range when facet is RangeFacetState rangeFacet:
+                    yield return new Chip(facet.Key, facet.Title, RangeLabel(rangeFacet, range), () => Context.ClearAsync(facet.Key));
+                    break;
+
+                case DateSelection date when facet is DateFacetState dateFacet:
+                    yield return new Chip(facet.Key, facet.Title, DateLabel(dateFacet, date), () => Context.ClearAsync(facet.Key));
+                    break;
+
+                default:
+                    yield return new Chip(facet.Key, facet.Title, facet.Selection.ToString() ?? string.Empty, () => Context.ClearAsync(facet.Key));
+                    break;
+            }
+        }
+    }
+
+    /// <summary>The bucket's own label when the interval is exactly a bucket, otherwise the formatter's interval text.</summary>
+    private string RangeLabel(RangeFacetState facet, RangeSelection selection)
+    {
+        if (selection.OnlyNulls)
+        {
+            return Formatter.NullLabel;
+        }
+
+        RangeBucket? bucket = facet.Buckets.FirstOrDefault(b => b.ToSelection().Equals(selection));
+        return bucket is not null ? Formatter.FormatRangeBucket(bucket) : Formatter.FormatRangeSelection(selection);
+    }
+
+    private string DateLabel(DateFacetState facet, DateSelection selection)
+    {
+        if (selection.OnlyNulls)
+        {
+            return Formatter.NullLabel;
+        }
+
+        if (selection.Preset is DatePreset preset)
+        {
+            return Formatter.FormatPreset(preset);
+        }
+
+        DateBucket? bucket = facet.Buckets.FirstOrDefault(b => b.ToSelection().Equals(selection));
+        return bucket is not null ? Formatter.FormatDateBucket(bucket, facet.Granularity) : Formatter.FormatDateSelection(selection);
+    }
+
+    private sealed record Chip(string Key, string FacetTitle, string Label, Func<Task> Remove);
+}

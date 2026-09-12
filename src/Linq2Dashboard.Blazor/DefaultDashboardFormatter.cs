@@ -78,6 +78,47 @@ public class DefaultDashboardFormatter : IDashboardFormatter
         _ => preset.ToString(),
     };
 
+    public virtual string FormatRangeSelection(RangeSelection selection)
+    {
+        if (selection.OnlyNulls)
+        {
+            return NullLabel;
+        }
+
+        string text = (selection.From, selection.To) switch
+        {
+            (null, null) => "any",
+            (double from, null) => $"{(selection.FromInclusive ? "≥" : ">")} {FormatNumber(from)}",
+            (null, double to) => $"{(selection.ToInclusive ? "≤" : "<")} {FormatNumber(to)}",
+            (double from, double to) => $"{FormatNumber(from)} – {FormatNumber(to)}",
+        };
+
+        return selection.IncludeNull ? $"{text} or {NullLabel}" : text;
+    }
+
+    public virtual string FormatDateSelection(DateSelection selection)
+    {
+        if (selection.OnlyNulls)
+        {
+            return NullLabel;
+        }
+
+        if (selection.Preset is DatePreset preset)
+        {
+            return FormatPreset(preset);
+        }
+
+        string text = (selection.From, selection.To) switch
+        {
+            (null, null) => "any",
+            (DateTimeOffset from, null) => $"from {from.ToString("d", Culture)}",
+            (null, DateTimeOffset to) => $"before {to.ToString("d", Culture)}",
+            (DateTimeOffset from, DateTimeOffset to) => $"{from.ToString("d", Culture)} – {to.ToString("d", Culture)}",
+        };
+
+        return selection.IncludeNull ? $"{text} or {NullLabel}" : text;
+    }
+
     /// <summary>Whole numbers without decimals, others with two.</summary>
     protected virtual string FormatNumber(double value) =>
         value == Math.Floor(value) && Math.Abs(value) < 1e15
