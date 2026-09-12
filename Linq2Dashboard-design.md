@@ -12,7 +12,7 @@
 
 - **One million rows, ten facets, one high-cardinality facet, interactive.** A full recalculation after a click should land well under 50 ms on a developer laptop. Building the dashboard may take a couple of seconds.
 - **The engine is a pure function.** `Dashboard<T>` is immutable after construction. `Calculate(selections)` returns an immutable `DashboardState<T>`. Nothing about a dashboard changes when a user clicks (§C4.9).
-- **Columnar first, bitmaps where they pay.** Every facet is stored as one integer code per row. Counting is a single pass over the rows in context. Per-value bitmaps are an optimisation enabled by measurement, not an assumption.
+- **Columnar only.** Every facet is stored as one integer code per row. Counting is a single pass over the rows in context. Per-value bitmaps are not part of the first version; they are a later optimisation to be justified by a benchmark scenario that needs them (§3.4).
 - **No surprises at the boundary.** Everything the UI touches is a plain, serialisable, non-generic type.
 
 ---
@@ -232,7 +232,6 @@ int[]     codes        one per row; 0 = null, 1..V = dictionary index + 1
 TValue[]  dictionary   distinct non-null values, in first-seen order
 string[]  labels       Format(dictionary[i]), built lazily for searchable facets
 int[]     totalCounts  per code, computed once
-RowSet[]? perValue     optional, see §3.4
 ```
 
 - Equality of values uses `EqualityComparer<TValue>.Default` unless the builder is given a comparer. Case-insensitive strings are a builder option, not a default.
@@ -276,20 +275,16 @@ int[]  sortedRows      row ids ordered by the application-defined sort, computed
 
 If no sort is defined, this is the identity and is not allocated.
 
-### 3.4 Low versus high cardinality
+### 3.4 Cardinality
 
-Two strategies, chosen per value facet at build time:
+The first version uses one strategy for every value facet regardless of cardinality: the `codes` column, a scan to turn a selection into a row set, and a counting pass over the context rows. Cost is linear in the number of rows and independent of the number of distinct values.
 
-| | Columnar only | Columnar + per-value bitmaps |
+| Facet | Storage at 1 M rows | Per calculation |
 |---|---|---|
-| Storage per facet | `codes` (4 B/row) | `codes` + V × N/8 bytes |
-| Selection → row set | one scan of `codes` | OR of the selected values' bitmaps |
-| Counting | one pass over the context rows | popcount(context AND perValue[v]) for each v |
-| Good when | V is large, or memory matters | V is small and selections are frequent |
+| Country, 20 values | 4 MB of codes | 21-entry counter array |
+| Customer, 100 000 values | 4 MB of codes | 400 KB counter array, partial sort for top N |
 
-The default threshold is **V ≤ 64** for enabling bitmaps. At 1 M rows that is at most 8 MB per facet. The threshold is a builder option, and the baseline columnar path must be correct and fast enough on its own so that turning bitmaps off is always safe. Whether the bitmaps are worth their memory at all is a benchmark question (§8), not a design assumption.
-
-A 100 000-value facet is columnar only: 4 MB of codes, a 400 KB counter array per calculation, and no per-value sets.
+Per-value bitmaps (one `RowSet` per distinct value, selection as an OR of sets, counting as popcount of AND) are a known later optimisation for low-cardinality facets with frequent selection changes. They cost `V × N / 8` bytes per facet and would be gated by a cardinality threshold. They are deliberately left out until the benchmark suite (§8) shows a scenario where the columnar path misses its target. Nothing outside `Indexing/` depends on which strategy a facet uses, so adding them later is local.
 
 ---
 
@@ -301,7 +296,7 @@ A 100 000-value facet is columnar only: 4 MB of codes, a 400 KB counter array pe
 
 For each facet `f` with a non-empty selection, produce `R_f`:
 
-- Value: if bitmaps exist, OR the selected values' sets. Otherwise scan `codes` and set a bit where `codes[row]` is in the selected code set (a small `HashSet<int>` or, for tiny selections, a bitmask over codes).
+- Value: scan `codes` and set a bit where `codes[row]` is in the selected code set. The selected codes are looked up in a `bool[V + 1]` mask built once per selection, so the inner loop is one array read and one branch per row.
 - Range: scan `values`; set a bit where the value is inside the interval. OR in `nulls` if `IncludeNull`.
 - Date: resolve preset to `[from, to)` ticks if needed; scan `ticks`. OR in `nulls` if `IncludeNull`.
 
@@ -338,7 +333,7 @@ foreach (int row in C_f.Rows())
     counts[codes[row]]++;
 ```
 
-One sequential pass over the rows in context. Cost is proportional to `|C_f|`, not to `V`. With bitmaps enabled for a small `V`, the alternative `popcount(C_f AND perValue[v])` for each `v` is used instead; whichever the facet was built with.
+One sequential pass over the rows in context. Cost is proportional to `|C_f|`, not to `V`.
 
 `counts[0]` is the null value's filtered count (§C4.8). Total counts come from the column and are never recomputed.
 
@@ -386,7 +381,7 @@ For 1 M rows, ten facets, three of them with selections:
 | Metrics (3, one column) | 1 pass over M | ~1 ms |
 | First page | 1 walk | ~1 ms |
 
-Roughly 20 to 30 ms single-threaded, before any bitmap or parallel gains. This is the number the benchmark suite must confirm or refute.
+Roughly 20 to 30 ms single-threaded, before any parallel gains. This is the number the benchmark suite must confirm or refute.
 
 ---
 
@@ -490,20 +485,22 @@ The benchmark project is part of the first version, not an afterthought. It gene
 4. `Calculate` with a range and a date interval active.
 5. `Search("acme")` on Customer.
 6. `GetPage` first, middle and last page.
-7. Everything above with per-value bitmaps forced on and forced off.
-8. Everything above with parallel counting on and off.
+7. Everything above with parallel counting on and off.
 
-**Targets**: `Create` under 2 s. Warm `Calculate` under 50 ms in every scenario. Peak managed memory reported per facet kind so the bitmap threshold can be chosen with numbers rather than by feel.
+**Targets**: `Create` under 2 s. Warm `Calculate` under 50 ms in every scenario. Peak managed memory reported per facet kind. If a scenario misses its target, the per-facet timings say whether per-value bitmaps (§3.4) would help before any are added.
 
 ---
 
 ## 9. Open questions
 
-1. **Per-value bitmaps in the first version at all.** Ship the hybrid with the 64-value default, or ship columnar only and add bitmaps once the benchmark shows a scenario that needs them?
-2. **Range bounds as `double`.** Accept the precision trade for `decimal` properties, or make `RangeSelection` generic over the value type at the cost of a non-uniform selection model and a harder serializer?
-3. **Stateless dashboard.** `Calculate(selections)` with the UI holding the selections is the proposal. The alternative is a dashboard that owns a current selection and exposes `SetSelection` plus a `Changed` event. The stateless form is simpler and matches §C2; confirm.
-4. **Value equality.** Default comparer with an opt-in for case-insensitive strings is the proposal. Should string facets be case-insensitive by default instead?
-5. **Parallel counting default.** Off by default is the proposal until the benchmarks show a clear win on a typical server core count.
-6. **Project rename.** `Linq2Dashboard.Core` to `Linq2Dashboard` under `src/`. Any reason to keep the `.Core` suffix?
-7. **Selection serializer shape.** Query string plus JSON as proposed, or JSON only for the first version?
-8. **Custom facet interface exposure.** Public from day one as proposed, or internal until the built-ins have settled?
+1. **Value equality.** Default comparer with an opt-in for case-insensitive strings is the proposal. Should string facets be case-insensitive by default instead?
+2. **Parallel counting default.** Off by default is the proposal until the benchmarks show a clear win on a typical server core count.
+3. **Project rename.** `Linq2Dashboard.Core` to `Linq2Dashboard` under `src/`. Any reason to keep the `.Core` suffix?
+4. **Selection serializer shape.** Query string plus JSON as proposed, or JSON only for the first version?
+5. **Custom facet interface exposure.** Public from day one as proposed, or internal until the built-ins have settled?
+
+### Decided
+
+- **Columnar only in the first version.** No per-value bitmaps. Same strategy for every cardinality; bitmaps are a later, benchmark-justified addition. See §1, §3.4, §4.1.
+- **Range bounds are `double`.** The precision trade for `decimal` properties is accepted; range values are used only for filtering and bucketing, never for metrics. See §2.2, §3.3.
+- **The dashboard is stateless.** `Calculate(selections)` is the only entry point; the UI owns the current `Selections`. See §2.3, §7.
