@@ -1,4 +1,4 @@
-namespace Linq2Dashboard.Sample.Data;
+namespace Linq2Dashboard.SampleData;
 
 public sealed class SampleOrder
 {

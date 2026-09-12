@@ -1,0 +1,135 @@
+@page "/getting-started"
+
+<PageTitle>Getting started · Linq2Dashboard</PageTitle>
+
+<h1>Getting started</h1>
+
+<p>
+    Two packages: <code>Linq2Dashboard</code> is the engine and has no UI dependency; <code>Linq2Dashboard.Blazor</code>
+    renders it. Both target .NET 10. Until they are on NuGet, reference the projects from the
+    <a href="https://github.com/joadan/Linq2Dashboard" target="_blank" rel="noopener">repository</a>.
+</p>
+
+<h2>1. Build a dashboard</h2>
+
+<p>Build it once, from the collection you already have in memory. Facets, metrics and the sort order are fixed at this point; only selections change afterwards.</p>
+
+<pre><code>@BuilderExample</code></pre>
+
+<h2>2. Calculate a state</h2>
+
+<p>The UI owns the selections. The dashboard is a pure function of them: same selections, same state.</p>
+
+<pre><code>@CalculateExample</code></pre>
+
+<h2>3. Render it in Blazor</h2>
+
+<p>Register the dashboard once, for example as a singleton, and put the components inside a <code>DashboardView</code>. Every component reads the cascaded state and turns clicks into selection changes; none of them counts anything.</p>
+
+<pre><code>@BlazorExample</code></pre>
+
+<h2>What the components do</h2>
+
+<table>
+    <thead>
+        <tr><th>Component</th><th>Renders</th><th>Notable options</th></tr>
+    </thead>
+    <tbody>
+        <tr><td><code>DashboardView</code></td><td>Owns selections and state; cascades them. Bindable <code>Selections</code>.</td><td><code>Formatter</code>, custom child content</td></tr>
+        <tr><td><code>ValueFacet</code></td><td>Values with counts, the null value, "Other", search.</td><td><code>ShowTotals</code>, <code>HideZeroCounts</code>, <code>Collapsible</code>, templates</td></tr>
+        <tr><td><code>RangeFacet</code></td><td>Fixed buckets as a histogram or list; optional slider.</td><td><code>ShowSlider</code>, <code>Layout</code>, <code>ShowBounds</code></td></tr>
+        <tr><td><code>DateFacet</code></td><td>Presets with counts and periods as bars.</td><td><code>ShowPresets</code>, <code>Layout</code></td></tr>
+        <tr><td><code>ActiveSelections</code></td><td>One removable chip per selected value or interval, clear all.</td><td><code>ShowFacetTitle</code></td></tr>
+        <tr><td><code>Metrics</code></td><td>One tile per metric; a dash when no row contributed.</td><td><code>Keys</code>, <code>IncludeMatchingCount</code>, <code>MetricTemplate</code></td></tr>
+        <tr><td><code>Results</code></td><td>Matching rows through your row template, paged or virtualised.</td><td><code>Layout</code>, <code>PageSize</code>, <code>Virtualize</code></td></tr>
+    </tbody>
+</table>
+
+<h2>Formatting and styling</h2>
+
+<ul>
+    <li><strong>One formatter.</strong> An <code>IDashboardFormatter</code> cascades from <code>DashboardView</code>. Culture, number formats, the null label and preset names come from it, and from nowhere else. Derive from <code>DefaultDashboardFormatter</code> to change any of them.</li>
+    <li><strong>Custom properties.</strong> Every <code>--l2d-*</code> property is declared on <code>.l2d-dashboard</code>. Set them on that element or an ancestor to restyle without touching markup. Dark-scheme neutrals are built in.</li>
+    <li><strong>Templates.</strong> <code>HeaderTemplate</code> and <code>ValueTemplate</code> on the facets, <code>MetricTemplate</code> on the tiles, <code>RowTemplate</code>, <code>HeaderTemplate</code> and <code>EmptyTemplate</code> on the results.</li>
+</ul>
+
+<h2>Bookmarks</h2>
+
+<p>Selections serialise to JSON through <code>dashboard.Serializer</code>. Reading is lenient: unknown facets and values that cannot be read are dropped, so a stale bookmark degrades to fewer selections rather than an error. The <a href="demo">demo</a> keeps the current selections in the URL this way.</p>
+
+@code {
+    private const string BuilderExample = """
+        using Linq2Dashboard;
+
+        var dashboard = Dashboard.Create(orders, b =>
+        {
+            b.Where(x => x.CompanyId == 42);                       // fixed filter: defines the dataset
+
+            b.ValueFacet(x => x.Country);
+            b.ValueFacet(x => x.Status).Title("Order status");
+            b.ValueFacet(x => x.Customer).Top(20).Searchable();
+            b.BooleanFacet(x => x.IsActive);
+            b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);   // below 100, 100-500, 500-1000, 1000 and above
+            b.DateFacet(x => x.OrderDate)
+             .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
+             .Granularity(DateGranularity.Month)
+             .Presets(DatePreset.Last30Days, DatePreset.ThisYear);
+
+            b.Count("orders");
+            b.Sum("revenue", x => x.Amount);
+            b.Average("average", x => x.Amount);
+
+            b.OrderByDescending(x => x.OrderDate);
+        });
+        """;
+
+    private const string CalculateExample = """
+        var selections = Selections.Empty
+            .Toggle("Country", "SE")
+            .With("Amount", RangeSelection.Between(100, 1000));
+
+        DashboardState<Order> state = dashboard.Calculate(selections);
+
+        state.MatchingCount;                          // rows matching every selection
+        state.Metric("revenue").Value;                // sum over the matching rows, null if none
+
+        var country = (ValueFacetState)state.Facet("Country");
+        foreach (FacetValue value in country.Values)  // SE is selected; other countries keep their counts
+            Console.WriteLine($"{value.Value ?? "(none)"}  {value.FilteredCount}/{value.TotalCount}");
+
+        var amount = (RangeFacetState)state.Facet("Amount");
+        selections = selections.With("Amount", amount.Buckets[1].ToSelection());   // a bucket click
+
+        ResultPage<Order> page = state.GetPage(pageIndex: 0, pageSize: 50);
+
+        string bookmark = dashboard.Serializer.ToJson(selections);
+        Selections restored = dashboard.Serializer.FromJson(bookmark);
+        """;
+
+    private const string BlazorExample = """
+        @inject Dashboard<Order> Dashboard
+
+        <DashboardView T="Order" Dashboard="Dashboard" @bind-Selections="selections">
+            <aside>
+                <ValueFacet T="Order" Key="Country" />
+                <ValueFacet T="Order" Key="Customer" Collapsible="true" />
+                <RangeFacet T="Order" Key="Amount" ShowSlider="true" />
+                <DateFacet  T="Order" Key="OrderDate" />
+            </aside>
+            <main>
+                <Metrics T="Order" IncludeMatchingCount="true" />
+                <ActiveSelections T="Order" />
+                <Results T="Order" Layout="ResultsLayout.Table" PageSize="25">
+                    <HeaderTemplate><tr><th>Id</th><th>Country</th><th>Amount</th></tr></HeaderTemplate>
+                    <RowTemplate Context="order">
+                        <tr><td>@order.Id</td><td>@order.Country</td><td>@order.Amount</td></tr>
+                    </RowTemplate>
+                </Results>
+            </main>
+        </DashboardView>
+
+        @code {
+            private Selections selections = Selections.Empty;
+        }
+        """;
+}

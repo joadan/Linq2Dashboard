@@ -1,6 +1,6 @@
 using Linq2Dashboard;
 using Linq2Dashboard.Sample.Components;
-using Linq2Dashboard.Sample.Data;
+using Linq2Dashboard.SampleData;
 
 var builder = WebApplication.CreateBuilder(args);
 

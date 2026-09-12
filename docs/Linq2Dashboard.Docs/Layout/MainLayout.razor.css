@@ -1,0 +1,66 @@
+.site {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.site-header {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem 1.5rem;
+    padding: 0.75rem 2rem;
+    border-bottom: 1px solid var(--docs-border);
+    background: var(--docs-surface);
+}
+
+.site-brand {
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: inherit;
+    text-decoration: none;
+}
+
+.site-nav {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+}
+
+.site-nav ::deep a {
+    color: var(--docs-muted);
+    text-decoration: none;
+    padding: 0.25rem 0;
+    border-bottom: 2px solid transparent;
+}
+
+.site-nav ::deep a:hover {
+    color: var(--docs-text);
+}
+
+.site-nav ::deep a.active {
+    color: var(--docs-text);
+    border-bottom-color: var(--docs-accent);
+}
+
+.site-main {
+    flex: 1;
+    width: 100%;
+    max-width: 72rem;
+    margin: 0 auto;
+    padding: 1.5rem 2rem 3rem;
+}
+
+.site-footer {
+    padding: 1rem 2rem;
+    border-top: 1px solid var(--docs-border);
+    color: var(--docs-muted);
+    font-size: 0.8125rem;
+}
+
+@media (max-width: 48rem) {
+    .site-header, .site-main, .site-footer {
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+}

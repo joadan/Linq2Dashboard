@@ -1,0 +1,58 @@
+@inject HttpClient Http
+@using Markdig
+
+@* Renders one of the repository's markdown documents, copied into wwwroot/docs at build time. *@
+
+@if (error is not null)
+{
+    <p class="markdown-error">@error</p>
+}
+else if (html is null)
+{
+    <p class="markdown-loading">Loading…</p>
+}
+else
+{
+    <article class="markdown">@html</article>
+}
+
+@code {
+    private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
+        .UseAdvancedExtensions()
+        .UseAutoIdentifiers()
+        .Build();
+
+    private MarkupString? html;
+    private string? error;
+    private string? loadedPath;
+
+    /// <summary>Path under wwwroot, for example <c>docs/concept.md</c>.</summary>
+    [Parameter, EditorRequired]
+    public string Path { get; set; } = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (Path == loadedPath)
+        {
+            return;
+        }
+
+        loadedPath = Path;
+        html = null;
+        error = null;
+        try
+        {
+            string markdown = await Http.GetStringAsync(Path);
+            html = new MarkupString(Markdown.ToHtml(RewriteLinks(markdown), Pipeline));
+        }
+        catch (HttpRequestException e)
+        {
+            error = $"Could not load {Path}: {e.Message}";
+        }
+    }
+
+    /// <summary>The documents link to each other by file name in the repository; on the site they are pages.</summary>
+    private static string RewriteLinks(string markdown) => markdown
+        .Replace("](Linq2Dashboard-concept.md)", "](concept)")
+        .Replace("](Linq2Dashboard-design.md)", "](design)");
+}

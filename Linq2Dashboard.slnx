@@ -11,6 +11,10 @@
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Linq2Dashboard.Sample/Linq2Dashboard.Sample.csproj" />
+    <Project Path="samples/Linq2Dashboard.SampleData/Linq2Dashboard.SampleData.csproj" />
+  </Folder>
+  <Folder Name="/docs/">
+    <Project Path="docs/Linq2Dashboard.Docs/Linq2Dashboard.Docs.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/Linq2Dashboard.Tests/Linq2Dashboard.Tests.csproj" />

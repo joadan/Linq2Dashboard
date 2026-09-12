@@ -1,0 +1,43 @@
+.lead {
+    font-size: 1.125rem;
+    max-width: 48rem;
+}
+
+.button {
+    display: inline-block;
+    margin-right: 0.5rem;
+    padding: 0.5rem 1rem;
+    border-radius: 0.375rem;
+    background: var(--docs-accent);
+    color: #fff;
+    text-decoration: none;
+    font-weight: 600;
+}
+
+.button.secondary {
+    background: transparent;
+    color: var(--docs-accent);
+    border: 1px solid var(--docs-border);
+}
+
+.cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 1rem;
+}
+
+.card {
+    padding: 1rem 1.25rem;
+    border: 1px solid var(--docs-border);
+    border-radius: 0.5rem;
+    background: var(--docs-surface);
+}
+
+.card h3 {
+    margin: 0 0 0.5rem;
+}
+
+.card p {
+    margin: 0;
+    color: var(--docs-muted);
+}

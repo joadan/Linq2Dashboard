@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <RootNamespace>Linq2Dashboard.Docs</RootNamespace>
+    <IsPackable>false</IsPackable>
+    <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <!-- Ahead-of-time compilation is turned on by the Pages workflow (-p:RunAOTCompilation=true); it needs the wasm-tools workload. -->
+    <RunAOTCompilation Condition="'$(RunAOTCompilation)' == ''">false</RunAOTCompilation>
+    <WasmEnableSIMD>true</WasmEnableSIMD>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Markdig" Version="1.3.2" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="10.0.11" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="10.0.11" PrivateAssets="all" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\Linq2Dashboard.Blazor\Linq2Dashboard.Blazor.csproj" />
+    <ProjectReference Include="..\..\samples\Linq2Dashboard.SampleData\Linq2Dashboard.SampleData.csproj" />
+  </ItemGroup>
+
+  <!-- The concept and design documents are rendered by the site; copy them from the repository root so they never drift. -->
+  <ItemGroup>
+    <RepositoryDocument Include="..\..\Linq2Dashboard-concept.md" Name="concept.md" />
+    <RepositoryDocument Include="..\..\Linq2Dashboard-design.md" Name="design.md" />
+  </ItemGroup>
+
+  <Target Name="CopyRepositoryDocuments" BeforeTargets="ResolveStaticWebAssetsInputs;BeforeBuild">
+    <Copy SourceFiles="@(RepositoryDocument)" DestinationFiles="@(RepositoryDocument->'wwwroot\docs\%(Name)')" SkipUnchangedFiles="true" />
+  </Target>
+
+</Project>

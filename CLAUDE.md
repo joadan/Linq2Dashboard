@@ -18,6 +18,8 @@ src/Linq2Dashboard/            core, net10.0, no dependencies, package id Linq2D
   Metrics/  Selections/  State/  Serialization/  Calculation/
 src/Linq2Dashboard.Blazor/     Razor class library: DashboardView<T>, DashboardContext<T>, IDashboardFormatter, components
 samples/Linq2Dashboard.Sample/ Blazor Server sample over 200 000 generated rows
+samples/Linq2Dashboard.SampleData/  the generator both the sample and the docs site use
+docs/Linq2Dashboard.Docs/      Blazor WebAssembly docs site: demo, getting started, concept and design rendered from the root markdown; deployed to GitHub Pages by .github/workflows/pages.yml
 tests/Linq2Dashboard.Tests/    xUnit, InternalsVisibleTo
 tests/Linq2Dashboard.Blazor.Tests/   bUnit; tests pass an invariant-culture formatter so they do not depend on the machine
 benchmarks/Linq2Dashboard.Benchmarks/   BenchmarkDotNet, plus a --memory report

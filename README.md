@@ -2,7 +2,7 @@
 
 Interactive exploration of large in-memory collections for .NET: facets with counts, metrics, and paged results that all update together on every click. The faceted-search experience of an e-commerce site, applied to any collection, with a LINQ-flavoured API.
 
-The core library has no UI dependency. A Blazor package renders it.
+The core library has no UI dependency. A Blazor package renders it. **Docs and a live demo:** [joadan.github.io/Linq2Dashboard](https://joadan.github.io/Linq2Dashboard/), a Blazor WebAssembly site that builds the dashboard in your browser.
 
 ## Status
 
@@ -122,6 +122,8 @@ Every facet is a dictionary-encoded column; counting is one pass over the rows i
 src/Linq2Dashboard/              the core library, net10.0, no dependencies
 src/Linq2Dashboard.Blazor/       Blazor components
 samples/Linq2Dashboard.Sample/   Blazor Server sample app
+samples/Linq2Dashboard.SampleData/   generated sample data shared by the sample and the docs site
+docs/Linq2Dashboard.Docs/        Blazor WebAssembly docs site with the live demo, deployed to GitHub Pages by .github/workflows/pages.yml
 tests/Linq2Dashboard.Tests/      xUnit; every behavioural rule has a named test
 tests/Linq2Dashboard.Blazor.Tests/   bUnit component tests
 benchmarks/Linq2Dashboard.Benchmarks/   BenchmarkDotNet suite and a --memory report
@@ -132,6 +134,7 @@ Linq2Dashboard-design.md         how it is built, with measured numbers
 ```powershell
 dotnet test                                                      # all tests
 dotnet run --project samples/Linq2Dashboard.Sample               # the sample app
+dotnet run --project docs/Linq2Dashboard.Docs                    # the docs site, locally
 dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --memory
 dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --job short --filter *
 ```

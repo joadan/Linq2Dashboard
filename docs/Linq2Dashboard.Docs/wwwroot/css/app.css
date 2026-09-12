@@ -1,0 +1,179 @@
+:root {
+    --docs-text: #18181b;
+    --docs-muted: #71717a;
+    --docs-background: #fafafa;
+    --docs-surface: #ffffff;
+    --docs-border: #e4e4e7;
+    --docs-accent: #2563eb;
+    --docs-code: #f4f4f5;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --docs-text: #e4e4e7;
+        --docs-muted: #a1a1aa;
+        --docs-background: #18181b;
+        --docs-surface: #1f1f23;
+        --docs-border: #3f3f46;
+        --docs-accent: #60a5fa;
+        --docs-code: #27272a;
+    }
+}
+
+* {
+    box-sizing: border-box;
+}
+
+html, body {
+    margin: 0;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+    color: var(--docs-text);
+    background: var(--docs-background);
+}
+
+a {
+    color: var(--docs-accent);
+}
+
+h1 {
+    font-size: 1.75rem;
+    margin: 0 0 1rem;
+}
+
+h1:focus {
+    outline: none;
+}
+
+h2 {
+    font-size: 1.25rem;
+    margin: 2rem 0 0.75rem;
+}
+
+h3 {
+    font-size: 1.05rem;
+    margin: 1.5rem 0 0.5rem;
+}
+
+code, pre {
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 0.875em;
+}
+
+code {
+    padding: 0.1em 0.3em;
+    border-radius: 0.25rem;
+    background: var(--docs-code);
+}
+
+pre {
+    padding: 0.875rem 1rem;
+    border-radius: 0.375rem;
+    background: var(--docs-code);
+    overflow-x: auto;
+}
+
+pre code {
+    padding: 0;
+    background: none;
+}
+
+table {
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+th, td {
+    padding: 0.375rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--docs-border);
+    vertical-align: top;
+}
+
+th {
+    color: var(--docs-muted);
+    font-weight: 600;
+}
+
+blockquote {
+    margin: 1rem 0;
+    padding: 0.25rem 1rem;
+    border-left: 3px solid var(--docs-border);
+    color: var(--docs-muted);
+}
+
+hr {
+    border: none;
+    border-top: 1px solid var(--docs-border);
+    margin: 2rem 0;
+}
+
+/* Boot screen before the runtime is up. */
+.boot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    min-height: 100vh;
+}
+
+.boot-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.boot-hint {
+    color: var(--docs-muted);
+}
+
+.loading-progress {
+    position: relative;
+    display: block;
+    width: 6rem;
+    height: 6rem;
+}
+
+.loading-progress circle {
+    fill: none;
+    stroke: var(--docs-border);
+    stroke-width: 0.5rem;
+    transform-origin: 50% 50%;
+    transform: rotate(-90deg);
+}
+
+.loading-progress circle:last-child {
+    stroke: var(--docs-accent);
+    stroke-dasharray: calc(3.141 * var(--blazor-load-percentage, 0%) * 0.8), 500%;
+    transition: stroke-dasharray 0.05s ease-in-out;
+}
+
+.loading-progress-text {
+    color: var(--docs-muted);
+    font-size: 0.875rem;
+}
+
+.loading-progress-text:after {
+    content: var(--blazor-load-percentage-text, "Loading");
+}
+
+#blazor-error-ui {
+    display: none;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 1000;
+    padding: 0.6rem 1.25rem 0.7rem 1.25rem;
+    background: #fde047;
+    color: #18181b;
+    box-shadow: 0 -1px 2px rgba(0, 0, 0, 0.2);
+}
+
+#blazor-error-ui .dismiss {
+    position: absolute;
+    right: 0.75rem;
+    top: 0.5rem;
+    cursor: pointer;
+}

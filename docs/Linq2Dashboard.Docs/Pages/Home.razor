@@ -1,0 +1,53 @@
+@page "/"
+
+<PageTitle>Linq2Dashboard</PageTitle>
+
+<h1>Linq2Dashboard</h1>
+
+<p class="lead">
+    Interactive exploration of large in-memory collections for .NET: facets with counts, metrics and paged
+    results that all update together on every click. The faceted-search experience of an e-commerce site,
+    applied to any collection, with a LINQ-flavoured API and Blazor components on top.
+</p>
+
+<p>
+    <a class="button" href="demo">Try the demo</a>
+    <a class="button secondary" href="getting-started">Getting started</a>
+</p>
+
+<h2>What you get</h2>
+
+<div class="cards">
+    <div class="card">
+        <h3>Facets that explain themselves</h3>
+        <p>Every value shows how many rows it would give you. A facet's own selection is excluded from its own counts, so picking Sweden never zeroes out Norway.</p>
+    </div>
+    <div class="card">
+        <h3>Null is a value</h3>
+        <p>Missing values are shown, counted and selectable like any other. Filtered counts always add up to the rows in context.</p>
+    </div>
+    <div class="card">
+        <h3>Fast at a million rows</h3>
+        <p>Columnar indexes and a single counting pass per facet. About a second to build, 5 to 20 ms per click on a server, measured.</p>
+    </div>
+    <div class="card">
+        <h3>No UI in the core</h3>
+        <p>The engine is a pure function from selections to state. The Blazor package renders that state and never counts anything itself.</p>
+    </div>
+    <div class="card">
+        <h3>Bookmarkable</h3>
+        <p>Selections serialise to JSON, so a filtered view can be stored, put in a URL and restored later. The demo does exactly that.</p>
+    </div>
+    <div class="card">
+        <h3>Decisions, written down</h3>
+        <p>The <a href="concept">concept</a> says how it behaves and the <a href="design">design</a> says how it is built. Both are rendered here from the repository.</p>
+    </div>
+</div>
+
+<h2>Runs where .NET runs</h2>
+
+<p>
+    This site is Blazor WebAssembly. The dashboard behind the demo is generated, built and recalculated in your
+    browser with the same library a server would use. Blazor Server is the primary target for large datasets;
+    in the browser the dataset size is bounded by memory rather than by the library.
+</p>

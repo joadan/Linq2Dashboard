@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Linq2Dashboard.Blazor\Linq2Dashboard.Blazor.csproj" />
+    <ProjectReference Include="..\Linq2Dashboard.SampleData\Linq2Dashboard.SampleData.csproj" />
   </ItemGroup>
 
   <PropertyGroup>
