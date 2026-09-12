@@ -523,7 +523,9 @@ User clicks "Sweden"
     → StateHasChanged()
 ```
 
-The component owns `Selections` and the current `DashboardState<T>`. `Calculate` runs inline. At the measured cost (§4.8, 5 to 20 ms) that is acceptable on Blazor Server. On WebAssembly a million rows in the browser is a memory question before it is a speed question, and is not a first-version target.
+The component owns `Selections` and the current `DashboardState<T>`. `Calculate` runs inline. At the measured cost (§4.8, 5 to 20 ms) that is acceptable on Blazor Server.
+
+**Blazor Server is the primary target**; the sample application runs there. **WebAssembly works unchanged** and is supported: the core has no dependencies, needs no threads with parallel counting off, and time zone data is available in the browser. The limits are the browser's: the indexes (§8, 78 MB per million rows) plus the source objects share the WebAssembly heap, and `Create` runs several times slower interpreted than on the server JIT, though ahead-of-time compilation recovers most of that and enables the SIMD path in `RowSet`. A few hundred thousand rows is comfortable in the browser; a million is the host's call.
 
 ---
 
