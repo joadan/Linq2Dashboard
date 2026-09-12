@@ -9,44 +9,44 @@ namespace Linq2Dashboard;
 /// </summary>
 public sealed class DashboardState<T>
 {
-    private readonly Dashboard<T> _dashboard;
-    private readonly RowSet _matching;
-    private readonly Dictionary<string, FacetState> _facetsByKey;
-    private readonly Dictionary<string, MetricState> _metricsByKey;
+    private readonly Dashboard<T> dashboard;
+    private readonly RowSet matching;
+    private readonly Dictionary<string, FacetState> facetsByKey;
+    private readonly Dictionary<string, MetricState> metricsByKey;
 
     internal DashboardState(Dashboard<T> dashboard, Selections selections, RowSet matching, FacetState[] facets, MetricState[] metrics)
     {
-        _dashboard = dashboard;
+        this.dashboard = dashboard;
         Selections = selections;
-        _matching = matching;
+        this.matching = matching;
         Facets = facets;
         Metrics = metrics;
-        _facetsByKey = facets.ToDictionary(f => f.Key, StringComparer.Ordinal);
-        _metricsByKey = metrics.ToDictionary(m => m.Key, StringComparer.Ordinal);
+        facetsByKey = facets.ToDictionary(f => f.Key, StringComparer.Ordinal);
+        metricsByKey = metrics.ToDictionary(m => m.Key, StringComparer.Ordinal);
     }
 
     /// <summary>The selections this state was calculated from.</summary>
     public Selections Selections { get; }
 
     /// <summary>Rows in the dataset, after fixed filters (concept §4.3).</summary>
-    public int TotalCount => _dashboard.TotalCount;
+    public int TotalCount => dashboard.TotalCount;
 
     /// <summary>Rows satisfying every current selection (concept §3).</summary>
-    public int MatchingCount => _matching.Count;
+    public int MatchingCount => matching.Count;
 
     public IReadOnlyList<FacetState> Facets { get; }
 
     public IReadOnlyList<MetricState> Metrics { get; }
 
     public FacetState Facet(string key) =>
-        _facetsByKey.TryGetValue(key, out FacetState? facet)
+        facetsByKey.TryGetValue(key, out FacetState? facet)
             ? facet
             : throw new ArgumentException($"Unknown facet key '{key}'.", nameof(key));
 
-    public bool TryGetFacet(string key, out FacetState facet) => _facetsByKey.TryGetValue(key, out facet!);
+    public bool TryGetFacet(string key, out FacetState facet) => facetsByKey.TryGetValue(key, out facet!);
 
     public MetricState Metric(string key) =>
-        _metricsByKey.TryGetValue(key, out MetricState? metric)
+        metricsByKey.TryGetValue(key, out MetricState? metric)
             ? metric
             : throw new ArgumentException($"Unknown metric key '{key}'.", nameof(key));
 
@@ -76,7 +76,7 @@ public sealed class DashboardState<T>
                 continue;
             }
 
-            items.Add(_dashboard.ItemAt(row));
+            items.Add(dashboard.ItemAt(row));
             if (items.Count == pageSize)
             {
                 break;
@@ -93,22 +93,22 @@ public sealed class DashboardState<T>
         {
             foreach (int row in OrderedMatchingRows())
             {
-                yield return _dashboard.ItemAt(row);
+                yield return dashboard.ItemAt(row);
             }
         }
     }
 
-    internal RowSet Matching => _matching;
+    internal RowSet Matching => matching;
 
     private IEnumerable<int> OrderedMatchingRows()
     {
-        int[]? sorted = _dashboard.SortedRows;
+        int[]? sorted = dashboard.SortedRows;
         if (sorted is null)
         {
-            return _matching.Rows();
+            return matching.Rows();
         }
 
-        return Walk(sorted, _matching);
+        return Walk(sorted, matching);
 
         static IEnumerable<int> Walk(int[] sorted, RowSet matching)
         {

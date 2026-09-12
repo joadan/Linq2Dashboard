@@ -5,14 +5,14 @@ namespace Linq2Dashboard.Metrics;
 /// <summary>A metric as configured by the builder. Count has no selector; the others read a nullable double.</summary>
 internal sealed class MetricDefinition<T>
 {
-    private readonly Func<T, double?>? _selector;
+    private readonly Func<T, double?>? selector;
 
     public MetricDefinition(string key, Aggregation aggregation, Func<T, double?>? selector)
     {
         Key = key;
         Title = key;
         Aggregation = aggregation;
-        _selector = selector;
+        this.selector = selector;
     }
 
     public string Key { get; }
@@ -25,12 +25,11 @@ internal sealed class MetricDefinition<T>
 
     public MetricIndex Build(T[] items)
     {
-        if (_selector is null)
+        if (selector is null)
         {
             return new MetricIndex(Key, Title, Aggregation, null, items.Length);
         }
 
-        Func<T, double?> selector = _selector;
         var column = MetricColumn.Build(items.Length, (int row, out double value) =>
         {
             double? read = selector(items[row]);

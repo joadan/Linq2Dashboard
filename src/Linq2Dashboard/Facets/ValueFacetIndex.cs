@@ -6,7 +6,7 @@ namespace Linq2Dashboard.Facets;
 /// <summary>Built value or boolean facet: the dictionary-encoded column plus presentation options.</summary>
 internal sealed class ValueFacetIndex<TValue> : FacetIndex
 {
-    private readonly Lazy<string[]> _labels;
+    private readonly Lazy<string[]> labels;
 
     public ValueFacetIndex(string key, string title, FacetKind kind, ValueColumn<TValue> column, int? top, RankMode rankMode, bool searchable)
         : base(key, title, kind, column.RowCount)
@@ -15,7 +15,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         Top = top;
         RankMode = rankMode;
         Searchable = searchable;
-        _labels = new Lazy<string[]>(BuildLabels, LazyThreadSafetyMode.ExecutionAndPublication);
+        labels = new Lazy<string[]>(BuildLabels, LazyThreadSafetyMode.ExecutionAndPublication);
     }
 
     public ValueColumn<TValue> Column { get; }
@@ -112,11 +112,11 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     /// <summary>Design §4.4 search: values whose label contains the text, ranked, limited. Never the null value.</summary>
     private IReadOnlyList<FacetValue> Search(string text, int max, int[] counts, HashSet<int> selected)
     {
-        string[] labels = _labels.Value;
+        string[] all = labels.Value;
         var heap = new PriorityQueue<int, RankKey>(WorstFirst);
         for (int code = 1; code <= Column.DistinctCount; code++)
         {
-            if (labels[code - 1].Contains(text, StringComparison.OrdinalIgnoreCase))
+            if (all[code - 1].Contains(text, StringComparison.OrdinalIgnoreCase))
             {
                 Offer(heap, code, RankOf(code, counts), max);
             }
@@ -183,13 +183,13 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
 
     private string[] BuildLabels()
     {
-        var labels = new string[Column.DistinctCount];
+        var result = new string[Column.DistinctCount];
         for (int code = 1; code <= Column.DistinctCount; code++)
         {
-            labels[code - 1] = Convert.ToString(Column.ValueOf(code), CultureInfo.InvariantCulture) ?? string.Empty;
+            result[code - 1] = Convert.ToString(Column.ValueOf(code), CultureInfo.InvariantCulture) ?? string.Empty;
         }
 
-        return labels;
+        return result;
     }
 
     /// <summary>

@@ -7,26 +7,26 @@ namespace Linq2Dashboard.Indexing;
 /// </summary>
 internal sealed class MetricColumn
 {
-    private readonly double[] _values;
-    private readonly MetricAggregate _total;
+    private readonly double[] values;
+    private readonly MetricAggregate total;
 
     private MetricColumn(double[] values, MetricAggregate total)
     {
-        _values = values;
-        _total = total;
+        this.values = values;
+        this.total = total;
     }
 
-    public int RowCount => _values.Length;
+    public int RowCount => values.Length;
 
-    public ReadOnlySpan<double> Values => _values;
+    public ReadOnlySpan<double> Values => values;
 
     /// <summary>Rows that have a value, over the whole dataset.</summary>
-    public int ValueCount => _total.Count;
+    public int ValueCount => total.Count;
 
     public int NullCount => RowCount - ValueCount;
 
     /// <summary>Aggregate over the whole dataset, computed once at build.</summary>
-    public MetricAggregate Total => _total;
+    public MetricAggregate Total => total;
 
     public static MetricColumn Build(int rowCount, RowReader<double> read)
     {
@@ -65,14 +65,14 @@ internal sealed class MetricColumn
 
         if (context.IsFull)
         {
-            return _total;
+            return total;
         }
 
         var accumulator = new Accumulator();
-        ReadOnlySpan<double> values = _values;
+        ReadOnlySpan<double> all = values;
         foreach (int row in context)
         {
-            double value = values[row];
+            double value = all[row];
             if (!double.IsNaN(value))
             {
                 accumulator.Add(value);
@@ -85,49 +85,49 @@ internal sealed class MetricColumn
     /// <summary>Neumaier compensated summation alongside count, min and max.</summary>
     private struct Accumulator
     {
-        private int _count;
-        private double _sum;
-        private double _compensation;
-        private double _min;
-        private double _max;
+        private int count;
+        private double sum;
+        private double compensation;
+        private double min;
+        private double max;
 
         public void Add(double value)
         {
-            if (_count == 0)
+            if (count == 0)
             {
-                _min = value;
-                _max = value;
+                min = value;
+                max = value;
             }
             else
             {
-                if (value < _min)
+                if (value < min)
                 {
-                    _min = value;
+                    min = value;
                 }
 
-                if (value > _max)
+                if (value > max)
                 {
-                    _max = value;
+                    max = value;
                 }
             }
 
-            _count++;
-            double t = _sum + value;
-            if (Math.Abs(_sum) >= Math.Abs(value))
+            count++;
+            double t = sum + value;
+            if (Math.Abs(sum) >= Math.Abs(value))
             {
-                _compensation += (_sum - t) + value;
+                compensation += (sum - t) + value;
             }
             else
             {
-                _compensation += (value - t) + _sum;
+                compensation += (value - t) + sum;
             }
 
-            _sum = t;
+            sum = t;
         }
 
-        public MetricAggregate Result => _count == 0
+        public MetricAggregate Result => count == 0
             ? MetricAggregate.Empty
-            : new MetricAggregate(_count, _sum + _compensation, _min, _max);
+            : new MetricAggregate(count, sum + compensation, min, max);
     }
 }
 

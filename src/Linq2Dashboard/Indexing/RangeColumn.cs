@@ -7,23 +7,23 @@ namespace Linq2Dashboard.Indexing;
 /// </summary>
 internal sealed class RangeColumn
 {
-    private readonly double[] _values;
-    private readonly int[] _bucketCodes;
-    private readonly double[] _edges;
-    private readonly int[] _totalCounts;
+    private readonly double[] values;
+    private readonly int[] bucketCodes;
+    private readonly double[] edges;
+    private readonly int[] totalCounts;
 
     private RangeColumn(double[] values, RowSet nulls, int[] bucketCodes, double[] edges, int[] totalCounts, double min, double max)
     {
-        _values = values;
+        this.values = values;
         Nulls = nulls;
-        _bucketCodes = bucketCodes;
-        _edges = edges;
-        _totalCounts = totalCounts;
+        this.bucketCodes = bucketCodes;
+        this.edges = edges;
+        this.totalCounts = totalCounts;
         Min = min;
         Max = max;
     }
 
-    public int RowCount => _values.Length;
+    public int RowCount => values.Length;
 
     /// <summary>Rows whose value is null.</summary>
     public RowSet Nulls { get; }
@@ -39,14 +39,14 @@ internal sealed class RangeColumn
     public double Max { get; }
 
     /// <summary>Number of buckets, B. Valid bucket codes are 0..B.</summary>
-    public int BucketCount => _edges.Length == 0 ? 0 : _edges.Length - 1;
+    public int BucketCount => edges.Length == 0 ? 0 : edges.Length - 1;
 
-    public ReadOnlySpan<double> Values => _values;
+    public ReadOnlySpan<double> Values => values;
 
-    public ReadOnlySpan<int> BucketCodes => _bucketCodes;
+    public ReadOnlySpan<int> BucketCodes => bucketCodes;
 
     /// <summary>Total count per bucket code, index 0 being null.</summary>
-    public ReadOnlySpan<int> TotalCounts => _totalCounts;
+    public ReadOnlySpan<int> TotalCounts => totalCounts;
 
     /// <summary>
     /// Bounds of bucket <paramref name="index"/> (0-based). The bucket covers <c>[From, To)</c>,
@@ -56,7 +56,7 @@ internal sealed class RangeColumn
     {
         ArgumentOutOfRangeException.ThrowIfNegative(index);
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, BucketCount);
-        return (_edges[index], _edges[index + 1]);
+        return (edges[index], edges[index + 1]);
     }
 
     public static RangeColumn Build(int rowCount, RowReader<double> read, RangeBucketing bucketing)
@@ -131,10 +131,10 @@ internal sealed class RangeColumn
         bool highInclusive = to is null || toInclusive;
 
         var builder = new RowSetBuilder(RowCount);
-        ReadOnlySpan<double> values = _values;
-        for (int row = 0; row < values.Length; row++)
+        ReadOnlySpan<double> all = values;
+        for (int row = 0; row < all.Length; row++)
         {
-            double value = values[row];
+            double value = all[row];
             bool aboveLow = lowInclusive ? value >= low : value > low;
             bool belowHigh = highInclusive ? value <= high : value < high;
             if (aboveLow && belowHigh)
@@ -149,7 +149,7 @@ internal sealed class RangeColumn
 
     /// <summary>Filtered counts per bucket code over the context (design §4.5). Length B + 1; index 0 is null.</summary>
     public void CountInto(RowSet context, Span<int> counts) =>
-        CodeColumn.CountInto(_bucketCodes, _totalCounts, context, counts);
+        CodeColumn.CountInto(bucketCodes, totalCounts, context, counts);
 
     /// <summary>Index of the bucket containing <paramref name="value"/>. Edges must be non-empty and cover the value.</summary>
     internal static int BucketIndex(ReadOnlySpan<double> edges, double value)

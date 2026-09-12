@@ -24,7 +24,7 @@ internal abstract record RangeBucketing
 
     private sealed record ExplicitBucketing : RangeBucketing
     {
-        private readonly double[] _cuts;
+        private readonly double[] cuts;
 
         public ExplicitBucketing(double[] cuts)
         {
@@ -42,14 +42,14 @@ internal abstract record RangeBucketing
                 }
             }
 
-            _cuts = (double[])cuts.Clone();
+            this.cuts = (double[])cuts.Clone();
         }
 
         public override double[] Edges(double min, double max)
         {
-            var edges = new double[_cuts.Length + 2];
+            var edges = new double[cuts.Length + 2];
             edges[0] = double.NegativeInfinity;
-            _cuts.CopyTo(edges, 1);
+            cuts.CopyTo(edges, 1);
             edges[^1] = double.PositiveInfinity;
             return edges;
         }
@@ -57,12 +57,12 @@ internal abstract record RangeBucketing
 
     private sealed record AutoBucketing : RangeBucketing
     {
-        private readonly int _count;
+        private readonly int count;
 
         public AutoBucketing(int count)
         {
             ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
-            _count = count;
+            this.count = count;
         }
 
         public override double[] Edges(double min, double max)
@@ -77,14 +77,14 @@ internal abstract record RangeBucketing
                 return [min, max];
             }
 
-            var edges = new double[_count + 1];
-            double width = (max - min) / _count;
-            for (int i = 0; i < _count; i++)
+            var edges = new double[count + 1];
+            double width = (max - min) / count;
+            for (int i = 0; i < count; i++)
             {
                 edges[i] = min + width * i;
             }
 
-            edges[_count] = max;
+            edges[count] = max;
             return edges;
         }
     }

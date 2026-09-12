@@ -33,23 +33,23 @@ public sealed class Dashboard<T>
     private const int RowSetCacheCapacity = 256;
     private const int StateCacheCapacity = 8;
 
-    private readonly T[] _items;
-    private readonly FacetIndex[] _facets;
-    private readonly Dictionary<string, FacetIndex> _facetsByKey;
-    private readonly Dictionary<string, int> _facetPositions;
-    private readonly MetricIndex[] _metrics;
-    private readonly Dictionary<string, MetricIndex> _metricsByKey;
-    private readonly LruCache<(string Key, Selection Selection), RowSet> _rowSets = new(RowSetCacheCapacity);
-    private readonly LruCache<Selections, DashboardState<T>> _states = new(StateCacheCapacity);
+    private readonly T[] items;
+    private readonly FacetIndex[] facets;
+    private readonly Dictionary<string, FacetIndex> facetsByKey;
+    private readonly Dictionary<string, int> facetPositions;
+    private readonly MetricIndex[] metrics;
+    private readonly Dictionary<string, MetricIndex> metricsByKey;
+    private readonly LruCache<(string Key, Selection Selection), RowSet> rowSets = new(RowSetCacheCapacity);
+    private readonly LruCache<Selections, DashboardState<T>> states = new(StateCacheCapacity);
 
     internal Dashboard(T[] items, FacetIndex[] facets, MetricIndex[] metrics, int[]? sortedRows, TimeProvider timeProvider, bool parallelCounting)
     {
-        _items = items;
-        _facets = facets;
-        _facetsByKey = facets.ToDictionary(f => f.Key, StringComparer.Ordinal);
-        _facetPositions = facets.Select((f, i) => (f.Key, i)).ToDictionary(p => p.Key, p => p.i, StringComparer.Ordinal);
-        _metrics = metrics;
-        _metricsByKey = metrics.ToDictionary(m => m.Key, StringComparer.Ordinal);
+        this.items = items;
+        this.facets = facets;
+        facetsByKey = facets.ToDictionary(f => f.Key, StringComparer.Ordinal);
+        facetPositions = facets.Select((f, i) => (f.Key, i)).ToDictionary(p => p.Key, p => p.i, StringComparer.Ordinal);
+        this.metrics = metrics;
+        metricsByKey = metrics.ToDictionary(m => m.Key, StringComparer.Ordinal);
         SortedRows = sortedRows;
         TimeProvider = timeProvider;
         ParallelCounting = parallelCounting;
@@ -59,7 +59,7 @@ public sealed class Dashboard<T>
     }
 
     /// <summary>Rows in the dataset, after fixed filters (concept §4.3).</summary>
-    public int TotalCount => _items.Length;
+    public int TotalCount => items.Length;
 
     /// <summary>The facets in definition order.</summary>
     public IReadOnlyList<FacetInfo> Facets { get; }
@@ -81,21 +81,21 @@ public sealed class Dashboard<T>
     public DashboardState<T> Calculate(Selections selections)
     {
         ArgumentNullException.ThrowIfNull(selections);
-        return _states.GetOrAdd(selections, s => DashboardCalculator.Calculate(this, s));
+        return states.GetOrAdd(selections, s => DashboardCalculator.Calculate(this, s));
     }
 
     /// <summary>The state with nothing selected.</summary>
     public DashboardState<T> Calculate() => Calculate(Selections.Empty);
 
-    internal ReadOnlySpan<T> Items => _items;
+    internal ReadOnlySpan<T> Items => items;
 
-    internal T ItemAt(int row) => _items[row];
+    internal T ItemAt(int row) => items[row];
 
-    internal IReadOnlyList<FacetIndex> FacetIndexes => _facets;
+    internal IReadOnlyList<FacetIndex> FacetIndexes => facets;
 
-    internal IReadOnlyDictionary<string, int> FacetPositions => _facetPositions;
+    internal IReadOnlyDictionary<string, int> FacetPositions => facetPositions;
 
-    internal IReadOnlyList<MetricIndex> MetricIndexes => _metrics;
+    internal IReadOnlyList<MetricIndex> MetricIndexes => metrics;
 
     /// <summary>Row ids in the application-defined order, or null for identity order.</summary>
     internal int[]? SortedRows { get; }
@@ -104,22 +104,22 @@ public sealed class Dashboard<T>
     internal RowSet All { get; }
 
     internal FacetIndex FacetIndex(string key) =>
-        _facetsByKey.TryGetValue(key, out FacetIndex? facet)
+        facetsByKey.TryGetValue(key, out FacetIndex? facet)
             ? facet
             : throw new ArgumentException($"Unknown facet key '{key}'.", nameof(key));
 
-    internal bool TryGetFacetIndex(string key, out FacetIndex facet) => _facetsByKey.TryGetValue(key, out facet!);
+    internal bool TryGetFacetIndex(string key, out FacetIndex facet) => facetsByKey.TryGetValue(key, out facet!);
 
     internal MetricIndex MetricIndex(string key) =>
-        _metricsByKey.TryGetValue(key, out MetricIndex? metric)
+        metricsByKey.TryGetValue(key, out MetricIndex? metric)
             ? metric
             : throw new ArgumentException($"Unknown metric key '{key}'.", nameof(key));
 
     /// <summary>Rows matching one facet's selection, through the row-set cache (design §5).</summary>
     internal RowSet RowsMatching(FacetIndex facet, Selection selection) =>
-        _rowSets.GetOrAdd((facet.Key, selection), _ => facet.RowsMatching(selection));
+        rowSets.GetOrAdd((facet.Key, selection), _ => facet.RowsMatching(selection));
 
-    internal int CachedRowSetCount => _rowSets.Count;
+    internal int CachedRowSetCount => rowSets.Count;
 
-    internal int CachedStateCount => _states.Count;
+    internal int CachedStateCount => states.Count;
 }

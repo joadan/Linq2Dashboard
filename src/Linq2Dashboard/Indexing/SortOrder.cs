@@ -9,15 +9,15 @@ internal abstract class SortKey<T>
 
 internal sealed class SortKey<T, TKey> : SortKey<T>
 {
-    private readonly Func<T, TKey> _selector;
-    private readonly bool _descending;
-    private readonly IComparer<TKey> _comparer;
+    private readonly Func<T, TKey> selector;
+    private readonly bool descending;
+    private readonly IComparer<TKey> comparer;
 
     public SortKey(Func<T, TKey> selector, bool descending, IComparer<TKey>? comparer = null)
     {
-        _selector = selector;
-        _descending = descending;
-        _comparer = comparer ?? Comparer<TKey>.Default;
+        this.selector = selector;
+        this.descending = descending;
+        this.comparer = comparer ?? Comparer<TKey>.Default;
     }
 
     public override Comparison<int> Materialize(T[] items)
@@ -25,13 +25,13 @@ internal sealed class SortKey<T, TKey> : SortKey<T>
         var keys = new TKey[items.Length];
         for (int row = 0; row < items.Length; row++)
         {
-            keys[row] = _selector(items[row]);
+            keys[row] = selector(items[row]);
         }
 
-        IComparer<TKey> comparer = _comparer;
-        return _descending
-            ? (a, b) => comparer.Compare(keys[b], keys[a])
-            : (a, b) => comparer.Compare(keys[a], keys[b]);
+        IComparer<TKey> compare = comparer;
+        return descending
+            ? (a, b) => compare.Compare(keys[b], keys[a])
+            : (a, b) => compare.Compare(keys[a], keys[b]);
     }
 }
 

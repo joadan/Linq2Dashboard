@@ -14,11 +14,11 @@ namespace Linq2Dashboard.Indexing;
 /// </remarks>
 internal sealed class RowSet : IEquatable<RowSet>
 {
-    private readonly ulong[] _words;
+    private readonly ulong[] words;
 
     private RowSet(ulong[] words, int length, int count)
     {
-        _words = words;
+        this.words = words;
         Length = length;
         Count = count;
     }
@@ -34,7 +34,7 @@ internal sealed class RowSet : IEquatable<RowSet>
     public bool IsFull => Count == Length;
 
     /// <summary>The raw words. Exposed for tests and for tightly coupled indexing code only.</summary>
-    internal ReadOnlySpan<ulong> Words => _words;
+    internal ReadOnlySpan<ulong> Words => words;
 
     internal static int WordCount(int length) => (length + 63) >> 6;
 
@@ -88,7 +88,7 @@ internal sealed class RowSet : IEquatable<RowSet>
     {
         ArgumentOutOfRangeException.ThrowIfNegative(row);
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(row, Length);
-        return (_words[row >> 6] & (1UL << (row & 63))) != 0;
+        return (words[row >> 6] & (1UL << (row & 63))) != 0;
     }
 
     public RowSet And(RowSet other)
@@ -105,8 +105,8 @@ internal sealed class RowSet : IEquatable<RowSet>
             return other;
         }
 
-        var result = new ulong[_words.Length];
-        AndWords(_words, other._words, result);
+        var result = new ulong[words.Length];
+        AndWords(words, other.words, result);
         return FromOwnedWords(result, Length);
     }
 
@@ -124,13 +124,13 @@ internal sealed class RowSet : IEquatable<RowSet>
             return other;
         }
 
-        var result = new ulong[_words.Length];
-        OrWords(_words, other._words, result);
+        var result = new ulong[words.Length];
+        OrWords(words, other.words, result);
         return FromOwnedWords(result, Length);
     }
 
     /// <summary>Allocation-free enumeration of rows in ascending order: <c>foreach (int row in set)</c>.</summary>
-    public Enumerator GetEnumerator() => new(_words);
+    public Enumerator GetEnumerator() => new(words);
 
     /// <summary>Rows in ascending order as a sequence, for LINQ and tests.</summary>
     public IEnumerable<int> Rows()
@@ -155,7 +155,7 @@ internal sealed class RowSet : IEquatable<RowSet>
 
         return Length == other.Length
             && Count == other.Count
-            && _words.AsSpan().SequenceEqual(other._words);
+            && words.AsSpan().SequenceEqual(other.words);
     }
 
     public override bool Equals(object? obj) => Equals(obj as RowSet);
@@ -165,7 +165,7 @@ internal sealed class RowSet : IEquatable<RowSet>
         var hash = new HashCode();
         hash.Add(Length);
         hash.Add(Count);
-        hash.AddBytes(MemoryMarshal.AsBytes(_words.AsSpan()));
+        hash.AddBytes(MemoryMarshal.AsBytes(words.AsSpan()));
         return hash.ToHashCode();
     }
 
@@ -239,15 +239,15 @@ internal sealed class RowSet : IEquatable<RowSet>
     /// <summary>Walks set bits in ascending row order using trailing-zero counts.</summary>
     public struct Enumerator
     {
-        private readonly ulong[] _words;
-        private int _wordIndex;
-        private ulong _remaining;
+        private readonly ulong[] words;
+        private int wordIndex;
+        private ulong remaining;
 
         internal Enumerator(ulong[] words)
         {
-            _words = words;
-            _wordIndex = -1;
-            _remaining = 0;
+            this.words = words;
+            wordIndex = -1;
+            remaining = 0;
             Current = -1;
         }
 
@@ -255,19 +255,19 @@ internal sealed class RowSet : IEquatable<RowSet>
 
         public bool MoveNext()
         {
-            while (_remaining == 0)
+            while (remaining == 0)
             {
-                if (++_wordIndex >= _words.Length)
+                if (++wordIndex >= words.Length)
                 {
                     return false;
                 }
 
-                _remaining = _words[_wordIndex];
+                remaining = words[wordIndex];
             }
 
-            int bit = BitOperations.TrailingZeroCount(_remaining);
-            _remaining &= _remaining - 1;
-            Current = (_wordIndex << 6) + bit;
+            int bit = BitOperations.TrailingZeroCount(remaining);
+            remaining &= remaining - 1;
+            Current = (wordIndex << 6) + bit;
             return true;
         }
     }

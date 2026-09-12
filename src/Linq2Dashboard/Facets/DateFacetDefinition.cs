@@ -10,14 +10,14 @@ namespace Linq2Dashboard.Facets;
 /// </summary>
 internal sealed class DateFacetDefinition<T, TDate> : FacetDefinition<T>
 {
-    private readonly Func<T, TDate> _selector;
-    private readonly Func<TDate, TimeZoneInfo, DateTimeOffset?> _convert;
+    private readonly Func<T, TDate> selector;
+    private readonly Func<TDate, TimeZoneInfo, DateTimeOffset?> convert;
 
     public DateFacetDefinition(string key, Expression<Func<T, TDate>> selector)
         : base(key, FacetKind.Date)
     {
-        _convert = DateConversion.For<TDate>();
-        _selector = selector.Compile();
+        convert = DateConversion.For<TDate>();
+        this.selector = selector.Compile();
     }
 
     public TimeZoneInfo Zone { get; set; } = TimeZoneInfo.Utc;
@@ -28,8 +28,6 @@ internal sealed class DateFacetDefinition<T, TDate> : FacetDefinition<T>
 
     public override FacetIndex Build(T[] items, TimeProvider timeProvider)
     {
-        Func<T, TDate> selector = _selector;
-        Func<TDate, TimeZoneInfo, DateTimeOffset?> convert = _convert;
         TimeZoneInfo zone = Zone;
         var column = DateColumn.Build(items.Length, (int row, out DateTimeOffset value) =>
         {

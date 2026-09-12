@@ -3,11 +3,11 @@ namespace Linq2Dashboard;
 /// <summary>Fluent configuration of a date facet (design §2.1).</summary>
 public sealed class DateFacetBuilder<T>
 {
-    private readonly Action<string> _setTitle;
-    private readonly Action<TimeZoneInfo> _setZone;
-    private readonly Action<DateGranularity> _setGranularity;
-    private readonly Action<DatePreset[]> _setPresets;
-    private readonly Action _ensureMutable;
+    private readonly Action<string> setTitle;
+    private readonly Action<TimeZoneInfo> setZone;
+    private readonly Action<DateGranularity> setGranularity;
+    private readonly Action<DatePreset[]> setPresets;
+    private readonly Action ensureMutable;
 
     internal DateFacetBuilder(
         string key,
@@ -18,11 +18,11 @@ public sealed class DateFacetBuilder<T>
         Action ensureMutable)
     {
         Key = key;
-        _setTitle = setTitle;
-        _setZone = setZone;
-        _setGranularity = setGranularity;
-        _setPresets = setPresets;
-        _ensureMutable = ensureMutable;
+        this.setTitle = setTitle;
+        this.setZone = setZone;
+        this.setGranularity = setGranularity;
+        this.setPresets = setPresets;
+        this.ensureMutable = ensureMutable;
     }
 
     public string Key { get; }
@@ -31,8 +31,8 @@ public sealed class DateFacetBuilder<T>
     public DateFacetBuilder<T> Title(string title)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(title);
-        _ensureMutable();
-        _setTitle(title);
+        ensureMutable();
+        setTitle(title);
         return this;
     }
 
@@ -40,8 +40,8 @@ public sealed class DateFacetBuilder<T>
     public DateFacetBuilder<T> TimeZone(TimeZoneInfo zone)
     {
         ArgumentNullException.ThrowIfNull(zone);
-        _ensureMutable();
-        _setZone(zone);
+        ensureMutable();
+        setZone(zone);
         return this;
     }
 
@@ -53,8 +53,8 @@ public sealed class DateFacetBuilder<T>
             throw new ArgumentOutOfRangeException(nameof(granularity));
         }
 
-        _ensureMutable();
-        _setGranularity(granularity);
+        ensureMutable();
+        setGranularity(granularity);
         return this;
     }
 
@@ -70,8 +70,8 @@ public sealed class DateFacetBuilder<T>
             }
         }
 
-        _ensureMutable();
-        _setPresets(presets.Distinct().ToArray());
+        ensureMutable();
+        setPresets(presets.Distinct().ToArray());
         return this;
     }
 }

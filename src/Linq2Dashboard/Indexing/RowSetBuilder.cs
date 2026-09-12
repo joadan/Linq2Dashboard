@@ -7,13 +7,13 @@ namespace Linq2Dashboard.Indexing;
 /// </summary>
 internal sealed class RowSetBuilder
 {
-    private ulong[]? _words;
+    private ulong[]? words;
 
     public RowSetBuilder(int length)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(length);
         Length = length;
-        _words = new ulong[RowSet.WordCount(length)];
+        words = new ulong[RowSet.WordCount(length)];
     }
 
     public int Length { get; }
@@ -43,10 +43,10 @@ internal sealed class RowSetBuilder
     public RowSet Build()
     {
         ulong[] words = Words;
-        _words = null;
+        this.words = null;
         return RowSet.FromOwnedWords(words, Length);
     }
 
-    private ulong[] Words => _words ?? throw new InvalidOperationException(
+    private ulong[] Words => words ?? throw new InvalidOperationException(
         "The builder has already been built and can no longer be used.");
 }

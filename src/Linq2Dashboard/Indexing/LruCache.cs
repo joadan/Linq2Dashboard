@@ -7,37 +7,37 @@ namespace Linq2Dashboard.Indexing;
 /// </summary>
 internal sealed class LruCache<TKey, TValue> where TKey : notnull
 {
-    private readonly int _capacity;
-    private readonly Dictionary<TKey, LinkedListNode<Entry>> _map;
-    private readonly LinkedList<Entry> _order = new();
-    private readonly Lock _lock = new();
+    private readonly int capacity;
+    private readonly Dictionary<TKey, LinkedListNode<Entry>> map;
+    private readonly LinkedList<Entry> order = new();
+    private readonly Lock gate = new();
 
     public LruCache(int capacity)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(capacity, 1);
-        _capacity = capacity;
-        _map = new Dictionary<TKey, LinkedListNode<Entry>>(capacity);
+        this.capacity = capacity;
+        map = new Dictionary<TKey, LinkedListNode<Entry>>(capacity);
     }
 
     public int Count
     {
         get
         {
-            lock (_lock)
+            lock (gate)
             {
-                return _map.Count;
+                return map.Count;
             }
         }
     }
 
     public bool TryGet(TKey key, out TValue value)
     {
-        lock (_lock)
+        lock (gate)
         {
-            if (_map.TryGetValue(key, out LinkedListNode<Entry>? node))
+            if (map.TryGetValue(key, out LinkedListNode<Entry>? node))
             {
-                _order.Remove(node);
-                _order.AddFirst(node);
+                order.Remove(node);
+                order.AddFirst(node);
                 value = node.Value.Value;
                 return true;
             }
@@ -55,22 +55,22 @@ internal sealed class LruCache<TKey, TValue> where TKey : notnull
         }
 
         TValue created = factory(key);
-        lock (_lock)
+        lock (gate)
         {
-            if (_map.TryGetValue(key, out LinkedListNode<Entry>? node))
+            if (map.TryGetValue(key, out LinkedListNode<Entry>? node))
             {
-                _order.Remove(node);
-                _order.AddFirst(node);
+                order.Remove(node);
+                order.AddFirst(node);
                 return node.Value.Value;
             }
 
-            node = _order.AddFirst(new Entry(key, created));
-            _map[key] = node;
-            if (_map.Count > _capacity)
+            node = order.AddFirst(new Entry(key, created));
+            map[key] = node;
+            if (map.Count > capacity)
             {
-                LinkedListNode<Entry> last = _order.Last!;
-                _order.RemoveLast();
-                _map.Remove(last.Value.Key);
+                LinkedListNode<Entry> last = order.Last!;
+                order.RemoveLast();
+                map.Remove(last.Value.Key);
             }
         }
 

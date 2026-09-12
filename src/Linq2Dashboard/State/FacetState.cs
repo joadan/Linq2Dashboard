@@ -37,7 +37,7 @@ public abstract class FacetState
 /// <summary>State of a value or boolean facet.</summary>
 public sealed class ValueFacetState : FacetState
 {
-    private readonly Func<string, int, IReadOnlyList<FacetValue>> _search;
+    private readonly Func<string, int, IReadOnlyList<FacetValue>> search;
 
     internal ValueFacetState(
         string key, string title, FacetKind kind, Selection? selection, int contextCount,
@@ -49,7 +49,7 @@ public sealed class ValueFacetState : FacetState
         Other = other;
         DistinctCount = distinctCount;
         IsSearchable = isSearchable;
-        _search = search;
+        this.search = search;
     }
 
     /// <summary>
@@ -77,7 +77,7 @@ public sealed class ValueFacetState : FacetState
     {
         ArgumentNullException.ThrowIfNull(text);
         ArgumentOutOfRangeException.ThrowIfLessThan(max, 1);
-        return _search(text, max);
+        return search(text, max);
     }
 }
 

@@ -12,13 +12,13 @@ namespace Linq2Dashboard;
 /// </summary>
 public sealed class DashboardBuilder<T>
 {
-    private readonly List<Func<T, bool>> _filters = [];
-    private readonly List<FacetDefinition<T>> _facets = [];
-    private readonly List<MetricDefinition<T>> _metrics = [];
-    private readonly List<SortKey<T>> _sort = [];
-    private TimeProvider _timeProvider = TimeProvider.System;
-    private bool _parallelCounting;
-    private bool _built;
+    private readonly List<Func<T, bool>> filters = [];
+    private readonly List<FacetDefinition<T>> facets = [];
+    private readonly List<MetricDefinition<T>> metrics = [];
+    private readonly List<SortKey<T>> sort = [];
+    private TimeProvider timeProvider = TimeProvider.System;
+    private bool parallelCounting;
+    private bool built;
 
     internal DashboardBuilder()
     {
@@ -29,7 +29,7 @@ public sealed class DashboardBuilder<T>
     {
         ArgumentNullException.ThrowIfNull(predicate);
         EnsureMutable();
-        _filters.Add(predicate);
+        filters.Add(predicate);
         return this;
     }
 
@@ -132,7 +132,7 @@ public sealed class DashboardBuilder<T>
     {
         ArgumentNullException.ThrowIfNull(timeProvider);
         EnsureMutable();
-        _timeProvider = timeProvider;
+        this.timeProvider = timeProvider;
         return this;
     }
 
@@ -144,36 +144,36 @@ public sealed class DashboardBuilder<T>
     public DashboardBuilder<T> EnableParallelCounting(bool enabled = true)
     {
         EnsureMutable();
-        _parallelCounting = enabled;
+        parallelCounting = enabled;
         return this;
     }
 
     internal Dashboard<T> Build(IEnumerable<T> source)
     {
         EnsureMutable();
-        _built = true;
+        built = true;
 
         T[] items = Materialize(source);
 
-        var facets = new FacetIndex[_facets.Count];
-        for (int i = 0; i < facets.Length; i++)
+        var facetIndexes = new FacetIndex[facets.Count];
+        for (int i = 0; i < facetIndexes.Length; i++)
         {
-            facets[i] = _facets[i].Build(items, _timeProvider);
+            facetIndexes[i] = facets[i].Build(items, timeProvider);
         }
 
-        var metrics = new MetricIndex[_metrics.Count];
-        for (int i = 0; i < metrics.Length; i++)
+        var metricIndexes = new MetricIndex[metrics.Count];
+        for (int i = 0; i < metricIndexes.Length; i++)
         {
-            metrics[i] = _metrics[i].Build(items);
+            metricIndexes[i] = metrics[i].Build(items);
         }
 
-        int[]? sortedRows = SortOrder.Build(items, _sort);
-        return new Dashboard<T>(items, facets, metrics, sortedRows, _timeProvider, _parallelCounting);
+        int[]? sortedRows = SortOrder.Build(items, sort);
+        return new Dashboard<T>(items, facetIndexes, metricIndexes, sortedRows, timeProvider, parallelCounting);
     }
 
     private T[] Materialize(IEnumerable<T> source)
     {
-        if (_filters.Count == 0)
+        if (filters.Count == 0)
         {
             return source.ToArray();
         }
@@ -182,7 +182,7 @@ public sealed class DashboardBuilder<T>
         foreach (T item in source)
         {
             bool passes = true;
-            foreach (Func<T, bool> filter in _filters)
+            foreach (Func<T, bool> filter in filters)
             {
                 if (!filter(item))
                 {
@@ -215,13 +215,13 @@ public sealed class DashboardBuilder<T>
     {
         ValidateKey(key);
         EnsureMutable();
-        if (_metrics.Any(m => m.Key == key))
+        if (metrics.Any(m => m.Key == key))
         {
             throw new ArgumentException($"A metric with key '{key}' is already defined. Keys are case-sensitive and must be unique.", nameof(key));
         }
 
         var definition = new MetricDefinition<T>(key, aggregation, selector);
-        _metrics.Add(definition);
+        metrics.Add(definition);
         return new MetricBuilder<T>(definition, EnsureMutable);
     }
 
@@ -229,29 +229,29 @@ public sealed class DashboardBuilder<T>
     {
         ArgumentNullException.ThrowIfNull(keySelector);
         EnsureMutable();
-        if (primary && _sort.Count > 0)
+        if (primary && sort.Count > 0)
         {
             throw new InvalidOperationException("OrderBy has already been called. Use ThenBy or ThenByDescending to add further keys.");
         }
 
-        if (!primary && _sort.Count == 0)
+        if (!primary && sort.Count == 0)
         {
             throw new InvalidOperationException("Call OrderBy or OrderByDescending before ThenBy.");
         }
 
-        _sort.Add(new SortKey<T, TKey>(keySelector.Compile(), descending, comparer));
+        sort.Add(new SortKey<T, TKey>(keySelector.Compile(), descending, comparer));
         return this;
     }
 
     private void AddFacet(FacetDefinition<T> definition)
     {
-        if (_facets.Any(f => f.Key == definition.Key))
+        if (facets.Any(f => f.Key == definition.Key))
         {
             throw new ArgumentException(
                 $"A facet with key '{definition.Key}' is already defined. Keys are case-sensitive and must be unique.", "key");
         }
 
-        _facets.Add(definition);
+        facets.Add(definition);
     }
 
     private static string DeriveKey(LambdaExpression selector)
@@ -264,7 +264,7 @@ public sealed class DashboardBuilder<T>
 
     private void EnsureMutable()
     {
-        if (_built)
+        if (built)
         {
             throw new InvalidOperationException("The dashboard has been built; its configuration can no longer be changed.");
         }

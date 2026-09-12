@@ -33,51 +33,51 @@ internal static class ValueColumn
 #pragma warning disable CS8714 // Nullability of type argument doesn't match 'notnull' constraint (see remarks).
 internal sealed class ValueColumn<TValue>
 {
-    private readonly int[] _codes;
-    private readonly TValue[] _dictionary;
-    private readonly Dictionary<TValue, int> _codeOf;
-    private readonly int[] _totalCounts;
+    private readonly int[] codes;
+    private readonly TValue[] dictionary;
+    private readonly Dictionary<TValue, int> codeOf;
+    private readonly int[] totalCounts;
 
     private ValueColumn(int[] codes, TValue[] dictionary, Dictionary<TValue, int> codeOf, int[] totalCounts)
     {
-        _codes = codes;
-        _dictionary = dictionary;
-        _codeOf = codeOf;
-        _totalCounts = totalCounts;
+        this.codes = codes;
+        this.dictionary = dictionary;
+        this.codeOf = codeOf;
+        this.totalCounts = totalCounts;
     }
 
     /// <summary>Number of rows in the dataset.</summary>
-    public int RowCount => _codes.Length;
+    public int RowCount => codes.Length;
 
     /// <summary>Number of distinct non-null values, V. Valid codes are 0..V.</summary>
-    public int DistinctCount => _dictionary.Length;
+    public int DistinctCount => dictionary.Length;
 
     /// <summary>Rows whose value is null.</summary>
-    public int NullCount => _totalCounts[0];
+    public int NullCount => totalCounts[0];
 
     public bool HasNulls => NullCount > 0;
 
     /// <summary>One code per row. Sequential reads of this span are the counting hot path.</summary>
-    public ReadOnlySpan<int> Codes => _codes;
+    public ReadOnlySpan<int> Codes => codes;
 
     /// <summary>Total count per code, index 0 being null. Computed once at build (concept §4.3).</summary>
-    public ReadOnlySpan<int> TotalCounts => _totalCounts;
+    public ReadOnlySpan<int> TotalCounts => totalCounts;
 
-    public int CodeAt(int row) => _codes[row];
+    public int CodeAt(int row) => codes[row];
 
     /// <summary>The value behind a non-null code (1..V). The first-seen spelling under the comparer.</summary>
     public TValue ValueOf(int code)
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(code, 1);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(code, DistinctCount);
-        return _dictionary[code - 1];
+        return dictionary[code - 1];
     }
 
     public int TotalCount(int code)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(code);
         ArgumentOutOfRangeException.ThrowIfGreaterThan(code, DistinctCount);
-        return _totalCounts[code];
+        return totalCounts[code];
     }
 
     /// <summary>Looks up the code of a non-null value. False when the value does not occur in the dataset.</summary>
@@ -89,7 +89,7 @@ internal sealed class ValueColumn<TValue>
             return false;
         }
 
-        return _codeOf.TryGetValue(value, out code);
+        return codeOf.TryGetValue(value, out code);
     }
 
     /// <summary>
@@ -152,10 +152,10 @@ internal sealed class ValueColumn<TValue>
         }
 
         var builder = new RowSetBuilder(RowCount);
-        ReadOnlySpan<int> codes = _codes;
-        for (int row = 0; row < codes.Length; row++)
+        ReadOnlySpan<int> all = codes;
+        for (int row = 0; row < all.Length; row++)
         {
-            if (mask[codes[row]])
+            if (mask[all[row]])
             {
                 builder.Set(row);
             }
@@ -169,6 +169,6 @@ internal sealed class ValueColumn<TValue>
     /// <paramref name="counts"/> must have length V + 1; it is cleared first. Index 0 is null.
     /// </summary>
     public void CountInto(RowSet context, Span<int> counts) =>
-        CodeColumn.CountInto(_codes, _totalCounts, context, counts);
+        CodeColumn.CountInto(codes, totalCounts, context, counts);
 }
 #pragma warning restore CS8714

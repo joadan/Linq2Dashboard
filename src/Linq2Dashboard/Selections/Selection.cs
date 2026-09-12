@@ -17,25 +17,25 @@ public abstract record Selection
 /// </summary>
 public sealed record ValueSelection : Selection
 {
-    private readonly object?[] _values;
+    private readonly object?[] values;
 
     public ValueSelection(IEnumerable<object?> values)
     {
         ArgumentNullException.ThrowIfNull(values);
-        _values = values.Distinct().ToArray();
+        this.values = values.Distinct().ToArray();
     }
 
     public static ValueSelection Of(params object?[]? values) => new(values ?? [null]);
 
-    public IReadOnlyList<object?> Values => _values;
+    public IReadOnlyList<object?> Values => values;
 
-    public bool IsEmpty => _values.Length == 0;
+    public bool IsEmpty => values.Length == 0;
 
-    public bool Contains(object? value) => Array.IndexOf(_values, value) >= 0;
+    public bool Contains(object? value) => Array.IndexOf(values, value) >= 0;
 
-    public ValueSelection Add(object? value) => Contains(value) ? this : new(_values.Append(value));
+    public ValueSelection Add(object? value) => Contains(value) ? this : new(values.Append(value));
 
-    public ValueSelection Remove(object? value) => Contains(value) ? new(_values.Where(v => !Equals(v, value))) : this;
+    public ValueSelection Remove(object? value) => Contains(value) ? new(values.Where(v => !Equals(v, value))) : this;
 
     public bool Equals(ValueSelection? other)
     {
@@ -49,12 +49,12 @@ public sealed record ValueSelection : Selection
             return true;
         }
 
-        if (_values.Length != other._values.Length)
+        if (values.Length != other.values.Length)
         {
             return false;
         }
 
-        foreach (object? value in _values)
+        foreach (object? value in values)
         {
             if (!other.Contains(value))
             {
@@ -68,8 +68,8 @@ public sealed record ValueSelection : Selection
     public override int GetHashCode()
     {
         // Order-independent: XOR of element hashes, plus the count.
-        int hash = _values.Length;
-        foreach (object? value in _values)
+        int hash = values.Length;
+        foreach (object? value in values)
         {
             hash ^= value?.GetHashCode() ?? 0x5bd1e995;
         }
@@ -77,7 +77,7 @@ public sealed record ValueSelection : Selection
         return hash;
     }
 
-    public override string ToString() => $"ValueSelection({string.Join(", ", _values.Select(v => v?.ToString() ?? "null"))})";
+    public override string ToString() => $"ValueSelection({string.Join(", ", values.Select(v => v?.ToString() ?? "null"))})";
 }
 
 /// <summary>

@@ -10,26 +10,26 @@ namespace Linq2Dashboard;
 /// </summary>
 public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePair<string, Selection>>
 {
-    private readonly ImmutableSortedDictionary<string, Selection> _map;
+    private readonly ImmutableSortedDictionary<string, Selection> map;
 
     private Selections(ImmutableSortedDictionary<string, Selection> map)
     {
-        _map = map;
+        this.map = map;
     }
 
     public static Selections Empty { get; } = new(ImmutableSortedDictionary.Create<string, Selection>(StringComparer.Ordinal));
 
-    public int Count => _map.Count;
+    public int Count => map.Count;
 
-    public bool IsEmpty => _map.IsEmpty;
+    public bool IsEmpty => map.IsEmpty;
 
-    public IEnumerable<string> Keys => _map.Keys;
+    public IEnumerable<string> Keys => map.Keys;
 
-    public Selection? this[string key] => _map.TryGetValue(key, out Selection? selection) ? selection : null;
+    public Selection? this[string key] => map.TryGetValue(key, out Selection? selection) ? selection : null;
 
-    public bool TryGet(string key, out Selection selection) => _map.TryGetValue(key, out selection!);
+    public bool TryGet(string key, out Selection selection) => map.TryGetValue(key, out selection!);
 
-    public bool Contains(string key) => _map.ContainsKey(key);
+    public bool Contains(string key) => map.ContainsKey(key);
 
     /// <summary>Replaces the selection for <paramref name="key"/>. An empty value selection clears it instead.</summary>
     public Selections With(string key, Selection selection)
@@ -42,14 +42,14 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
             return Clear(key);
         }
 
-        return new Selections(_map.SetItem(key, selection));
+        return new Selections(map.SetItem(key, selection));
     }
 
     /// <summary>Removes the selection for <paramref name="key"/>, if any.</summary>
     public Selections Clear(string key)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
-        return _map.ContainsKey(key) ? new Selections(_map.Remove(key)) : this;
+        return map.ContainsKey(key) ? new Selections(map.Remove(key)) : this;
     }
 
     public Selections ClearAll() => Empty;
@@ -86,14 +86,14 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
             return true;
         }
 
-        if (_map.Count != other._map.Count)
+        if (map.Count != other.map.Count)
         {
             return false;
         }
 
-        foreach ((string key, Selection selection) in _map)
+        foreach ((string key, Selection selection) in map)
         {
-            if (!other._map.TryGetValue(key, out Selection? theirs) || !selection.Equals(theirs))
+            if (!other.map.TryGetValue(key, out Selection? theirs) || !selection.Equals(theirs))
             {
                 return false;
             }
@@ -107,7 +107,7 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
     public override int GetHashCode()
     {
         var hash = new HashCode();
-        foreach ((string key, Selection selection) in _map)
+        foreach ((string key, Selection selection) in map)
         {
             hash.Add(key, StringComparer.Ordinal);
             hash.Add(selection);
@@ -116,11 +116,11 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
         return hash.ToHashCode();
     }
 
-    public IEnumerator<KeyValuePair<string, Selection>> GetEnumerator() => _map.GetEnumerator();
+    public IEnumerator<KeyValuePair<string, Selection>> GetEnumerator() => map.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
     public override string ToString() => IsEmpty
         ? "Selections(empty)"
-        : $"Selections({string.Join("; ", _map.Select(p => $"{p.Key}={p.Value}"))})";
+        : $"Selections({string.Join("; ", map.Select(p => $"{p.Key}={p.Value}"))})";
 }

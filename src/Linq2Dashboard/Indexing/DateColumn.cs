@@ -10,25 +10,25 @@ internal sealed class DateColumn
 {
     private const long NullTicks = long.MinValue;
 
-    private readonly long[] _utcTicks;
-    private readonly int[] _bucketCodes;
-    private readonly long[] _bucketStarts;
-    private readonly int[] _totalCounts;
+    private readonly long[] utcTicks;
+    private readonly int[] bucketCodes;
+    private readonly long[] bucketStarts;
+    private readonly int[] totalCounts;
 
     private DateColumn(
         long[] utcTicks, RowSet nulls, int[] bucketCodes, long[] bucketStarts, int[] totalCounts,
         TimeZoneInfo zone, DateGranularity granularity)
     {
-        _utcTicks = utcTicks;
+        this.utcTicks = utcTicks;
         Nulls = nulls;
-        _bucketCodes = bucketCodes;
-        _bucketStarts = bucketStarts;
-        _totalCounts = totalCounts;
+        this.bucketCodes = bucketCodes;
+        this.bucketStarts = bucketStarts;
+        this.totalCounts = totalCounts;
         Zone = zone;
         Granularity = granularity;
     }
 
-    public int RowCount => _utcTicks.Length;
+    public int RowCount => utcTicks.Length;
 
     public TimeZoneInfo Zone { get; }
 
@@ -42,21 +42,21 @@ internal sealed class DateColumn
     public bool HasNulls => NullCount > 0;
 
     /// <summary>Number of periods present in the dataset, B. Valid bucket codes are 0..B.</summary>
-    public int BucketCount => _bucketStarts.Length;
+    public int BucketCount => bucketStarts.Length;
 
-    public ReadOnlySpan<long> UtcTicks => _utcTicks;
+    public ReadOnlySpan<long> UtcTicks => utcTicks;
 
-    public ReadOnlySpan<int> BucketCodes => _bucketCodes;
+    public ReadOnlySpan<int> BucketCodes => bucketCodes;
 
     /// <summary>Total count per bucket code, index 0 being null.</summary>
-    public ReadOnlySpan<int> TotalCounts => _totalCounts;
+    public ReadOnlySpan<int> TotalCounts => totalCounts;
 
     /// <summary>Start of bucket <paramref name="index"/> (0-based) as a local date-time in the facet zone.</summary>
     public DateTime BucketStart(int index)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(index);
         ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, BucketCount);
-        return new DateTime(_bucketStarts[index], DateTimeKind.Unspecified);
+        return new DateTime(bucketStarts[index], DateTimeKind.Unspecified);
     }
 
     /// <summary>
@@ -135,7 +135,7 @@ internal sealed class DateColumn
         bool highInclusive = to is null;
 
         var builder = new RowSetBuilder(RowCount);
-        ReadOnlySpan<long> ticks = _utcTicks;
+        ReadOnlySpan<long> ticks = utcTicks;
         for (int row = 0; row < ticks.Length; row++)
         {
             long value = ticks[row];
@@ -151,7 +151,7 @@ internal sealed class DateColumn
 
     /// <summary>Filtered counts per bucket code over the context (design §4.5). Length B + 1; index 0 is null.</summary>
     public void CountInto(RowSet context, Span<int> counts) =>
-        CodeColumn.CountInto(_bucketCodes, _totalCounts, context, counts);
+        CodeColumn.CountInto(bucketCodes, totalCounts, context, counts);
 
     /// <summary>Converts a local date-time in the facet zone to an instant, using the zone's offset at that time.</summary>
     public DateTimeOffset ToInstant(DateTime local) => ToInstant(local, Zone);
