@@ -5,7 +5,7 @@
 ## Documents are the source of truth
 
 - `Linq2Dashboard-concept.md` says what the library is and how it behaves. Its rules are decisions. If code and concept disagree, the code is wrong.
-- `Linq2Dashboard-design.md` says how it is built and records measured numbers. If design and concept disagree, the concept wins.
+- `Linq2Dashboard-design.md` says how it is built and records measured numbers. Section 9 is the Blazor plan. If design and concept disagree, the concept wins.
 - Both end with a **Decided** list. Do not reopen those decisions; when a new one is made, add it there and point to the section that implements it.
 - When code changes the public API or a behavioural rule, update the relevant document in the same commit.
 
@@ -47,7 +47,7 @@ dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --job sh
 - The dashboard is immutable after `Create` and holds no selection state. The UI owns `Selections`.
 - Null is a facet value. Zero-count values stay in the state. Filtered counts always sum to the facet's context count.
 - Parallel counting exists but is off by default.
-- The Blazor package waits until asked for.
+- The Blazor package follows the plan in design §9; do not start it until asked.
 
 ## Performance baseline
 

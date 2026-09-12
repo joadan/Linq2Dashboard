@@ -601,7 +601,43 @@ Every target is met with margin, so per-value bitmaps stay out (§3.4). What the
 
 ---
 
-## 9. Open questions
+## 9. Blazor package plan
+
+The package renders a `DashboardState<T>`, turns clicks into `Selections`, and never counts anything (§C7). It starts from the decisions below.
+
+### Projects
+
+```text
+src/Linq2Dashboard.Blazor/           Razor class library, net10.0; depends on the core and Microsoft.AspNetCore.Components.Web only
+samples/Linq2Dashboard.Sample/       Blazor Server app over the benchmark generator's data; the manual test bed
+tests/Linq2Dashboard.Blazor.Tests/   bUnit: each component renders a given state and raises the right selection change
+```
+
+### Decisions
+
+- **Blazor Server is the primary target**; WebAssembly works unchanged with a smaller dataset (§7).
+- **Plain CSS with custom properties.** One scoped stylesheet, no CSS framework dependency. Colours, spacing and fonts are custom properties on the root component so a host restyles without overriding markup.
+- **One formatter service.** A single `IDashboardFormatter` cascaded from the root component turns boxed facet values, bucket bounds, instants, counts and metric values into text, and names the null value. Culture enters here and nowhere else; the core stays culture-free. A default implementation uses the current culture.
+- **Paging only.** `Results<T>` uses `GetPage`. Virtualisation is a later addition; `Items` is already lazy, so nothing in the core needs to change for it.
+
+### Components, in build order
+
+1. **`Dashboard<T>`** takes the `Dashboard<T>` and optional initial `Selections`. Owns the current selections and state, exposes `SelectionsChanged` so a host can bookmark through the serializer, cascades state and formatter to children, and lays out facets, metrics and results through render fragments with defaults. First milestone: the loop works end to end with a raw dump of the state.
+2. **`ValueFacet`**: `Values` with counts and the selected flag, the null value through the formatter, `Other`, a search box when `IsSearchable`. Click → `Toggle`. Clear link → `Clear`.
+3. **`ActiveSelections`**: the chip row of everything selected, each removable. Cheap and heavily used.
+4. **`Results<T>`**: paged list over `GetPage` with a required `RowTemplate`, since the core cannot know what a row looks like.
+5. **`Metrics`**: one tile per `MetricState`; no value renders as a dash.
+6. **`RangeFacet`**: histogram of `Buckets` with the null value beside it; bucket click → `ToSelection()`. Min and max shown; a slider is a later iteration.
+7. **`DateFacet`**: period buckets and the preset list with counts; clicks → `ToSelection()`.
+8. **Templates and styling last**, once the defaults work (§C7): optional `ValueTemplate` and `HeaderTemplate` per facet component, then the stylesheet.
+
+### State flow
+
+`Calculate` runs inline in the click handler, then `StateHasChanged`. The component keeps no derived data of its own, so nothing can drift from the state. A back click is a state-cache hit and costs nothing.
+
+---
+
+## 10. Open questions
 
 None at the moment. New questions raised during implementation go here.
 
@@ -613,6 +649,8 @@ None at the moment. New questions raised during implementation go here.
 - **Project renamed to `Linq2Dashboard` under `src/`.** First code change of the implementation. See §7.
 - **Selections serialise to JSON only.** No query-string format in the first version; applications encode the JSON for URLs themselves. See §2.5.
 - **Custom facets come later.** The facet interfaces are internal in the first version and become public when custom facets are added. See §6.
+- **Blazor: Server primary, WebAssembly supported with smaller datasets.** See §7.
+- **Blazor: plain CSS with custom properties, one cascaded formatter service, paging only.** See §9.
 
 - **Columnar only in the first version.** No per-value bitmaps. Same strategy for every cardinality; bitmaps are a later, benchmark-justified addition. See §1, §3.4, §4.1.
 - **Range bounds are `double`.** The precision trade for `decimal` properties is accepted; range values are used only for filtering and bucketing, never for metrics. See §2.2, §3.3.
