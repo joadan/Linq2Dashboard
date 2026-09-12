@@ -658,7 +658,7 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 
 ## 10. Open questions
 
-1. **Metrics declared in Blazor markup.** Should `<Metric>` be able to define its aggregation and selector, not only place a metric defined in the builder? Two routes were weighed on 2026-09-12: computing in the component over the matching rows (pure, but the UI calculates and pays per render), or registering a column lazily on the dashboard (fast, but mutates a dashboard the design promises is immutable and misses states already cached). Kept as is for now: definition in the builder, placement in Blazor, like the facets. To be revisited.
+1. **Facets and metrics declared in Blazor markup.** Should `<Metric>` and the facet components be able to define what they show (aggregation and selector, or facet kind and selector), not only place something defined in the builder? Two routes were weighed on 2026-09-12: computing in the component over the matching rows (pure, but the UI calculates and pays per render; for facets that would be a second counting engine, which §C7 rules out), or registering the column lazily on the dashboard on first render (keeps the speed, but mutates a dashboard the design promises is immutable after `Create`, misses states already cached, and makes a page's markup part of the dashboard's definition). A third route is a markup-driven builder: a `DashboardDefinition` component whose children declare facets and metrics, run once to produce the `Dashboard<T>` before the view renders, so the definition lives on the page but still happens at `Create`. Kept as is for now: definition in the builder, placement in Blazor. To be revisited.
 
 ### Decided
 
