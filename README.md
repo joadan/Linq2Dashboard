@@ -19,7 +19,7 @@ dotnet add package Linq2Dashboard          # the engine, no UI dependency
 dotnet add package Linq2Dashboard.Blazor   # the components
 ```
 
-Versions come from [Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning): `version.json` holds the major.minor and the prerelease tag, the build height supplies the patch. Releases are cut manually from the **Create Release** workflow, which tests, packs, pushes to NuGet and tags the commit.
+Versions come from [Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning): `version.json` holds the major.minor and the prerelease tag, the build height supplies the patch. Releases are cut manually from the **Create Release** workflow, which tests, packs, pushes to NuGet through [Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) and tags the commit. No API key is stored anywhere.
 
 ## Example
 

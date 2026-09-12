@@ -46,7 +46,7 @@ dotnet pack src/Linq2Dashboard/Linq2Dashboard.csproj -c Release -o artifacts   #
 - Reading external input (JSON selections) is lenient: drop what cannot be read. Code paths are strict: unknown keys throw.
 - Doc comments cite the section they implement, e.g. `(concept §4.2)` or `(design §3.3)`.
 - Commit messages: an imperative summary line, then a short paragraph on what and why. No attribution trailers.
-- Releases: never push to NuGet from a machine. The Create Release workflow (manual) tests, packs, pushes with the NUGET_API_KEY secret and tags. Bump major.minor or the prerelease tag in version.json; the patch is the git height. CI packs on every push to verify the packages build but pushes nothing.
+- Releases: never push to NuGet from a machine. The Create Release workflow (manual) tests, packs, pushes through NuGet Trusted Publishing (OIDC via NuGet/login; the only secret is NUGET_USER, the nuget.org profile name) and tags. Bump major.minor or the prerelease tag in version.json; the patch is the git height. CI packs on every push to verify the packages build but pushes nothing.
 
 ## Things that are settled, so do not propose them
 

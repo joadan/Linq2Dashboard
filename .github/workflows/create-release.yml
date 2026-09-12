@@ -2,10 +2,15 @@ name: Create Release
 
 # Run by hand from the Actions tab. Tests, packs both packages, pushes them to NuGet and tags the commit.
 # On master the version is <major.minor>.<height>-beta from version.json; on a release/v* branch it is stable.
+#
+# Publishing uses NuGet Trusted Publishing: no long-lived API key. The job's OIDC token is exchanged for a
+# one-hour NuGet key by NuGet/login, which nuget.org allows because a trusted publishing policy names this
+# repository and this workflow file. The only secret is NUGET_USER, the nuget.org profile name.
 on: workflow_dispatch
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   release:
@@ -40,8 +45,14 @@ jobs:
           dotnet pack src/Linq2Dashboard/Linq2Dashboard.csproj -c Release -o artifacts
           dotnet pack src/Linq2Dashboard.Blazor/Linq2Dashboard.Blazor.csproj -c Release -o artifacts
 
+      - name: NuGet login (Trusted Publishing, OIDC to a one-hour API key)
+        id: login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
       - name: Push to NuGet
-        run: dotnet nuget push "artifacts/*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }} --skip-duplicate
+        run: dotnet nuget push "artifacts/*.nupkg" -s https://api.nuget.org/v3/index.json -k ${{ steps.login.outputs.NUGET_API_KEY }} --skip-duplicate
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
