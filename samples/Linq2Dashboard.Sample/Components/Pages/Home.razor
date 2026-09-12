@@ -1,0 +1,18 @@
+@page "/"
+@rendermode InteractiveServer
+@inject Dashboard<SampleOrder> Dashboard
+
+<PageTitle>Linq2Dashboard sample</PageTitle>
+
+<h1>Orders</h1>
+
+<DashboardView T="SampleOrder" Dashboard="Dashboard" @bind-Selections="selections" />
+
+<details>
+    <summary>Selections as JSON</summary>
+    <pre>@Dashboard.Serializer.ToJson(selections, indented: true)</pre>
+</details>
+
+@code {
+    private Selections selections = Selections.Empty;
+}

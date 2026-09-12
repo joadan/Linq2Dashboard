@@ -1,6 +1,6 @@
 # Linq2Dashboard
 
-.NET library for interactive exploration of large in-memory collections: facets with counts, metrics, paged results. Core engine only so far; a Blazor package is planned but not started.
+.NET library for interactive exploration of large in-memory collections: facets with counts, metrics, paged results. The core engine is complete; the Blazor package is in progress following design §9.
 
 ## Documents are the source of truth
 
@@ -16,7 +16,10 @@ src/Linq2Dashboard/            core, net10.0, no dependencies, package id Linq2D
   Indexing/                    RowSet, columns, caches, sort order (internal)
   Facets/                      definitions, builders, indexes, state
   Metrics/  Selections/  State/  Serialization/  Calculation/
+src/Linq2Dashboard.Blazor/     Razor class library: DashboardView<T>, DashboardContext<T>, IDashboardFormatter, components
+samples/Linq2Dashboard.Sample/ Blazor Server sample over 200 000 generated rows
 tests/Linq2Dashboard.Tests/    xUnit, InternalsVisibleTo
+tests/Linq2Dashboard.Blazor.Tests/   bUnit; tests pass an invariant-culture formatter so they do not depend on the machine
 benchmarks/Linq2Dashboard.Benchmarks/   BenchmarkDotNet, plus a --memory report
 ```
 
@@ -47,7 +50,7 @@ dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --job sh
 - The dashboard is immutable after `Create` and holds no selection state. The UI owns `Selections`.
 - Null is a facet value. Zero-count values stay in the state. Filtered counts always sum to the facet's context count.
 - Parallel counting exists but is off by default.
-- The Blazor package follows the plan in design §9; do not start it until asked.
+- The Blazor package follows the plan in design §9, component by component in the listed order. Components hold no state; everything goes through DashboardContext<T>.
 
 ## Performance baseline
 

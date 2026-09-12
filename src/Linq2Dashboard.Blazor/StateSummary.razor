@@ -1,0 +1,108 @@
+@typeparam T
+@inherits DashboardComponentBase<T>
+
+<div class="l2d-summary">
+    <p class="l2d-summary-counts">
+        <strong class="l2d-matching">@Formatter.FormatCount(State.MatchingCount)</strong> of
+        <span class="l2d-total">@Formatter.FormatCount(State.TotalCount)</span>
+        @if (!State.Selections.IsEmpty)
+        {
+            <button type="button" class="l2d-clear-all" @onclick="() => Context.ClearAllAsync()">Clear all</button>
+        }
+    </p>
+
+    @if (State.Metrics.Count > 0)
+    {
+        <dl class="l2d-summary-metrics">
+            @foreach (MetricState metric in State.Metrics)
+            {
+                <dt>@metric.Title</dt>
+                <dd class="l2d-metric" data-key="@metric.Key">@Formatter.FormatMetric(metric)</dd>
+            }
+        </dl>
+    }
+
+    @foreach (FacetState facet in State.Facets)
+    {
+        <section class="l2d-summary-facet" data-key="@facet.Key">
+            <h4>
+                @facet.Title
+                @if (facet.HasSelection)
+                {
+                    <button type="button" class="l2d-clear" @onclick="() => Context.ClearAsync(facet.Key)">Clear</button>
+                }
+            </h4>
+            <ul>
+                @switch (facet)
+                {
+                    case ValueFacetState values:
+                        @foreach (FacetValue value in values.Values)
+                        {
+                            <li class="@(value.Selected ? "l2d-selected" : null)">
+                                <button type="button" class="l2d-value" @onclick="() => Context.ToggleAsync(facet.Key, value.Value)">
+                                    @Formatter.FormatValue(facet, value.Value)
+                                </button>
+                                <span class="l2d-count">@Formatter.FormatCount(value.FilteredCount) / @Formatter.FormatCount(value.TotalCount)</span>
+                            </li>
+                        }
+                        @if (values.Other is FacetCount other)
+                        {
+                            <li class="l2d-other">Other <span class="l2d-count">@Formatter.FormatCount(other.FilteredCount) / @Formatter.FormatCount(other.TotalCount)</span></li>
+                        }
+                        break;
+
+                    case RangeFacetState range:
+                        @foreach (RangeBucket bucket in range.Buckets)
+                        {
+                            <li class="@(bucket.Selected ? "l2d-selected" : null)">
+                                <button type="button" class="l2d-value" @onclick="() => Context.SelectAsync(facet.Key, bucket.ToSelection())">
+                                    @Formatter.FormatRangeBucket(bucket)
+                                </button>
+                                <span class="l2d-count">@Formatter.FormatCount(bucket.FilteredCount) / @Formatter.FormatCount(bucket.TotalCount)</span>
+                            </li>
+                        }
+                        @if (range.Null.TotalCount > 0)
+                        {
+                            <li class="@(range.Null.Selected ? "l2d-selected" : null)">
+                                <button type="button" class="l2d-value" @onclick="() => Context.SelectAsync(facet.Key, RangeSelection.OnlyNull)">
+                                    @Formatter.NullLabel
+                                </button>
+                                <span class="l2d-count">@Formatter.FormatCount(range.Null.FilteredCount) / @Formatter.FormatCount(range.Null.TotalCount)</span>
+                            </li>
+                        }
+                        break;
+
+                    case DateFacetState dates:
+                        @foreach (PresetState preset in dates.Presets)
+                        {
+                            <li class="l2d-preset @(preset.Selected ? "l2d-selected" : null)">
+                                <button type="button" class="l2d-value" @onclick="() => Context.SelectAsync(facet.Key, preset.ToSelection())">
+                                    @Formatter.FormatPreset(preset.Preset)
+                                </button>
+                                <span class="l2d-count">@Formatter.FormatCount(preset.FilteredCount) / @Formatter.FormatCount(preset.TotalCount)</span>
+                            </li>
+                        }
+                        @foreach (DateBucket bucket in dates.Buckets)
+                        {
+                            <li class="@(bucket.Selected ? "l2d-selected" : null)">
+                                <button type="button" class="l2d-value" @onclick="() => Context.SelectAsync(facet.Key, bucket.ToSelection())">
+                                    @Formatter.FormatDateBucket(bucket, dates.Granularity)
+                                </button>
+                                <span class="l2d-count">@Formatter.FormatCount(bucket.FilteredCount) / @Formatter.FormatCount(bucket.TotalCount)</span>
+                            </li>
+                        }
+                        @if (dates.Null.TotalCount > 0)
+                        {
+                            <li class="@(dates.Null.Selected ? "l2d-selected" : null)">
+                                <button type="button" class="l2d-value" @onclick="() => Context.SelectAsync(facet.Key, DateSelection.OnlyNull)">
+                                    @Formatter.NullLabel
+                                </button>
+                                <span class="l2d-count">@Formatter.FormatCount(dates.Null.FilteredCount) / @Formatter.FormatCount(dates.Null.TotalCount)</span>
+                            </li>
+                        }
+                        break;
+                }
+            </ul>
+        </section>
+    }
+</div>

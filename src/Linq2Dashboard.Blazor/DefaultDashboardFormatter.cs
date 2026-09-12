@@ -1,0 +1,86 @@
+using System.Globalization;
+
+namespace Linq2Dashboard.Blazor;
+
+/// <summary>
+/// Default text for dashboard values using a culture, the current one unless given. English labels
+/// for null, booleans and presets; numbers without decimals when whole, otherwise two.
+/// </summary>
+public class DefaultDashboardFormatter : IDashboardFormatter
+{
+    private readonly CultureInfo? culture;
+
+    public DefaultDashboardFormatter(CultureInfo? culture = null)
+    {
+        this.culture = culture;
+    }
+
+    public static DefaultDashboardFormatter Instance { get; } = new();
+
+    protected CultureInfo Culture => culture ?? CultureInfo.CurrentCulture;
+
+    public virtual string NullLabel => "(none)";
+
+    public virtual string FormatValue(FacetState facet, object? value) => value switch
+    {
+        null => NullLabel,
+        bool b => b ? "Yes" : "No",
+        DateTimeOffset dto => dto.ToString("g", Culture),
+        DateTime dt => dt.ToString("g", Culture),
+        DateOnly d => d.ToString("d", Culture),
+        TimeOnly t => t.ToString("t", Culture),
+        IFormattable f => f.ToString(null, Culture),
+        _ => value.ToString() ?? string.Empty,
+    };
+
+    public virtual string FormatCount(int count) => count.ToString("N0", Culture);
+
+    public virtual string FormatMetric(MetricState metric) =>
+        metric.Value is double value ? FormatNumber(value) : "–";
+
+    public virtual string FormatRangeBucket(RangeBucket bucket)
+    {
+        if (double.IsNegativeInfinity(bucket.From))
+        {
+            return $"< {FormatNumber(bucket.To)}";
+        }
+
+        if (double.IsPositiveInfinity(bucket.To))
+        {
+            return $"≥ {FormatNumber(bucket.From)}";
+        }
+
+        return $"{FormatNumber(bucket.From)} – {FormatNumber(bucket.To)}";
+    }
+
+    public virtual string FormatDateBucket(DateBucket bucket, DateGranularity granularity)
+    {
+        DateTime start = bucket.PeriodStart;
+        return granularity switch
+        {
+            DateGranularity.Year => start.ToString("yyyy", Culture),
+            DateGranularity.Month => start.ToString("MMM yyyy", Culture),
+            DateGranularity.Week => $"Week {ISOWeek.GetWeekOfYear(start)}, {ISOWeek.GetYear(start)}",
+            DateGranularity.Day => start.ToString("d", Culture),
+            _ => start.ToString(Culture),
+        };
+    }
+
+    public virtual string FormatPreset(DatePreset preset) => preset switch
+    {
+        DatePreset.Today => "Today",
+        DatePreset.Yesterday => "Yesterday",
+        DatePreset.Last7Days => "Last 7 days",
+        DatePreset.Last30Days => "Last 30 days",
+        DatePreset.ThisWeek => "This week",
+        DatePreset.ThisMonth => "This month",
+        DatePreset.ThisYear => "This year",
+        _ => preset.ToString(),
+    };
+
+    /// <summary>Whole numbers without decimals, others with two.</summary>
+    protected virtual string FormatNumber(double value) =>
+        value == Math.Floor(value) && Math.Abs(value) < 1e15
+            ? value.ToString("N0", Culture)
+            : value.ToString("N2", Culture);
+}

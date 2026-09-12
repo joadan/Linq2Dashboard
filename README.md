@@ -2,11 +2,11 @@
 
 Interactive exploration of large in-memory collections for .NET: facets with counts, metrics, and paged results that all update together on every click. The faceted-search experience of an e-commerce site, applied to any collection, with a LINQ-flavoured API.
 
-The core library has no UI dependency. A Blazor package is planned on top of it.
+The core library has no UI dependency. A Blazor package on top of it is in progress.
 
 ## Status
 
-The core engine is complete for the first version and meets its performance targets: a million rows with eight facets builds in about a second and recalculates in 5 to 20 ms per click. The Blazor package does not exist yet. The API may still change before a first release.
+The core engine is complete for the first version and meets its performance targets: a million rows with eight facets builds in about a second and recalculates in 5 to 20 ms per click. The Blazor package has its root component and a raw state view; the facet components are being built. The API may still change before a first release.
 
 ## Example
 
@@ -88,7 +88,10 @@ Every facet is a dictionary-encoded column; counting is one pass over the rows i
 
 ```text
 src/Linq2Dashboard/              the core library, net10.0, no dependencies
+src/Linq2Dashboard.Blazor/       Blazor components (in progress)
+samples/Linq2Dashboard.Sample/   Blazor Server sample app
 tests/Linq2Dashboard.Tests/      xUnit; every behavioural rule has a named test
+tests/Linq2Dashboard.Blazor.Tests/   bUnit component tests
 benchmarks/Linq2Dashboard.Benchmarks/   BenchmarkDotNet suite and a --memory report
 Linq2Dashboard-concept.md        what it is and how it behaves
 Linq2Dashboard-design.md         how it is built, with measured numbers
@@ -96,6 +99,7 @@ Linq2Dashboard-design.md         how it is built, with measured numbers
 
 ```powershell
 dotnet test                                                      # all tests
+dotnet run --project samples/Linq2Dashboard.Sample               # the sample app
 dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --memory
 dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --job short --filter *
 ```

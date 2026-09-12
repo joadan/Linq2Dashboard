@@ -622,7 +622,7 @@ tests/Linq2Dashboard.Blazor.Tests/   bUnit: each component renders a given state
 
 ### Components, in build order
 
-1. **`Dashboard<T>`** takes the `Dashboard<T>` and optional initial `Selections`. Owns the current selections and state, exposes `SelectionsChanged` so a host can bookmark through the serializer, cascades state and formatter to children, and lays out facets, metrics and results through render fragments with defaults. First milestone: the loop works end to end with a raw dump of the state.
+1. **`DashboardView<T>`** (named so because `Dashboard<T>` is the core type) takes the `Dashboard<T>` and a bindable `Selections`. Owns the current selections and state, raises `SelectionsChanged` so a host can bookmark through the serializer, and cascades a `DashboardContext<T>` holding dashboard, selections, state and formatter. Every child derives from `DashboardComponentBase<T>`, which receives the context and re-renders on its `StateChanged` event; the context's `ToggleAsync`, `SelectAsync`, `ClearAsync` and `ClearAllAsync` are the only ways a click changes anything. **Done:** the default child is `StateSummary<T>`, a raw but complete rendering of counts, metrics and every facet with clickable values, buckets, presets and the null value, which exercises the whole loop. The sample app runs it over 200 000 rows.
 2. **`ValueFacet`**: `Values` with counts and the selected flag, the null value through the formatter, `Other`, a search box when `IsSearchable`. Click → `Toggle`. Clear link → `Clear`.
 3. **`ActiveSelections`**: the chip row of everything selected, each removable. Cheap and heavily used.
 4. **`Results<T>`**: paged list over `GetPage` with a required `RowTemplate`, since the core cannot know what a row looks like.
