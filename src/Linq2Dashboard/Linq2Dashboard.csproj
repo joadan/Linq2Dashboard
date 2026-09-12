@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Linq2Dashboard</RootNamespace>
+    <AssemblyName>Linq2Dashboard</AssemblyName>
+    <PackageId>Linq2Dashboard</PackageId>
+    <Description>Interactive exploration of large in-memory collections: facets, counts, metrics and paging.</Description>
+  </PropertyGroup>
+
+</Project>

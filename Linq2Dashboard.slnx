@@ -1,6 +1,10 @@
 <Solution>
   <Folder Name="/Solution Items/">
+    <File Path="Linq2Dashboard-concept.md" />
     <File Path="Linq2Dashboard-design.md" />
+    <File Path="README.md" />
   </Folder>
-  <Project Path="Linq2Dashboard.Core/Linq2Dashboard.Core.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/Linq2Dashboard/Linq2Dashboard.csproj" />
+  </Folder>
 </Solution>

@@ -501,9 +501,11 @@ The benchmark project is part of the first version, not an afterthought. It gene
 
 ## 9. Open questions
 
-1. **Parallel counting default.** Counting the ten facets in §4.3 one after another takes roughly 10 to 20 ms. Counting them at the same time on separate cores could bring that down to a few milliseconds, at the cost of using several cores per click. On Blazor Server with many concurrent users that trade can go either way. The proposal is: supported as a builder option, off by default, revisited when the benchmark shows the actual gain on a typical server core count.
+None at the moment. New questions raised during implementation go here.
 
 ### Decided
+
+- **Parallel counting is off by default.** Counting facets one after another costs roughly 10 to 20 ms at the target; counting them on separate cores could cut that to a few milliseconds but occupies several cores per click, which can hurt a busy Blazor Server. Supported as a builder option, off unless the application turns it on. See §4.3.
 
 - **String facets are case-insensitive by default.** `OrdinalIgnoreCase`; first-seen spelling is presented. Case-sensitive is a builder option. See §3.3.
 - **Project renamed to `Linq2Dashboard` under `src/`.** First code change of the implementation. See §7.
