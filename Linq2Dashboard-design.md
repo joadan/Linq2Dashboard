@@ -178,21 +178,29 @@ sealed record MetricState(string Key, string Title, double? Value);   // null = 
 sealed record ResultPage<T>(IReadOnlyList<T> Items, int PageIndex, int PageSize, int MatchingCount);
 ```
 
-`Value` is `object?` on purpose. The UI formats it; the core does not know about cultures or labels. Boolean and custom facets reuse `ValueFacetState`.
+`Value` is `object?` on purpose. The UI formats it; the core does not know about cultures or labels. Boolean facets reuse `ValueFacetState`. `FacetKind` has `Value`, `Boolean`, `Range` and `Date` in the first version.
 
 ### 2.5 Serialising selections
 
 ```csharp
-string query = dashboard.Serializer.ToQueryString(selections);
-//  Country=SE&Country=NO&Amount=100..500&OrderDate=last30days
-
-Selections restored = dashboard.Serializer.FromQueryString(query);
+string json = dashboard.Serializer.ToJson(selections);
+Selections restored = dashboard.Serializer.FromJson(json);
 ```
 
-- Each facet definition owns a `Format(object?) → string` and `Parse(string) → object?` pair for its value type. Defaults cover primitives, enums, strings, `Guid`, and the date types with invariant culture; the builder allows an override.
-- Null is written as an empty segment (`Country=`). Range and date intervals use `from..to` with `[`/`(` prefixes only when a bound is non-default, so the common case reads cleanly.
+```json
+{
+  "Country":   { "values": ["SE", "NO"] },
+  "Amount":    { "from": 100, "to": 500, "toInclusive": false },
+  "OrderDate": { "preset": "last30days" },
+  "status":    { "values": [null, "Open"] }
+}
+```
+
+- JSON is the only format in the first version. Applications that want selections in a URL encode the JSON themselves; a dedicated query-string format can be added later without changing the JSON.
+- Each facet definition owns a `Format(object?) → JsonValue` and `Parse(JsonValue) → object?` pair for its value type. Defaults cover primitives, enums, strings, `Guid`, and the date types; the builder allows an override.
+- Null in a value selection is JSON `null`. Omitted interval bounds mean unbounded. Omitted flags take the defaults from §2.2.
 - Unknown keys and unparseable values are dropped, not thrown. A stale bookmark should degrade to "fewer selections", never to an error page.
-- A JSON form with the same semantics is provided for storage; the query form is for URLs.
+- The serializer is built by the dashboard because parsing needs each facet's value type. It is otherwise stateless.
 
 ---
 
@@ -234,7 +242,7 @@ string[]  labels       Format(dictionary[i]), built lazily for searchable facets
 int[]     totalCounts  per code, computed once
 ```
 
-- Equality of values uses `EqualityComparer<TValue>.Default` unless the builder is given a comparer. Case-insensitive strings are a builder option, not a default.
+- Equality of values uses `EqualityComparer<TValue>.Default` unless the builder is given a comparer. For `string` facets the default is `StringComparer.OrdinalIgnoreCase`, so `"Sweden"` and `"sweden"` are one facet value. The dictionary keeps the first-seen spelling, and that is the spelling the state presents and the serializer writes. A case-sensitive string facet is a builder option.
 - Reading `codes[row]` in ascending row order is a sequential memory scan. This is what makes the counting pass in §4.3 fast regardless of cardinality.
 
 **Range column**:
@@ -398,10 +406,10 @@ Roughly 20 to 30 ms single-threaded, before any parallel gains. This is the numb
 
 ## 6. Extensibility: custom facets
 
-The four built-in kinds are implemented against one internal interface. It is exposed so a custom facet (§C5) can be written without touching the core:
+Custom facets (§C5) are not part of the first version. The four built-in kinds are implemented against one **internal** interface so that the calculation pipeline (§4) treats every facet the same way:
 
 ```csharp
-public interface IFacetDefinition<T>
+internal interface IFacetDefinition<T>
 {
     string Key { get; }
     string Title { get; }
@@ -409,16 +417,16 @@ public interface IFacetDefinition<T>
     IFacetIndex<T> Build(ReadOnlySpan<T> rows);        // once, at Create
 }
 
-public interface IFacetIndex<T>
+internal interface IFacetIndex<T>
 {
     RowSet RowsMatching(Selection selection);           // §4.1
     FacetState Present(RowSet context, Selection? selection);   // §4.3–4.5
-    string Format(object? value);                        // §2.5
-    object? Parse(string text);
+    JsonValue Format(object? value);                     // §2.5
+    object? Parse(JsonValue value);
 }
 ```
 
-A custom facet gets the same context set as everyone else and is subject to every rule in §C4. The first version ships the interface and the four built-ins; it does not promise API stability for the interface until a second custom facet exists outside the repo.
+Keeping the interface internal means the built-ins can reshape it freely while they settle. When custom facets are added, the plan is to make this interface public as it stands then, together with a `FacetKind.Custom` value and a builder entry point. Nothing in the public API of the first version needs to change for that.
 
 ---
 
@@ -445,7 +453,7 @@ benchmarks/
     Linq2Dashboard.Benchmarks/          BenchmarkDotNet, see §8
 ```
 
-The existing `Linq2Dashboard.Core` project is renamed to `Linq2Dashboard` and moved under `src/` so that project, package and root namespace agree.
+The existing `Linq2Dashboard.Core` project is renamed to `Linq2Dashboard` and moved under `src/` so that project, package and root namespace agree. This is the first code change of the implementation.
 
 ### Blazor flow
 
@@ -493,13 +501,14 @@ The benchmark project is part of the first version, not an afterthought. It gene
 
 ## 9. Open questions
 
-1. **Value equality.** Default comparer with an opt-in for case-insensitive strings is the proposal. Should string facets be case-insensitive by default instead?
-2. **Parallel counting default.** Off by default is the proposal until the benchmarks show a clear win on a typical server core count.
-3. **Project rename.** `Linq2Dashboard.Core` to `Linq2Dashboard` under `src/`. Any reason to keep the `.Core` suffix?
-4. **Selection serializer shape.** Query string plus JSON as proposed, or JSON only for the first version?
-5. **Custom facet interface exposure.** Public from day one as proposed, or internal until the built-ins have settled?
+1. **Parallel counting default.** Counting the ten facets in §4.3 one after another takes roughly 10 to 20 ms. Counting them at the same time on separate cores could bring that down to a few milliseconds, at the cost of using several cores per click. On Blazor Server with many concurrent users that trade can go either way. The proposal is: supported as a builder option, off by default, revisited when the benchmark shows the actual gain on a typical server core count.
 
 ### Decided
+
+- **String facets are case-insensitive by default.** `OrdinalIgnoreCase`; first-seen spelling is presented. Case-sensitive is a builder option. See §3.3.
+- **Project renamed to `Linq2Dashboard` under `src/`.** First code change of the implementation. See §7.
+- **Selections serialise to JSON only.** No query-string format in the first version; applications encode the JSON for URLs themselves. See §2.5.
+- **Custom facets come later.** The facet interfaces are internal in the first version and become public when custom facets are added. See §6.
 
 - **Columnar only in the first version.** No per-value bitmaps. Same strategy for every cardinality; bitmaps are a later, benchmark-justified addition. See §1, §3.4, §4.1.
 - **Range bounds are `double`.** The precision trade for `decimal` properties is accepted; range values are used only for filtering and bucketing, never for metrics. See §2.2, §3.3.
