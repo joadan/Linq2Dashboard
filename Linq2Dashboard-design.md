@@ -478,6 +478,42 @@ benchmarks/
 
 The existing `Linq2Dashboard.Core` project is renamed to `Linq2Dashboard` and moved under `src/` so that project, package and root namespace agree. This is the first code change of the implementation.
 
+### The interaction loop, end to end
+
+Concept §2 describes the engine as a function and the UI as a loop around it. With the API as built, the whole loop for any host, Blazor or otherwise, is:
+
+```csharp
+// once, at startup or when new data arrives (§C4.9)
+Dashboard<Order> dashboard = Dashboard.Create(orders, Configure);
+
+// per user session: the UI owns the selections, nothing else is mutable
+Selections selections = dashboard.Serializer.FromJson(bookmarkOrEmpty);
+DashboardState<Order> state = dashboard.Calculate(selections);
+
+// a click on a value facet
+selections = selections.Toggle("Country", value.Value);
+// a click on a range or date bucket, a preset, or a clear
+selections = selections.With("Amount", bucket.ToSelection());
+selections = selections.With("OrderDate", preset.ToSelection());
+selections = selections.Clear("Amount");
+
+// every click ends the same way
+state = dashboard.Calculate(selections);
+Render(state);                                  // Facets, Metrics, MatchingCount, GetPage(...)
+bookmark = dashboard.Serializer.ToJson(selections);
+```
+
+What the UI reads from the state, per facet kind:
+
+| Kind | Renders | Click produces |
+|---|---|---|
+| `ValueFacetState` | `Values` (value, total, filtered, selected), `Other`, `Search(text)` | `Toggle(key, value.Value)` |
+| `RangeFacetState` | `Buckets` as a histogram, `Null` beside it, `Min`/`Max` for a slider | `bucket.ToSelection()`, or `new RangeSelection(from, to)` from a slider |
+| `DateFacetState` | `Buckets` per period, `Presets` with counts, `Null` | `bucket.ToSelection()`, `preset.ToSelection()` |
+| any | `ContextCount`, `HasSelection`, `Title` | `Clear(key)` |
+
+The UI never computes a count, never constructs an interval from bucket bounds, and never needs to know a facet's value type: `FacetValue.Value` is boxed and formatted by the UI, and goes straight back into `Toggle`.
+
 ### Blazor flow
 
 ```text
@@ -487,7 +523,7 @@ User clicks "Sweden"
     → StateHasChanged()
 ```
 
-The component owns `Selections` and the current `DashboardState<T>`. `Calculate` runs inline. At the target cost (§4.8) that is acceptable on Blazor Server. On WebAssembly a million rows in the browser is a memory question before it is a speed question, and is not a first-version target.
+The component owns `Selections` and the current `DashboardState<T>`. `Calculate` runs inline. At the measured cost (§4.8, 5 to 20 ms) that is acceptable on Blazor Server. On WebAssembly a million rows in the browser is a memory question before it is a speed question, and is not a first-version target.
 
 ---
 
