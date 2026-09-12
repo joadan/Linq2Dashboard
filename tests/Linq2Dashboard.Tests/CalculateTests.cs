@@ -282,6 +282,11 @@ public class CalculateTests
         var absolute = (DateFacetState)Shared.Calculate(Selections.Empty.With("OrderDate",
             DateSelection.Between(TestData.Instant("2026-01-01T00:00:00+01:00"), TestData.Instant("2026-04-01T00:00:00+02:00")))).Facet("OrderDate");
         Assert.Equal([true, true, true, false], absolute.Buckets.Select(b => b.Selected));
+        Assert.All(absolute.Presets, p => Assert.False(p.Selected)); // covers March but is not exactly "This month"
+
+        var marchExactly = (DateFacetState)Shared.Calculate(Selections.Empty.With("OrderDate", dates.Buckets[2].ToSelection())).Facet("OrderDate");
+        Assert.True(marchExactly.Presets[0].Selected); // the March bar is exactly "This month" (design §2.4)
+        Assert.False(marchExactly.Presets[1].Selected);
 
         var clicked = Shared.Calculate(Selections.Empty.With("OrderDate", dates.Buckets[1].ToSelection()));
         Assert.Equal([2, 3], clicked.Items.Select(o => o.Id).Order());

@@ -1,0 +1,45 @@
+@* Shared by RangeFacet and DateFacet: buckets as bars, the total faintly behind the filtered count, both scaled to the largest total. *@
+
+<ol class="l2d-buckets l2d-buckets-@Layout.ToString().ToLowerInvariant()">
+    @{
+        int scale = Math.Max(1, Bars.Count == 0 ? 0 : Bars.Max(b => b.TotalCount));
+    }
+    @foreach (BucketBar bar in Bars)
+    {
+        <li class="l2d-bucket @(bar.Selected ? "l2d-selected" : null) @(bar.FilteredCount == 0 ? "l2d-zero" : null) @(bar.IsNull ? "l2d-null" : null)"
+            style="--l2d-total: @Share(bar.TotalCount, scale); --l2d-filtered: @Share(bar.FilteredCount, scale);">
+            <button type="button" class="l2d-bucket-button" aria-pressed="@(bar.Selected ? "true" : "false")"
+                    title="@bar.Label: @Formatter.FormatCount(bar.FilteredCount) / @Formatter.FormatCount(bar.TotalCount)"
+                    @onclick="bar.Click">
+                <span class="l2d-bucket-bar"><span class="l2d-bucket-bar-total"></span><span class="l2d-bucket-bar-filtered"></span></span>
+                <span class="l2d-bucket-label">@bar.Label</span>
+                @if (ShowCounts)
+                {
+                    <span class="l2d-bucket-count">
+                        @Formatter.FormatCount(bar.FilteredCount)@if (ShowTotals) {<span class="l2d-bucket-total"> / @Formatter.FormatCount(bar.TotalCount)</span>}
+                    </span>
+                }
+            </button>
+        </li>
+    }
+</ol>
+
+@code {
+    [Parameter, EditorRequired]
+    public IReadOnlyList<BucketBar> Bars { get; set; } = [];
+
+    [Parameter, EditorRequired]
+    public IDashboardFormatter Formatter { get; set; } = default!;
+
+    [Parameter]
+    public BucketLayout Layout { get; set; } = BucketLayout.Histogram;
+
+    [Parameter]
+    public bool ShowCounts { get; set; } = true;
+
+    [Parameter]
+    public bool ShowTotals { get; set; }
+
+    private static string Share(int count, int scale) =>
+        ((double)count / scale).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
+}

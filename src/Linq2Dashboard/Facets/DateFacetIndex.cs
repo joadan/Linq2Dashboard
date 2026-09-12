@@ -57,7 +57,10 @@ internal sealed class DateFacetIndex : FacetIndex
             DatePreset preset = Presets[i];
             (DateTimeOffset from, DateTimeOffset to) = ResolvePreset(preset);
             RowSet rows = Column.RowsInInterval(from, to);
-            presets[i] = new PresetState(preset, from, to, rows.Count, rows.And(context).Count, date?.Preset == preset);
+            // Selected when the selection is this preset, or an absolute interval that is exactly the preset's interval
+            // (a click on the March bar lights "This month"). Coverage would light every preset inside a wide selection.
+            bool selected = date?.Preset == preset || (hasInterval && date?.Preset is null && selectedFrom == from && selectedTo == to);
+            presets[i] = new PresetState(preset, from, to, rows.Count, rows.And(context).Count, selected);
         }
 
         var nullValue = new FacetValue(null, Column.TotalCounts[0], counts[0], date is { IncludeNull: true });

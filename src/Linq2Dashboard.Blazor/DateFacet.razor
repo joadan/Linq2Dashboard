@@ -1,0 +1,104 @@
+@typeparam T
+@inherits DashboardComponentBase<T>
+
+<section class="l2d-facet l2d-date-facet l2d-date-@Layout.ToString().ToLowerInvariant()" data-key="@Key">
+    <header class="l2d-facet-header">
+        <h3 class="l2d-facet-title">@Facet.Title</h3>
+        @if (Facet.HasSelection)
+        {
+            <button type="button" class="l2d-facet-clear" @onclick="() => Context.ClearAsync(Key)">@ClearText</button>
+        }
+    </header>
+
+    @if (ShowPresets && Facet.Presets.Count > 0)
+    {
+        <ul class="l2d-presets">
+            @foreach (PresetState preset in Facet.Presets)
+            {
+                <li class="l2d-preset @(preset.Selected ? "l2d-selected" : null) @(preset.FilteredCount == 0 ? "l2d-zero" : null)">
+                    <button type="button" class="l2d-preset-button" aria-pressed="@(preset.Selected ? "true" : "false")"
+                            title="@Formatter.FormatCount(preset.FilteredCount) / @Formatter.FormatCount(preset.TotalCount)"
+                            @onclick="() => ClickPreset(preset)">
+                        <span class="l2d-preset-label">@Formatter.FormatPreset(preset.Preset)</span>
+                        @if (ShowCounts)
+                        {
+                            <span class="l2d-preset-count">
+                                @Formatter.FormatCount(preset.FilteredCount)@if (ShowTotals) {<span class="l2d-preset-total"> / @Formatter.FormatCount(preset.TotalCount)</span>}
+                            </span>
+                        }
+                    </button>
+                </li>
+            }
+        </ul>
+    }
+
+    @if (Facet.Buckets.Count == 0 && Facet.Null.TotalCount == 0)
+    {
+        <p class="l2d-facet-empty">@NoValuesText</p>
+    }
+    else
+    {
+        <BucketBars Bars="Bars()" Formatter="Formatter" Layout="Layout" ShowCounts="ShowCounts" ShowTotals="ShowTotals" />
+    }
+</section>
+
+@code {
+    /// <summary>The facet key, as defined in the builder. Must be a date facet.</summary>
+    [Parameter, EditorRequired]
+    public string Key { get; set; } = default!;
+
+    /// <summary>Vertical bars per period with labels beneath, or rows with an inline bar.</summary>
+    [Parameter]
+    public BucketLayout Layout { get; set; } = BucketLayout.Histogram;
+
+    /// <summary>Show the configured presets with their counts above the periods (concept §5).</summary>
+    [Parameter]
+    public bool ShowPresets { get; set; } = true;
+
+    [Parameter]
+    public bool ShowCounts { get; set; } = true;
+
+    /// <summary>Show "filtered / total" instead of the filtered count alone.</summary>
+    [Parameter]
+    public bool ShowTotals { get; set; }
+
+    [Parameter]
+    public string ClearText { get; set; } = "Clear";
+
+    [Parameter]
+    public string NoValuesText { get; set; } = "No values";
+
+    private DateFacetState Facet => State.Facet(Key) as DateFacetState
+        ?? throw new InvalidOperationException($"Facet '{Key}' is not a date facet; use the component for its kind.");
+
+    private IReadOnlyList<BucketBar> Bars()
+    {
+        DateFacetState facet = Facet;
+        var bars = new List<BucketBar>(facet.Buckets.Count + 1);
+        foreach (DateBucket bucket in facet.Buckets)
+        {
+            DateBucket captured = bucket;
+            bars.Add(new BucketBar(Formatter.FormatDateBucket(bucket, facet.Granularity), bucket.TotalCount, bucket.FilteredCount, bucket.Selected, false, () => ClickBucket(captured)));
+        }
+
+        if (facet.Null.TotalCount > 0)
+        {
+            bars.Add(new BucketBar(Formatter.NullLabel, facet.Null.TotalCount, facet.Null.FilteredCount, facet.Null.Selected, true, ClickNull));
+        }
+
+        return bars;
+    }
+
+    /// <summary>A click selects the period; a second click on the selected period clears the facet.</summary>
+    private Task ClickBucket(DateBucket bucket)
+    {
+        DateSelection selection = bucket.ToSelection();
+        return selection.Equals(Facet.Selection) ? Context.ClearAsync(Key) : Context.SelectAsync(Key, selection);
+    }
+
+    private Task ClickPreset(PresetState preset) =>
+        preset.Selected ? Context.ClearAsync(Key) : Context.SelectAsync(Key, preset.ToSelection());
+
+    private Task ClickNull() =>
+        Facet.Selection is DateSelection { OnlyNulls: true } ? Context.ClearAsync(Key) : Context.SelectAsync(Key, DateSelection.OnlyNull);
+}

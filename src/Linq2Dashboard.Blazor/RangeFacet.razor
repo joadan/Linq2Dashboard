@@ -20,46 +20,7 @@
     }
     else
     {
-        int scale = Math.Max(1, Math.Max(Facet.Buckets.Count == 0 ? 0 : Facet.Buckets.Max(b => b.TotalCount), Facet.Null.TotalCount));
-
-        <ol class="l2d-buckets">
-            @foreach (RangeBucket bucket in Facet.Buckets)
-            {
-                <li class="l2d-bucket @(bucket.Selected ? "l2d-selected" : null) @(bucket.FilteredCount == 0 ? "l2d-zero" : null)"
-                    style="--l2d-total: @Share(bucket.TotalCount, scale); --l2d-filtered: @Share(bucket.FilteredCount, scale);">
-                    <button type="button" class="l2d-bucket-button" aria-pressed="@(bucket.Selected ? "true" : "false")"
-                            title="@Formatter.FormatRangeBucket(bucket): @Formatter.FormatCount(bucket.FilteredCount) / @Formatter.FormatCount(bucket.TotalCount)"
-                            @onclick="() => ClickBucket(bucket)">
-                        <span class="l2d-bucket-bar"><span class="l2d-bucket-bar-total"></span><span class="l2d-bucket-bar-filtered"></span></span>
-                        <span class="l2d-bucket-label">@Formatter.FormatRangeBucket(bucket)</span>
-                        @if (ShowCounts)
-                        {
-                            <span class="l2d-bucket-count">
-                                @Formatter.FormatCount(bucket.FilteredCount)@if (ShowTotals) {<span class="l2d-bucket-total"> / @Formatter.FormatCount(bucket.TotalCount)</span>}
-                            </span>
-                        }
-                    </button>
-                </li>
-            }
-            @if (Facet.Null.TotalCount > 0)
-            {
-                <li class="l2d-bucket l2d-null @(Facet.Null.Selected ? "l2d-selected" : null) @(Facet.Null.FilteredCount == 0 ? "l2d-zero" : null)"
-                    style="--l2d-total: @Share(Facet.Null.TotalCount, scale); --l2d-filtered: @Share(Facet.Null.FilteredCount, scale);">
-                    <button type="button" class="l2d-bucket-button" aria-pressed="@(Facet.Null.Selected ? "true" : "false")"
-                            title="@Formatter.NullLabel: @Formatter.FormatCount(Facet.Null.FilteredCount) / @Formatter.FormatCount(Facet.Null.TotalCount)"
-                            @onclick="ClickNull">
-                        <span class="l2d-bucket-bar"><span class="l2d-bucket-bar-total"></span><span class="l2d-bucket-bar-filtered"></span></span>
-                        <span class="l2d-bucket-label">@Formatter.NullLabel</span>
-                        @if (ShowCounts)
-                        {
-                            <span class="l2d-bucket-count">
-                                @Formatter.FormatCount(Facet.Null.FilteredCount)@if (ShowTotals) {<span class="l2d-bucket-total"> / @Formatter.FormatCount(Facet.Null.TotalCount)</span>}
-                            </span>
-                        }
-                    </button>
-                </li>
-            }
-        </ol>
+        <BucketBars Bars="Bars()" Formatter="Formatter" Layout="Layout" ShowCounts="ShowCounts" ShowTotals="ShowTotals" />
     }
 </section>
 
@@ -92,6 +53,24 @@
     private RangeFacetState Facet => State.Facet(Key) as RangeFacetState
         ?? throw new InvalidOperationException($"Facet '{Key}' is not a range facet; use the component for its kind.");
 
+    private IReadOnlyList<BucketBar> Bars()
+    {
+        RangeFacetState facet = Facet;
+        var bars = new List<BucketBar>(facet.Buckets.Count + 1);
+        foreach (RangeBucket bucket in facet.Buckets)
+        {
+            RangeBucket captured = bucket;
+            bars.Add(new BucketBar(Formatter.FormatRangeBucket(bucket), bucket.TotalCount, bucket.FilteredCount, bucket.Selected, false, () => ClickBucket(captured)));
+        }
+
+        if (facet.Null.TotalCount > 0)
+        {
+            bars.Add(new BucketBar(Formatter.NullLabel, facet.Null.TotalCount, facet.Null.FilteredCount, facet.Null.Selected, true, ClickNull));
+        }
+
+        return bars;
+    }
+
     /// <summary>A click selects the bucket's interval; a second click on the selected bucket clears the facet.</summary>
     private Task ClickBucket(RangeBucket bucket)
     {
@@ -101,7 +80,4 @@
 
     private Task ClickNull() =>
         Facet.Selection is RangeSelection { OnlyNulls: true } ? Context.ClearAsync(Key) : Context.SelectAsync(Key, RangeSelection.OnlyNull);
-
-    private static string Share(int count, int scale) =>
-        ((double)count / scale).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);
 }
