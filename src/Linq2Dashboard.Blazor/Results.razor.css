@@ -38,6 +38,21 @@
     flex-direction: column;
 }
 
+/* Virtualised rows scroll inside a container of definite height; Blazor's Virtualize needs that ancestor. */
+.l2d-results-scroll {
+    height: var(--l2d-results-height, 30rem);
+    overflow-y: auto;
+    border: 1px solid var(--l2d-border, #d4d4d8);
+    border-radius: var(--l2d-radius, 0.25rem);
+}
+
+.l2d-results-scroll .l2d-results-table ::deep thead th {
+    position: sticky;
+    top: 0;
+    background: var(--l2d-sticky-background, #fff);
+    z-index: 1;
+}
+
 .l2d-pager {
     display: flex;
     align-items: center;

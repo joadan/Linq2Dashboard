@@ -66,8 +66,25 @@ public sealed class DashboardState<T>
         ArgumentOutOfRangeException.ThrowIfNegative(pageIndex);
         ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
 
-        var items = new List<T>(Math.Min(pageSize, MatchingCount));
-        long skip = (long)pageIndex * pageSize;
+        return new ResultPage<T>(GetItems((long)pageIndex * pageSize, pageSize), pageIndex, pageSize, MatchingCount);
+    }
+
+    /// <summary>
+    /// Matching rows <paramref name="skip"/> to <paramref name="skip"/> + <paramref name="take"/> in the
+    /// application-defined order. The slice a virtualised list asks for (design §9); a slice beyond
+    /// the end is empty.
+    /// </summary>
+    public IReadOnlyList<T> GetItems(long skip, int take)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegative(skip);
+        ArgumentOutOfRangeException.ThrowIfNegative(take);
+
+        if (take == 0 || skip >= MatchingCount)
+        {
+            return [];
+        }
+
+        var items = new List<T>((int)Math.Min(take, MatchingCount - skip));
         foreach (int row in OrderedMatchingRows())
         {
             if (skip > 0)
@@ -77,13 +94,13 @@ public sealed class DashboardState<T>
             }
 
             items.Add(dashboard.ItemAt(row));
-            if (items.Count == pageSize)
+            if (items.Count == take)
             {
                 break;
             }
         }
 
-        return new ResultPage<T>(items, pageIndex, pageSize, MatchingCount);
+        return items;
     }
 
     /// <summary>All matching rows in the application-defined order, lazily. For export and iteration.</summary>

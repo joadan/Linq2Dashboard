@@ -13,6 +13,7 @@
     --l2d-bucket-label-width: 6rem;
     --l2d-metric-min-width: 9rem;
     --l2d-metric-padding: 0.625rem 0.75rem;
+    --l2d-results-height: 30rem;
 
     /* type */
     --l2d-font-size: 0.875rem;
@@ -34,6 +35,7 @@
     --l2d-bar-track: transparent;
     --l2d-input-background: transparent;
     --l2d-metric-background: transparent;
+    --l2d-sticky-background: #fff;
 
     display: flex;
     flex-direction: column;
@@ -52,5 +54,6 @@
         --l2d-selected-background: rgba(96, 165, 250, 0.2);
         --l2d-bar: #60a5fa;
         --l2d-bar-total: rgba(255, 255, 255, 0.12);
+        --l2d-sticky-background: #18181b;
     }
 }

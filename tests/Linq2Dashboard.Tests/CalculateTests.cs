@@ -350,6 +350,21 @@ public class CalculateTests
     }
 
     [Fact]
+    public void GetItems_slices_the_ordered_matching_rows()
+    {
+        var state = Shared.Calculate();
+
+        Assert.Equal([6, 5, 4], state.GetItems(0, 3).Select(o => o.Id));
+        Assert.Equal([2, 1, 8], state.GetItems(4, 3).Select(o => o.Id));
+        Assert.Equal([7], state.GetItems(7, 5).Select(o => o.Id));
+        Assert.Empty(state.GetItems(8, 5));
+        Assert.Empty(state.GetItems(3, 0));
+        Assert.Equal(state.GetPage(1, 3).Items, state.GetItems(3, 3));
+        Assert.Throws<ArgumentOutOfRangeException>(() => state.GetItems(-1, 1));
+        Assert.Throws<ArgumentOutOfRangeException>(() => state.GetItems(0, -1));
+    }
+
+    [Fact]
     public void Page_arguments_are_validated()
     {
         var state = Shared.Calculate();

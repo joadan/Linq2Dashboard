@@ -1,7 +1,8 @@
 @typeparam T
 @inherits DashboardComponentBase<T>
+@using Microsoft.AspNetCore.Components.Web.Virtualization
 
-<div class="l2d-results">
+<div class="l2d-results @(Virtualize ? "l2d-results-virtualized" : null)">
     @if (State.MatchingCount == 0)
     {
         <div class="l2d-results-empty">
@@ -12,6 +13,42 @@
             else
             {
                 @EmptyText
+            }
+        </div>
+    }
+    else if (Virtualize)
+    {
+        @if (ShowSummary)
+        {
+            <p class="l2d-results-summary">@string.Format(VirtualSummaryFormat, Formatter.FormatCount(State.MatchingCount))</p>
+        }
+
+        <div class="l2d-results-scroll">
+            @if (Layout == ResultsLayout.Table)
+            {
+                <table class="l2d-results-table">
+                    @if (HeaderTemplate is not null)
+                    {
+                        <thead>@HeaderTemplate</thead>
+                    }
+                    <tbody>
+                        <Virtualize @key="State.Selections" TItem="T" ItemsProvider="ProvideItems" ItemSize="ItemSize" OverscanCount="OverscanCount" SpacerElement="tr">
+                            @RowTemplate(context)
+                        </Virtualize>
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <div class="l2d-results-list">
+                    @if (HeaderTemplate is not null)
+                    {
+                        @HeaderTemplate
+                    }
+                    <Virtualize @key="State.Selections" TItem="T" ItemsProvider="ProvideItems" ItemSize="ItemSize" OverscanCount="OverscanCount">
+                        @RowTemplate(context)
+                    </Virtualize>
+                </div>
             }
         </div>
     }
@@ -91,6 +128,22 @@
     [Parameter]
     public ResultsLayout Layout { get; set; } = ResultsLayout.List;
 
+    /// <summary>
+    /// Scroll through every matching row in a fixed-height container instead of paging, rendering
+    /// only the visible rows through Blazor's <c>Virtualize</c>. Rows must have a roughly constant
+    /// height, given by <see cref="ItemSize"/>. The container height is <c>--l2d-results-height</c>.
+    /// </summary>
+    [Parameter]
+    public bool Virtualize { get; set; }
+
+    /// <summary>Row height in pixels for virtualisation. Default 32.</summary>
+    [Parameter]
+    public float ItemSize { get; set; } = 32f;
+
+    /// <summary>Rows rendered beyond the visible area for virtualisation. Default 5.</summary>
+    [Parameter]
+    public int OverscanCount { get; set; } = 5;
+
     [Parameter]
     public int PageSize { get; set; } = 50;
 
@@ -104,9 +157,13 @@
     [Parameter]
     public bool ShowSummary { get; set; } = true;
 
-    /// <summary>Format for the summary line; {0} first row, {1} last row, {2} matching count.</summary>
+    /// <summary>Format for the summary line when paging; {0} first row, {1} last row, {2} matching count.</summary>
     [Parameter]
     public string SummaryFormat { get; set; } = "Showing {0}–{1} of {2}";
+
+    /// <summary>Format for the summary line when virtualised; {0} matching count.</summary>
+    [Parameter]
+    public string VirtualSummaryFormat { get; set; } = "{0} rows";
 
     /// <summary>Format for the pager status; {0} current page, {1} page count.</summary>
     [Parameter]
@@ -123,16 +180,28 @@
         ArgumentNullException.ThrowIfNull(RowTemplate);
         ArgumentOutOfRangeException.ThrowIfLessThan(PageSize, 1);
         ArgumentOutOfRangeException.ThrowIfNegative(PageIndex);
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(ItemSize);
+        ArgumentOutOfRangeException.ThrowIfNegative(OverscanCount);
         pageIndex = PageIndex;
     }
 
-    /// <summary>A new state means new matching rows: go back to the first page (design §9).</summary>
+    /// <summary>
+    /// A new state means new matching rows: go back to the first page (design §9). The virtualised
+    /// list is keyed on the selections, so a new selection recreates it and it queries afresh from the top.
+    /// </summary>
     protected override void OnDashboardStateChanged()
     {
         if (!State.Selections.Equals(pageSelections))
         {
             pageIndex = 0;
         }
+    }
+
+    private ValueTask<ItemsProviderResult<T>> ProvideItems(ItemsProviderRequest request)
+    {
+        pageSelections = State.Selections;
+        IReadOnlyList<T> items = State.GetItems(request.StartIndex, request.Count);
+        return ValueTask.FromResult(new ItemsProviderResult<T>(items, State.MatchingCount));
     }
 
     private ResultPage<T> CurrentPage()
