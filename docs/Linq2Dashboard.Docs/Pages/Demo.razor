@@ -14,15 +14,19 @@
             }
         </select>
     </label>
-    @if (buildMilliseconds is long ms)
+    @if (generateMilliseconds is long generated && buildMilliseconds is long built)
     {
-        <span class="demo-timing">built in @ms.ToString("N0") ms in this browser</span>
+        <span class="demo-timing">generated in @generated.ToString("N0") ms · dashboard built in @built.ToString("N0") ms</span>
     }
 </div>
 
 @if (dashboard is null)
 {
-    <p class="demo-building">Generating @rows.ToString("N0") orders and building the dashboard…</p>
+    <p class="demo-building">Generating @rows.ToString("N0") orders and building the dashboard in your browser…</p>
+    @if (rows >= 500_000)
+    {
+        <p class="demo-building">Large datasets take a few seconds here: the runtime is interpreted or ahead-of-time compiled WebAssembly on a single thread, and the browser holds every row in memory.</p>
+    }
 }
 else
 {
@@ -38,6 +42,9 @@ else
                 <DateFacet T="SampleOrder" Key="OrderDate" Collapsible="true" />
             </aside>
             <div class="demo-main">
+                <div class="demo-status">
+                    <CalculationTiming />
+                </div>
                 <Metrics T="SampleOrder" IncludeMatchingCount="true" />
                 <ActiveSelections T="SampleOrder" />
                 <Results T="SampleOrder" Layout="ResultsLayout.Table" Virtualize="true" ItemSize="33">
@@ -72,13 +79,15 @@ else
 }
 
 @code {
-    private static readonly int[] RowOptions = [20_000, 50_000, 100_000, 200_000];
+    private static readonly int[] RowOptions = [20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000];
+    private const int DefaultRows = 50_000;
     private const string SelectionsParameter = "s";
     private const string RowsParameter = "rows";
 
     private Dashboard<SampleOrder>? dashboard;
     private Selections selections = Selections.Empty;
-    private int rows = 50_000;
+    private int rows = DefaultRows;
+    private long? generateMilliseconds;
     private long? buildMilliseconds;
     private bool building;
 
@@ -108,12 +117,17 @@ else
     {
         building = true;
         dashboard = null;
+        generateMilliseconds = null;
         buildMilliseconds = null;
         StateHasChanged();
         await Task.Delay(1); // let the "building" text paint before the single-threaded work starts
 
         var watch = System.Diagnostics.Stopwatch.StartNew();
-        Dashboard<SampleOrder> built = SampleData.BuildDashboard(rows);
+        SampleOrder[] orders = SampleData.Generate(rows);
+        generateMilliseconds = watch.ElapsedMilliseconds;
+
+        watch.Restart();
+        Dashboard<SampleOrder> built = SampleData.BuildDashboard(orders);
         buildMilliseconds = watch.ElapsedMilliseconds;
 
         selections = Restore(built, selectionsJson);
@@ -156,7 +170,7 @@ else
         string? json = selections.IsEmpty ? null : dashboard.Serializer.ToJson(selections);
         string url = Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
         {
-            [RowsParameter] = rows == 50_000 ? null : rows,
+            [RowsParameter] = rows == DefaultRows ? null : rows,
             [SelectionsParameter] = json,
         });
         Navigation.NavigateTo(url, replace: true);

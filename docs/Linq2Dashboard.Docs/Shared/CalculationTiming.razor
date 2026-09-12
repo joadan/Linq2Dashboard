@@ -1,0 +1,7 @@
+@inherits DashboardComponentBase<SampleOrder>
+
+@* Shows how long the most recent recalculation took in this browser. Re-renders with the state like any other component. *@
+<span class="demo-timing">
+    last recalculation @Context.LastCalculation.TotalMilliseconds.ToString("N1") ms
+    (@Formatter.FormatCount(State.MatchingCount) matching)
+</span>

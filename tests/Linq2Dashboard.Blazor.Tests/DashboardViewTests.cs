@@ -162,6 +162,21 @@ public class DashboardViewTests : BunitContext
     }
 
     [Fact]
+    public void The_context_records_how_long_the_last_calculation_took()
+    {
+        var cut = RenderView(BuildDashboard());
+        DashboardContext<Order> context = cut.Instance.Context;
+
+        Assert.True(context.LastCalculation >= TimeSpan.Zero);
+        Assert.True(context.LastCalculation < TimeSpan.FromSeconds(10));
+
+        ValueButton(cut, "Country", "SE").Click();
+
+        Assert.True(context.LastCalculation >= TimeSpan.Zero);
+        Assert.True(context.LastCalculation < TimeSpan.FromSeconds(10));
+    }
+
+    [Fact]
     public void A_dashboard_component_outside_a_view_fails_clearly()
     {
         var error = Assert.Throws<InvalidOperationException>(() => Render<Probe>());

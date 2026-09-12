@@ -14,7 +14,7 @@ public sealed class DashboardContext<T>
         Dashboard = dashboard;
         Formatter = formatter;
         Selections = selections;
-        State = dashboard.Calculate(selections);
+        State = TimedCalculate(selections);
         this.onSelectionsChanged = onSelectionsChanged;
     }
 
@@ -30,6 +30,9 @@ public sealed class DashboardContext<T>
 
     /// <summary>Raised after <see cref="State"/> changed. Components re-render on it.</summary>
     public event Action? StateChanged;
+
+    /// <summary>Wall time of the most recent <c>Calculate</c>, including the initial one. A cache hit reads as near zero.</summary>
+    public TimeSpan LastCalculation { get; private set; }
 
     /// <summary>Replaces the selections, recalculates, notifies components and the host.</summary>
     public Task ApplyAsync(Selections selections)
@@ -66,7 +69,15 @@ public sealed class DashboardContext<T>
     private void Recalculate(Selections selections)
     {
         Selections = selections;
-        State = Dashboard.Calculate(selections);
+        State = TimedCalculate(selections);
         StateChanged?.Invoke();
+    }
+
+    private DashboardState<T> TimedCalculate(Selections selections)
+    {
+        long start = System.Diagnostics.Stopwatch.GetTimestamp();
+        DashboardState<T> state = Dashboard.Calculate(selections);
+        LastCalculation = System.Diagnostics.Stopwatch.GetElapsedTime(start);
+        return state;
     }
 }

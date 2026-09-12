@@ -54,8 +54,11 @@ public static class SampleData
         return orders;
     }
 
-    public static Dashboard<SampleOrder> BuildDashboard(int rows) =>
-        Dashboard.Create(Generate(rows), b =>
+    public static Dashboard<SampleOrder> BuildDashboard(int rows) => BuildDashboard(Generate(rows));
+
+    /// <summary>Builds the dashboard over already generated orders, so generation and build can be timed apart.</summary>
+    public static Dashboard<SampleOrder> BuildDashboard(SampleOrder[] orders) =>
+        Dashboard.Create(orders, b =>
         {
             b.ValueFacet(x => x.Country);
             b.ValueFacet(x => x.Status);
