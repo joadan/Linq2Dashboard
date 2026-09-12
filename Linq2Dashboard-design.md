@@ -1,1096 +1,509 @@
-# Linq2Dashboard
+# Linq2Dashboard – Design
 
-## Overview
-
-**Linq2Dashboard** is a .NET library for exploring large in-memory collections through filtering, faceting, aggregation, grouping, and interactive dashboard state.
-
-The initial target is approximately **1 million rows of flattened objects**, with frequent filter changes and recalculation of facet counts.
-
-The library is inspired by LINQ and is intended to fit alongside existing projects such as:
-
-- `Linq2OData`
-- `Linq2GraphQL`
-
-The core library should be completely independent of Blazor or any other UI technology.
-
-A separate **Linq2Dashboard.Blazor** package provides the UI layer.
+> Status: draft, being built iteratively. This document describes *how* the behaviour defined in
+> [Linq2Dashboard-concept.md](Linq2Dashboard-concept.md) is realised: public API, types, internal data model,
+> calculation, caching, project layout and benchmarks. Section references of the form §C4.2 point into the concept document.
+>
+> Where this document and the concept disagree, the concept wins and this document is wrong.
 
 ---
 
-# Goals
+## 1. Design goals
 
-## Primary goals
-
-- Accept an `IEnumerable<T>` as the source.
-- Efficiently work with large in-memory datasets.
-- Support multiple facet types.
-- Support interactive filtering.
-- Calculate both total and filtered facet counts.
-- Recalculate all facets when filters change.
-- Avoid repeatedly scanning the complete dataset for every facet.
-- Provide a clean API based on expressions and LINQ concepts.
-- Keep the core engine independent from UI frameworks.
-- Provide a reusable Blazor component on top of the engine.
-
-## Non-goals
-
-The project is not intended to become a full BI platform.
-
-It should focus on:
-
-> Efficient interactive exploration of large in-memory collections.
+- **One million rows, ten facets, one high-cardinality facet, interactive.** A full recalculation after a click should land well under 50 ms on a developer laptop. Building the dashboard may take a couple of seconds.
+- **The engine is a pure function.** `Dashboard<T>` is immutable after construction. `Calculate(selections)` returns an immutable `DashboardState<T>`. Nothing about a dashboard changes when a user clicks (§C4.9).
+- **Columnar first, bitmaps where they pay.** Every facet is stored as one integer code per row. Counting is a single pass over the rows in context. Per-value bitmaps are an optimisation enabled by measurement, not an assumption.
+- **No surprises at the boundary.** Everything the UI touches is a plain, serialisable, non-generic type.
 
 ---
 
-# High-level architecture
+## 2. Public API
 
-```text
-                     Linq2Dashboard
-                            |
-                    +-------+-------+
-                    |               |
-              Dashboard<T>      Indexes
-                    |               |
-                    +-------+-------+
-                            |
-                    DashboardState
-                            |
-                            v
-                  Linq2Dashboard.Blazor
-                            |
-              +-------------+-------------+
-              |             |             |
-           Facets         Metrics       Results
-              |             |             |
-          Filter UI      KPI UI        Grid/List
-```
-
-The core engine owns the meaning and calculation of the dashboard.
-
-The Blazor layer owns presentation and user interaction.
-
----
-
-# Core API
-
-A typical usage should look approximately like:
+### 2.1 Building a dashboard
 
 ```csharp
-var dashboard = new Dashboard<Order>(orders);
-
-dashboard
-    .AddFacet(x => x.Country)
-    .AddFacet(x => x.Status)
-    .AddRangeFacet(x => x.Amount)
-    .AddDateFacet(x => x.OrderDate);
-```
-
-Filters can then be applied:
-
-```csharp
-dashboard.SetFilter(countryFacet, "SE");
-dashboard.SetFilter(statusFacet, "Open");
-
-var state = dashboard.Calculate();
-```
-
-The exact API is intentionally not fixed yet.
-
----
-
-# Why IEnumerable<T>
-
-The source API should be:
-
-```csharp
-IEnumerable<T>
-```
-
-rather than `IQueryable<T>`.
-
-The data is explicitly assumed to be in memory.
-
-`IQueryable<T>` does not provide a meaningful performance advantage for this scenario and introduces semantics associated with query providers and expression translation.
-
-The dashboard should instead own an internal optimized representation of the data.
-
-The source may be materialized once:
-
-```csharp
-_items = source.ToArray();
-```
-
-or another compact representation may be created.
-
-This is particularly important because the same source may otherwise be enumerated many times during facet calculations.
-
----
-
-# Performance model
-
-The target use case is:
-
-```text
-1,000,000 rows
-    |
-    +-- Country facet
-    +-- Category facet
-    +-- Brand facet
-    +-- Status facet
-    +-- Price facet
-    +-- Date facet
-    +-- ...
-```
-
-A naive implementation could perform a million-row scan for every facet whenever a filter changes.
-
-That does not scale well.
-
-The engine should instead build indexes that allow filtering and aggregation to operate on compact sets of row identifiers.
-
-## Row IDs
-
-Each source object can receive an integer row ID:
-
-```text
-0
-1
-2
-...
-999999
-```
-
-Indexes can then refer to rows rather than repeatedly evaluating object predicates.
-
-## Bitsets / bitmaps
-
-A value facet can maintain a bitmap for each value:
-
-```text
-Country
-
-Sweden  -> bitmap
-Norway  -> bitmap
-Denmark -> bitmap
-```
-
-A selection such as:
-
-```text
-Country = Sweden
-```
-
-becomes a bitmap operation.
-
-Multiple filters can be combined using AND/OR operations.
-
-This is potentially much cheaper than evaluating predicates against every object repeatedly.
-
-The exact bitmap implementation should remain an internal implementation detail.
-
----
-
-# Facets
-
-A facet represents one dimension by which the user can explore the data.
-
-The core should support different facet types rather than forcing everything into a single value-based model.
-
-Potential facet types include:
-
-## Value facet
-
-```csharp
-dashboard.AddFacet(x => x.Country);
-```
-
-Example:
-
-```text
-Country
-
-Sweden       4200
-Norway       1800
-Denmark      1100
-Germany       950
-```
-
-A value facet normally supports multi-selection.
-
-Within one facet:
-
-```text
-Sweden OR Norway
-```
-
-Across facets:
-
-```text
-(Sweden OR Norway)
-AND
-(Open OR Pending)
-```
-
----
-
-## Range facet
-
-For numeric values:
-
-```csharp
-dashboard.AddRangeFacet(x => x.Amount);
-```
-
-Possible UI:
-
-```text
-Amount
-
-0 - 100          124
-100 - 500        352
-500 - 1000       218
-1000+             76
-```
-
-It can also support a continuous range:
-
-```text
-Amount
-[ 250 ---------------- 750 ]
-```
-
-The engine should support range filtering without requiring a bucketed UI.
-
----
-
-## Date facet
-
-Dates deserve specialized handling.
-
-Possible options:
-
-```text
-Today
-Yesterday
-Last 7 days
-Last 30 days
-This year
-```
-
-or time buckets:
-
-```text
-2026
-  Jan
-  Feb
-  Mar
-  Apr
-```
-
-Date facets may also support arbitrary date ranges.
-
----
-
-## Boolean facet
-
-Example:
-
-```text
-Active
-
-Yes       4212
-No         891
-```
-
-This can be implemented as a specialized value facet but may deserve a specialized API/UI.
-
----
-
-## Custom facet
-
-The architecture should allow custom facet implementations.
-
-A custom facet should be able to define:
-
-- how values are represented
-- how selections are represented
-- how selections filter rows
-- how values/counts are calculated
-- what information is exposed to the UI
-
----
-
-# Facet counts
-
-Facet counts are one of the central features.
-
-For every facet value, there should normally be:
-
-```text
-TotalCount
-FilteredCount
-Selected
-```
-
-For example:
-
-```text
-Country
-
-              Total      Filtered
-
-Sweden         4200        1250
-Norway         1800         780
-Denmark        1100         420
-```
-
-## Total count
-
-The total count is calculated against the original dataset.
-
-It does not change when the user applies filters.
-
-Therefore it can normally be calculated once when the dashboard/index is built.
-
-## Filtered count
-
-The filtered count is calculated using the current filters.
-
-However, when calculating a facet, the facet's own filter must normally be excluded.
-
-For example:
-
-```text
-Active filters:
-
-Country = Sweden
-Status = Open
-Brand = ACME
-```
-
-For the Status facet:
-
-```text
-Country = Sweden
-AND
-Brand = ACME
-```
-
-The Status filter itself is excluded.
-
-For the Country facet:
-
-```text
-Status = Open
-AND
-Brand = ACME
-```
-
-The Country filter itself is excluded.
-
-This is what gives a normal faceted-search experience.
-
----
-
-# Filter model
-
-Filters should be separate from facet definitions.
-
-A facet definition is relatively static:
-
-```text
-Country
-  selector: Order.Country
-  type: Value
-```
-
-Filter state is dynamic:
-
-```text
-Country = Sweden
-Status = Open
-```
-
-This separation is important for both the engine and the Blazor layer.
-
-Potential concepts:
-
-```text
-FacetDefinition
-FacetSelection
-FilterState
-DashboardState
-```
-
----
-
-# Fixed filters vs interactive filters
-
-It may be useful to support filters that are always applied and filters controlled by the user.
-
-Example:
-
-```text
-Fixed filter:
-    CompanyId == 42
-
-Interactive filters:
-    Country = Sweden
-    Status = Open
-```
-
-This allows an application to scope a dashboard before exposing it to the user.
-
-Potential terminology:
-
-- Fixed filters / User filters
-- Base filters / Interactive filters
-
-The exact naming can be decided later.
-
----
-
-# Aggregations and metrics
-
-The same filtered row representation used by facets can support metrics.
-
-Examples:
-
-```csharp
-dashboard.AddMetric("Orders", Aggregation.Count);
-
-dashboard.AddMetric(
-    "Revenue",
-    x => x.Amount,
-    Aggregation.Sum);
-
-dashboard.AddMetric(
-    "Average order",
-    x => x.Amount,
-    Aggregation.Average);
-```
-
-Potential aggregations:
-
-- Count
-- Sum
-- Average
-- Minimum
-- Maximum
-- Distinct count
-
-Metrics should automatically reflect the current dashboard filters.
-
-Example:
-
-```text
-Orders          12,483
-Revenue       4.82 M
-Average          386
-```
-
----
-
-# Grouping
-
-Grouping can provide a more analytical view of the data.
-
-Example:
-
-```text
-Country
-
-Sweden
-    Orders: 4213
-    Revenue: 1.8 M
-
-Germany
-    Orders: 2982
-    Revenue: 1.2 M
-
-Norway
-    Orders: 1842
-    Revenue: 0.7 M
-```
-
-Potential future support:
-
-- Group by value
-- Hierarchical grouping
-- Group + aggregation
-- Group + sorting
-- Top N groups
-
----
-
-# Sorting
-
-Sorting should apply both to result data and facet values.
-
-Facet values might be sorted:
-
-```text
-By value
-    Denmark
-    Germany
-    Norway
-    Sweden
-```
-
-or:
-
-```text
-By count
-    Sweden
-    Germany
-    Norway
-    Denmark
-```
-
-Potential API:
-
-```csharp
-facet.SortByValue();
-facet.SortByCount();
-```
-
----
-
-# Top N and Other
-
-High-cardinality facets such as Customer may contain tens or hundreds of thousands of values.
-
-The UI should not attempt to display all values.
-
-Support concepts such as:
-
-```csharp
-dashboard.AddFacet(x => x.Customer)
-         .Top(20);
-```
-
-Example:
-
-```text
-Customer
-
-ACME             2421
-Siemens          1982
-Volvo            1754
-...
-
-Other            87421
-```
-
-The engine should distinguish between:
-
-- all facet values
-- values currently displayed
-- search within facet
-
----
-
-# Search within facets
-
-High-cardinality facets should support searching.
-
-Example:
-
-```text
-Customer
-[ Search customer ]
-
-ACME Sweden       124
-ACME Germany       82
-ACME Norway        51
-```
-
-Searching within the facet should normally be treated as a UI operation and not necessarily as a dashboard filter.
-
-This distinction should be maintained.
-
----
-
-# Date and numeric histograms
-
-A facet can expose buckets that a Blazor component can render as a histogram.
-
-For example:
-
-```text
-Price
-
-       █
-       █
-   █   █
- █ █ █ █ █
-──────────────
-```
-
-The core engine can provide bucket information without knowing how the chart is rendered.
-
-This keeps visualization concerns out of the core library.
-
----
-
-# Result data
-
-The dashboard should expose filtered results.
-
-For large datasets, the result API should support paging.
-
-Example:
-
-```csharp
-var page = dashboard.GetPage(
-    page: 2,
-    pageSize: 50);
-```
-
-The browser should not receive all matching objects when only one page is needed.
-
-Conceptually:
-
-```text
-1,000,000 source rows
-        |
-        v
-37,421 matching rows
-        |
-        v
-50 rows for current page
-        |
-        v
-Blazor
-```
-
-Virtualization can later be supported by the Blazor layer.
-
----
-
-# Selection vs filtering
-
-Selection and filtering should be separate concepts.
-
-Filtering:
-
-```text
-Country = Sweden
-```
-
-Row selection:
-
-```text
-Rows:
-123
-456
-789
-```
-
-A future grid integration may use selection for:
-
-- bulk operations
-- export
-- actions
-- navigation
-
-The core model should not assume that selected rows are filtered rows.
-
----
-
-# Dashboard state
-
-The engine should ideally produce a snapshot/state object.
-
-Conceptually:
-
-```csharp
-DashboardState<T>
+var dashboard = Dashboard.Create(orders, b =>
 {
-    TotalCount,
-    FilteredCount,
-    Items,
-    Facets,
-    Metrics
+    b.Where(x => x.CompanyId == 42);                           // fixed filter (§C3)
+
+    b.ValueFacet(x => x.Country)                               // key "Country"
+     .Title("Country")
+     .Top(20);
+
+    b.ValueFacet("status", x => x.Status);                     // explicit key (§C7)
+
+    b.ValueFacet(x => x.CustomerName)
+     .Top(20)
+     .RankBy(RankMode.TotalCount)                              // §C6
+     .Searchable();
+
+    b.BooleanFacet(x => x.IsActive);
+
+    b.RangeFacet(x => x.Amount)
+     .Buckets(0, 100, 500, 1000);                              // explicit boundaries, or .AutoBuckets(10)
+
+    b.DateFacet(x => x.OrderDate)
+     .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
+     .Granularity(DateGranularity.Month)
+     .Presets(DatePreset.Today, DatePreset.Last7Days, DatePreset.ThisYear);
+
+    b.Metric("orders",  Metric.Count());
+    b.Metric("revenue", Metric.Sum(x => x.Amount));
+    b.Metric("average", Metric.Average(x => x.Amount));
+
+    b.OrderByDescending(x => x.OrderDate);                     // application-defined sort (§C8)
+
+    b.TimeProvider(TimeProvider.System);                       // default; tests pass a fake
+});
+```
+
+- `Dashboard.Create` enumerates the source exactly once, applies fixed filters, and builds every column and index. After it returns, the dashboard is immutable and thread-safe.
+- Every builder method validates eagerly. Duplicate keys, a non-member selector without an explicit key, or a range facet over a non-numeric property throw at `Create`, not at first use.
+- All facet builders return a typed builder so kind-specific options are discoverable; the shape above is the whole configuration surface for the first version.
+
+### 2.2 Selections
+
+`Selections` is an immutable, non-generic map from facet key to a selection. It is the only thing the UI sends back.
+
+```csharp
+var selections = Selections.Empty
+    .With("Country", ValueSelection.Of("SE", "NO"))
+    .With("Amount",  RangeSelection.Between(100, 500))
+    .With("OrderDate", DateSelection.Preset(DatePreset.Last30Days));
+
+// convenience for the click case
+selections = selections.Toggle("Country", "DK");     // add if absent, remove if present
+selections = selections.Clear("Amount");
+```
+
+Selection types (§C5):
+
+```csharp
+abstract record Selection;
+
+sealed record ValueSelection(IReadOnlyList<object?> Values) : Selection;
+//  null in Values selects the null facet value (§C4.8)
+
+sealed record RangeSelection(
+    double? From, double? To,
+    bool FromInclusive = true, bool ToInclusive = true,
+    bool IncludeNull = false) : Selection;
+//  null bound = unbounded on that side
+
+sealed record DateSelection : Selection
+{
+    // exactly one of these is set
+    public DateTimeOffset? From { get; init; }   // inclusive
+    public DateTimeOffset? To   { get; init; }   // exclusive
+    public DatePreset?     Preset { get; init; } // resolved with TimeProvider at Calculate (§C5)
+    public bool IncludeNull { get; init; }
 }
 ```
 
-The state represents the calculated dashboard at a particular point in time.
+Interval conventions:
 
-An immutable snapshot would make the boundary between engine and UI particularly clean.
+- Numeric intervals default to closed on both ends because a slider showing 250 to 750 means both are included. A bucket click produces `[lo, hi)` by setting `ToInclusive = false`, so buckets `0-100` and `100-500` never both claim 100.
+- Date intervals are always `[From, To)`. Calendar buckets are naturally half-open, and a UI that lets the user pick an inclusive end day sends the following midnight as `To`.
+
+Values inside `ValueSelection` are the facet's real value type, boxed. A selection for an `int` facet holds boxed ints, not strings. Serialisation (§2.5) is where strings enter.
+
+### 2.3 Calculating
+
+```csharp
+DashboardState<T> state = dashboard.Calculate(selections);
+```
+
+Pure, synchronous, thread-safe. Two calls with equal selections give equal states. The dashboard may cache internally (§5), but that is invisible.
+
+### 2.4 Reading the state
+
+```csharp
+sealed class DashboardState<T>
+{
+    Selections Selections { get; }
+    int TotalCount { get; }                 // dataset size after fixed filters
+    int MatchingCount { get; }
+
+    IReadOnlyList<FacetState> Facets { get; }
+    FacetState Facet(string key);
+
+    IReadOnlyList<MetricState> Metrics { get; }
+    MetricState Metric(string key);
+
+    ResultPage<T> GetPage(int pageIndex, int pageSize);
+    IEnumerable<T> Items { get; }           // all matching rows in sort order, lazy; for export
+}
+```
+
+Facet state is one abstract type with one subtype per kind, all non-generic:
+
+```csharp
+abstract class FacetState
+{
+    string Key { get; }
+    string Title { get; }
+    FacetKind Kind { get; }
+    Selection? Selection { get; }
+    int ContextCount { get; }               // rows in this facet's own counting context (§C4.2)
+}
+
+sealed class ValueFacetState : FacetState
+{
+    IReadOnlyList<FacetValue> Values { get; }   // presented values, in rank order, selected pinned (§C6)
+    FacetCount? Other { get; }                  // present only when Top N truncated the list
+    int DistinctCount { get; }                  // all values, including those not presented
+    bool IsSearchable { get; }
+    IReadOnlyList<FacetValue> Search(string text, int max = 20);   // §C4.5, UI operation
+}
+
+sealed class RangeFacetState : FacetState
+{
+    double Min { get; }  double Max { get; }    // dataset bounds, fixed (§C5)
+    IReadOnlyList<Bucket> Buckets { get; }
+    FacetCount Null { get; }
+}
+
+sealed class DateFacetState : FacetState
+{
+    DateGranularity Granularity { get; }
+    IReadOnlyList<Bucket> Buckets { get; }      // one per period present in the dataset
+    IReadOnlyList<PresetState> Presets { get; } // each resolved to its interval and counted
+    FacetCount Null { get; }
+}
+
+sealed record FacetValue(object? Value, int TotalCount, int FilteredCount, bool Selected);
+sealed record FacetCount(int TotalCount, int FilteredCount);
+sealed record Bucket(double From, double To, string Label, int TotalCount, int FilteredCount, bool Selected);
+sealed record MetricState(string Key, string Title, double? Value);   // null = no value (§C4.4)
+sealed record ResultPage<T>(IReadOnlyList<T> Items, int PageIndex, int PageSize, int MatchingCount);
+```
+
+`Value` is `object?` on purpose. The UI formats it; the core does not know about cultures or labels. Boolean and custom facets reuse `ValueFacetState`.
+
+### 2.5 Serialising selections
+
+```csharp
+string query = dashboard.Serializer.ToQueryString(selections);
+//  Country=SE&Country=NO&Amount=100..500&OrderDate=last30days
+
+Selections restored = dashboard.Serializer.FromQueryString(query);
+```
+
+- Each facet definition owns a `Format(object?) → string` and `Parse(string) → object?` pair for its value type. Defaults cover primitives, enums, strings, `Guid`, and the date types with invariant culture; the builder allows an override.
+- Null is written as an empty segment (`Country=`). Range and date intervals use `from..to` with `[`/`(` prefixes only when a bound is non-default, so the common case reads cleanly.
+- Unknown keys and unparseable values are dropped, not thrown. A stale bookmark should degrade to "fewer selections", never to an error page.
+- A JSON form with the same semantics is provided for storage; the query form is for URLs.
 
 ---
 
-# Blazor layer
+## 3. Internal data model
 
-The Blazor package should be separate:
+### 3.1 Rows
 
 ```text
-Linq2Dashboard
-Linq2Dashboard.Blazor
+source  --Where(fixed filters)-->  T[] _items      row id = array index, 0..N-1
 ```
 
-The core package should have no dependency on Blazor.
+Rows that fail a fixed filter are dropped at build time, so ids are dense over the dataset and every count in the system is relative to the dataset (§C4.3). The dashboard keeps `_items` for paging and export only. Nothing else touches the objects after build.
 
-The Blazor package is responsible for:
+### 3.2 Row sets
 
-- rendering facets
-- rendering filter controls
-- handling user interaction
-- rendering metrics
-- rendering result data
-- paging/virtualization
-- display formatting
-- layout
-- UI-specific state
-
-It should consume the state produced by the core engine.
-
----
-
-# Blazor component
-
-The intended high-level API could look like:
-
-```razor
-<Linq2Dashboard Items="@orders">
-
-    <Facets>
-        ...
-    </Facets>
-
-</Linq2Dashboard>
+```csharp
+sealed class RowSet          // fixed length N, immutable once built
+{
+    readonly ulong[] _words; // ceil(N / 64)
+    int Count { get; }       // cached popcount
+    RowSet And(RowSet other);
+    RowSet Or(RowSet other);
+    IEnumerable<int> Rows(); // ascending, via TrailingZeroCount
+}
 ```
 
-Or the component could receive an already configured dashboard:
+Uncompressed. At 1 M rows a set is 125 KB. AND over two sets is 15 625 word operations and vectorises. A compressed representation (Roaring) is a possible later swap behind this type; nothing outside `Indexing/` sees the words.
 
-```razor
-<Linq2Dashboard Dashboard="@dashboard" />
-```
+### 3.3 Columns
 
-The final API is still to be decided.
+Every facet and every metric is materialised into a column at build. Selectors are compiled once and run once per row. After build, no expression is ever evaluated again.
 
-The important architectural rule is that the Blazor component should not implement the faceting algorithms itself.
-
----
-
-# UI facet model
-
-The engine's internal facet types may be strongly typed:
+**Value column** (value and boolean facets, also the bucket side of range and date facets):
 
 ```text
-ValueFacet<T, TValue>
-RangeFacet<T, TValue>
-DateRangeFacet<T>
+int[]     codes        one per row; 0 = null, 1..V = dictionary index + 1
+TValue[]  dictionary   distinct non-null values, in first-seen order
+string[]  labels       Format(dictionary[i]), built lazily for searchable facets
+int[]     totalCounts  per code, computed once
+RowSet[]? perValue     optional, see §3.4
 ```
 
-The Blazor layer should not need to know about expressions, indexes, or bitmap implementations.
+- Equality of values uses `EqualityComparer<TValue>.Default` unless the builder is given a comparer. Case-insensitive strings are a builder option, not a default.
+- Reading `codes[row]` in ascending row order is a sequential memory scan. This is what makes the counting pass in §4.3 fast regardless of cardinality.
 
-Instead, it should consume a UI-friendly representation such as:
+**Range column**:
 
 ```text
-FacetState
-
-Id
-Title
-Type
-Values
-Selection
-Configuration
+double[]  values       converted once with generic math; NaN where null
+RowSet    nulls
+int[]     bucketCodes  0 = null, 1..B = bucket index + 1, fixed at build (§C5)
+double    min, max     dataset bounds
 ```
 
-For example:
+Bounds arrive from `RangeSelection` as `double`. Comparisons happen in `double`. For `decimal` properties this is a deliberate precision trade: a UI slider does not carry more than double precision, and the converted values are used only for filtering and bucketing, never for metrics (which read their own column).
+
+**Date column**:
 
 ```text
-Range facet
-
-Type = Range
-Min = 0
-Max = 10000
-SelectedMin = 500
-SelectedMax = 2500
+long[]    ticks        UTC ticks after conversion into the facet's zone rules (§C5); long.MinValue where null
+RowSet    nulls
+int[]     bucketCodes  period index at the configured granularity, 0 = null
+long[]    bucketStarts start tick of each period present in the dataset
 ```
 
-This creates a clean boundary between calculation and presentation.
+Period boundaries are computed in the facet's time zone once, at build. A preset such as `Last7Days` is resolved at `Calculate` by asking the `TimeProvider` for now, converting into the facet zone, and snapping to day boundaries in that zone.
+
+**Metric column**:
+
+```text
+double[]  values       NaN where null
+```
+
+Count needs no column. Sum, average, min and max read their column over the matching set, skipping NaN (§C4.4).
+
+**Sort order**:
+
+```text
+int[]  sortedRows      row ids ordered by the application-defined sort, computed once at build
+```
+
+If no sort is defined, this is the identity and is not allocated.
+
+### 3.4 Low versus high cardinality
+
+Two strategies, chosen per value facet at build time:
+
+| | Columnar only | Columnar + per-value bitmaps |
+|---|---|---|
+| Storage per facet | `codes` (4 B/row) | `codes` + V × N/8 bytes |
+| Selection → row set | one scan of `codes` | OR of the selected values' bitmaps |
+| Counting | one pass over the context rows | popcount(context AND perValue[v]) for each v |
+| Good when | V is large, or memory matters | V is small and selections are frequent |
+
+The default threshold is **V ≤ 64** for enabling bitmaps. At 1 M rows that is at most 8 MB per facet. The threshold is a builder option, and the baseline columnar path must be correct and fast enough on its own so that turning bitmaps off is always safe. Whether the bitmaps are worth their memory at all is a benchmark question (§8), not a design assumption.
+
+A 100 000-value facet is columnar only: 4 MB of codes, a 400 KB counter array per calculation, and no per-value sets.
 
 ---
 
-# Rendering customization
+## 4. Calculation
 
-The Blazor package should provide sensible default renderers but allow applications to customize the UI.
+`Calculate(selections)` does the following, in order. Nothing here mutates the dashboard.
 
-Potential customization points:
+### 4.1 Selection row sets
 
-- facet templates
-- value templates
-- range templates
-- metric templates
-- result templates
-- empty states
-- loading states
+For each facet `f` with a non-empty selection, produce `R_f`:
 
-For example:
+- Value: if bitmaps exist, OR the selected values' sets. Otherwise scan `codes` and set a bit where `codes[row]` is in the selected code set (a small `HashSet<int>` or, for tiny selections, a bitmask over codes).
+- Range: scan `values`; set a bit where the value is inside the interval. OR in `nulls` if `IncludeNull`.
+- Date: resolve preset to `[from, to)` ticks if needed; scan `ticks`. OR in `nulls` if `IncludeNull`.
 
-```razor
-<FacetTemplate Context="facet">
-    ...
-</FacetTemplate>
+Each `R_f` is cached by `(facetKey, selection)` (§5). The scans are `O(N)` with sequential access, roughly 1 ms per million rows.
+
+### 4.2 Matching set and per-facet contexts
+
+Let the facets with selections be `R_1 … R_k`.
+
+```text
+M    = R_1 AND R_2 AND … AND R_k            (the full dataset set if k = 0)
+
+C_f  = AND of all R_g with g ≠ f            for a facet f with a selection
+C_f  = M                                    for a facet f without a selection
 ```
 
-The exact templating API should be designed after the basic component is working.
+Computing every `C_f` naively costs `O(k²)` ANDs. Instead:
+
+```text
+prefix[i] = R_1 AND … AND R_{i-1}
+suffix[i] = R_{i+1} AND … AND R_k
+C_i       = prefix[i] AND suffix[i]
+```
+
+That is `3k` ANDs in total, each 15 625 words at 1 M rows. For ten selected facets this is under a millisecond.
+
+### 4.3 Counting
+
+For each facet `f`, with context `C_f` and its `codes` (or `bucketCodes`) column:
+
+```csharp
+Span<int> counts = stackalloc or pooled, length V + 1, zeroed;
+foreach (int row in C_f.Rows())
+    counts[codes[row]]++;
+```
+
+One sequential pass over the rows in context. Cost is proportional to `|C_f|`, not to `V`. With bitmaps enabled for a small `V`, the alternative `popcount(C_f AND perValue[v])` for each `v` is used instead; whichever the facet was built with.
+
+`counts[0]` is the null value's filtered count (§C4.8). Total counts come from the column and are never recomputed.
+
+Facets are independent at this stage and may be counted in parallel. Parallelism is a builder option, off by default until benchmarks say otherwise.
+
+### 4.4 Presentation of a value facet
+
+From `counts`, build the presented list (§C6):
+
+1. Start with every selected value, regardless of rank.
+2. Fill up to `N` with the highest-ranked remaining values, ranking by filtered count or total count per the facet's `RankMode`. Zero-count values are eligible and are included if they rank (§C4.3).
+3. Ties break by total count, then by dictionary order, so the order is deterministic.
+4. `Other.FilteredCount = |C_f| − Σ presented filtered`, `Other.TotalCount = N_dataset − Σ presented total`. Omitted when nothing was truncated.
+
+Selecting the top `N` from `V = 100 000` counts is a partial sort, `O(V)` expected. The full `counts` array is retained inside the state to serve `Search` without recounting.
+
+### 4.5 Range and date facets
+
+Buckets are counted through `bucketCodes` exactly like value facets. Each `Bucket` gets `Selected = true` when the current interval fully covers it. `Null` reports `counts[0]`. For date facets, each configured preset is resolved and counted against `C_f` as well, so the UI can show "Last 7 days (312)" without a round trip.
+
+### 4.6 Metrics
+
+One pass over `M.Rows()` per metric column, accumulating sum, count-of-values, min and max in a single loop when several metrics share a column. Count is `M.Count`. A metric with zero contributing values reports `null` (§C4.4).
+
+### 4.7 Result page
+
+```csharp
+ResultPage<T> GetPage(int pageIndex, int pageSize)
+```
+
+Walk `sortedRows` in order, test membership in `M`, skip `pageIndex × pageSize` hits, take `pageSize`. Worst case one pass over `N` bit tests, about 1 ms at 1 M rows. Page requests are answered from the state without touching the dashboard. `Items` does the same walk lazily without skipping.
+
+When `sortedRows` is identity, `M.Rows()` is enumerated directly instead.
+
+### 4.8 Cost model at the target
+
+For 1 M rows, ten facets, three of them with selections:
+
+| Step | Work | Estimate |
+|---|---|---|
+| Selection row sets (3, cache-miss) | 3 sequential scans | ~3 ms |
+| Contexts | ≤ 9 ANDs of 15 625 words | < 1 ms |
+| Counting (10 facets) | ≤ 10 passes over ≤ 1 M rows | ~10–20 ms |
+| Top N + Other | partial sorts | < 1 ms |
+| Metrics (3, one column) | 1 pass over M | ~1 ms |
+| First page | 1 walk | ~1 ms |
+
+Roughly 20 to 30 ms single-threaded, before any bitmap or parallel gains. This is the number the benchmark suite must confirm or refute.
 
 ---
 
-# Blazor state flow
+## 5. Caching and concurrency
 
-A typical interaction should look like:
+- **Immutable after build:** `_items`, all columns, all indexes, total counts, `sortedRows`. No locks needed to read.
+- **Selection row-set cache:** `(facetKey, Selection) → RowSet`, bounded LRU, default 256 entries, inside the dashboard. Selections are records with value equality, so they are their own cache keys. Toggling a value in one facet re-uses every other facet's cached set.
+- **State cache:** `Selections → DashboardState<T>`, bounded LRU, default 8 entries. Covers back/forward and "undo last click" for free.
+- Both caches are safe for concurrent readers and writers. A miss computed twice is harmless because results are immutable and equal.
+- **States are immutable** and hold their own arrays. Rendering one state while the next is calculated is safe. A state keeps a reference to the dashboard for `GetPage` and `Search`; it never mutates it.
+- **Scratch memory** during `Calculate` comes from `ArrayPool<T>` and is returned before the state is published. Arrays that the state keeps (`counts` for searchable facets, `M`) are allocated for it.
+
+---
+
+## 6. Extensibility: custom facets
+
+The four built-in kinds are implemented against one internal interface. It is exposed so a custom facet (§C5) can be written without touching the core:
+
+```csharp
+public interface IFacetDefinition<T>
+{
+    string Key { get; }
+    string Title { get; }
+    FacetKind Kind { get; }
+    IFacetIndex<T> Build(ReadOnlySpan<T> rows);        // once, at Create
+}
+
+public interface IFacetIndex<T>
+{
+    RowSet RowsMatching(Selection selection);           // §4.1
+    FacetState Present(RowSet context, Selection? selection);   // §4.3–4.5
+    string Format(object? value);                        // §2.5
+    object? Parse(string text);
+}
+```
+
+A custom facet gets the same context set as everyone else and is subject to every rule in §C4. The first version ships the interface and the four built-ins; it does not promise API stability for the interface until a second custom facet exists outside the repo.
+
+---
+
+## 7. Projects and layout
+
+```text
+Linq2Dashboard.slnx
+src/
+    Linq2Dashboard/                     core, package id Linq2Dashboard, net10.0, no dependencies
+        Dashboard.cs                    Dashboard.Create, Dashboard<T>
+        DashboardBuilder.cs
+        DashboardState.cs
+        Selections.cs                   Selections, Selection records
+        Facets/                         definitions, builders, FacetState types
+        Metrics/
+        Indexing/                       RowSet, columns, caches (internal)
+        Serialization/
+    Linq2Dashboard.Blazor/              Razor class library, depends on core only
+        Dashboard.razor
+        Facets/  Metrics/  Results/
+tests/
+    Linq2Dashboard.Tests/               xUnit; rules in §C4 each get a named test
+benchmarks/
+    Linq2Dashboard.Benchmarks/          BenchmarkDotNet, see §8
+```
+
+The existing `Linq2Dashboard.Core` project is renamed to `Linq2Dashboard` and moved under `src/` so that project, package and root namespace agree.
+
+### Blazor flow
 
 ```text
 User clicks "Sweden"
-        |
-        v
-Blazor component
-        |
-        v
-Dashboard.SetFilter(...)
-        |
-        v
-Core engine recalculates
-        |
-        v
-DashboardState
-        |
-        v
-Blazor StateHasChanged()
-        |
-        v
-Updated UI
+    → component: selections = selections.Toggle("Country", "SE")
+    → state = dashboard.Calculate(selections)
+    → StateHasChanged()
 ```
 
-The UI should not independently calculate facet counts.
+The component owns `Selections` and the current `DashboardState<T>`. `Calculate` runs inline. At the target cost (§4.8) that is acceptable on Blazor Server. On WebAssembly a million rows in the browser is a memory question before it is a speed question, and is not a first-version target.
 
 ---
 
-# Performance considerations
+## 8. Benchmark plan
 
-The million-row target should influence the core architecture from the beginning.
+The benchmark project is part of the first version, not an afterthought. It generates a deterministic dataset and measures every step in §4.
 
-Avoid this pattern:
+**Dataset** (seeded generator, 1 000 000 rows):
 
-```csharp
-foreach (var facet in facets)
-{
-    var values = items
-        .Where(...)
-        .GroupBy(...)
-        .ToList();
-}
-```
+| Facet | Kind | Cardinality |
+|---|---|---|
+| Country | value | 20 |
+| Status | value | 5 |
+| Category | value | 200 |
+| Brand | value | 2 000 |
+| Customer | value, searchable, top 20 | 100 000 |
+| IsActive | boolean | 2 + null |
+| Amount | range, 8 buckets | continuous, 5 % null |
+| OrderDate | date, month | 3 years, 2 % null |
 
-when it means scanning one million objects repeatedly.
+**Scenarios**:
 
-Prefer:
+1. `Create` from an in-memory list.
+2. `Calculate` with no selections, cold and warm cache.
+3. `Calculate` after toggling one value in Country (1, 3, 5 active facets).
+4. `Calculate` with a range and a date interval active.
+5. `Search("acme")` on Customer.
+6. `GetPage` first, middle and last page.
+7. Everything above with per-value bitmaps forced on and forced off.
+8. Everything above with parallel counting on and off.
 
-```text
-Source objects
-     |
-     v
-Row IDs / compact storage
-     |
-     +---- facet indexes
-     |
-     +---- numeric/date indexes
-     |
-     v
-Current matching row set
-     |
-     +---- facet counts
-     +---- metrics
-     +---- result page
-```
-
-Potential optimizations:
-
-- materialize source once
-- assign integer row IDs
-- dictionary indexes for value facets
-- bitmap/bitset row sets
-- sorted indexes for numeric/date ranges
-- cached filter combinations
-- reuse intermediate row sets
-- precompute immutable total counts
-- avoid allocations during repeated calculations
-- return only requested result pages
-
-The implementation should be benchmarked with realistic datasets rather than optimizing prematurely around a specific data structure.
+**Targets**: `Create` under 2 s. Warm `Calculate` under 50 ms in every scenario. Peak managed memory reported per facet kind so the bitmap threshold can be chosen with numbers rather than by feel.
 
 ---
 
-# Caching
+## 9. Open questions
 
-Users often make incremental filter changes:
-
-```text
-{}
-{Country=SE}
-{Country=SE, Status=Open}
-{Country=SE, Status=Completed}
-```
-
-Caching calculated row sets or intermediate results may significantly improve interactive performance.
-
-Potential cache key:
-
-```text
-FilterState -> RowSet
-```
-
-The cache should have clear invalidation rules.
-
-Because the source is assumed to be an in-memory snapshot, the simplest initial implementation may treat the source as immutable for the lifetime of the dashboard.
-
----
-
-# Concurrency
-
-The engine should ideally not require synchronization for every row operation.
-
-A useful model is:
-
-- immutable source/indexes
-- mutable filter state
-- calculation produces a new state/snapshot
-
-This may also make it possible to calculate a new state without mutating the state currently being displayed by Blazor.
-
-Concurrency requirements should be kept modest initially.
-
----
-
-# Package structure
-
-Possible structure:
-
-```text
-Linq2Dashboard/
-    Dashboard.cs
-    DashboardState.cs
-    Facets/
-        Facet.cs
-        ValueFacet.cs
-        RangeFacet.cs
-        DateFacet.cs
-    Filters/
-    Aggregations/
-    Indexing/
-    Results/
-
-Linq2Dashboard.Blazor/
-    Linq2Dashboard.razor
-    Facets/
-        ValueFacet.razor
-        RangeFacet.razor
-        DateFacet.razor
-    Metrics/
-    Results/
-```
-
-The exact organization can evolve.
-
----
-
-# Naming
-
-The existing family strongly supports the name:
-
-```text
-Linq2OData
-Linq2GraphQL
-Linq2Dashboard
-```
-
-`Linq2Dashboard` can be interpreted as applying LINQ concepts to a dashboard/faceted exploration problem.
-
-The Blazor package could be:
-
-```text
-Linq2Dashboard.Blazor
-```
-
-This keeps the core package UI-independent and makes the technology dependency explicit.
-
----
-
-# Possible future functionality
-
-The architecture should leave room for:
-
-- saved filter states
-- named views
-- bookmarks
-- export
-- CSV/Excel export
-- chart data
-- cross-filtering
-- hierarchical facets
-- distinct counts
-- percentage-of-total metrics
-- calculated metrics
-- custom aggregations
-- drill-down
-- row selection
-- bulk actions
-- server-side/remote data adapters in a separate package
-- other UI adapters
-
-These should not be required for the initial implementation.
-
----
-
-# Suggested initial scope
-
-A sensible first version could contain:
-
-## Core
-
-1. `Dashboard<T>`
-2. `IEnumerable<T>` input
-3. materialized immutable source
-4. value facets
-5. numeric range facets
-6. date range facets
-7. multi-select filters
-8. total + filtered counts
-9. filtered result set
-10. paging
-11. basic count/sum/average metrics
-12. basic indexing
-13. benchmark suite
-
-## Blazor
-
-1. main dashboard component
-2. value facet component
-3. range facet component
-4. date facet component
-5. result list/grid integration
-6. metric display
-7. paging
-8. customizable templates
-9. basic responsive layout
-
-Then optimize the indexing implementation based on benchmarks.
-
----
-
-# Core design principle
-
-The most important architectural principle is:
-
-> **The core library understands data, filters, facets, aggregations and state. The Blazor library understands presentation and interaction.**
-
-The core should be useful without Blazor.
-
-The Blazor layer should be replaceable without changing the core engine.
-
-This makes `Linq2Dashboard` both a useful .NET library in its own right and a strong foundation for a reusable Blazor dashboard component.
+1. **Per-value bitmaps in the first version at all.** Ship the hybrid with the 64-value default, or ship columnar only and add bitmaps once the benchmark shows a scenario that needs them?
+2. **Range bounds as `double`.** Accept the precision trade for `decimal` properties, or make `RangeSelection` generic over the value type at the cost of a non-uniform selection model and a harder serializer?
+3. **Stateless dashboard.** `Calculate(selections)` with the UI holding the selections is the proposal. The alternative is a dashboard that owns a current selection and exposes `SetSelection` plus a `Changed` event. The stateless form is simpler and matches §C2; confirm.
+4. **Value equality.** Default comparer with an opt-in for case-insensitive strings is the proposal. Should string facets be case-insensitive by default instead?
+5. **Parallel counting default.** Off by default is the proposal until the benchmarks show a clear win on a typical server core count.
+6. **Project rename.** `Linq2Dashboard.Core` to `Linq2Dashboard` under `src/`. Any reason to keep the `.Core` suffix?
+7. **Selection serializer shape.** Query string plus JSON as proposed, or JSON only for the first version?
+8. **Custom facet interface exposure.** Public from day one as proposed, or internal until the built-ins have settled?
