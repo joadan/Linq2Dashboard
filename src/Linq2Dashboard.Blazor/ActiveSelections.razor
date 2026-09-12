@@ -12,16 +12,72 @@ else
 {
     <div class="l2d-active">
         <ul class="l2d-active-chips">
-            @foreach (Chip chip in Chips())
+            @foreach (FacetState facet in State.Facets)
             {
-                <li class="l2d-chip" data-key="@chip.Key">
-                    @if (ShowFacetTitle)
-                    {
-                        <span class="l2d-chip-facet">@chip.FacetTitle</span>
-                    }
-                    <span class="l2d-chip-label">@chip.Label</span>
-                    <button type="button" class="l2d-chip-remove" aria-label="@RemoveText @chip.Label" title="@RemoveText" @onclick="chip.Remove">×</button>
-                </li>
+                @switch (facet.Selection)
+                {
+                    case null:
+                        break;
+
+                    case ValueSelection values when GroupValues:
+                        @* One chip per facet: the values are one OR group (concept §4.1). Each value stays removable on its own. *@
+                        <li class="l2d-chip l2d-chip-group" data-key="@facet.Key">
+                            @if (ShowFacetTitle)
+                            {
+                                <span class="l2d-chip-facet">@facet.Title</span>
+                            }
+                            <span class="l2d-chip-values">
+                                @for (int i = 0; i < values.Values.Count; i++)
+                                {
+                                    object? value = values.Values[i];
+                                    string label = Formatter.FormatValue(facet, value);
+                                    @if (i > 0)
+                                    {
+                                        <span class="l2d-chip-separator">@ValueSeparator</span>
+                                    }
+                                    <span class="l2d-chip-value">
+                                        <span class="l2d-chip-label">@label</span>
+                                        <button type="button" class="l2d-chip-value-remove" aria-label="@RemoveText @label" title="@RemoveText"
+                                                @onclick="() => Context.ToggleAsync(facet.Key, value)">×</button>
+                                    </span>
+                                }
+                            </span>
+                            <button type="button" class="l2d-chip-remove" aria-label="@RemoveText @facet.Title" title="@RemoveText"
+                                    @onclick="() => Context.ClearAsync(facet.Key)">×</button>
+                        </li>
+                        break;
+
+                    case ValueSelection values:
+                        @* One chip per value; removing it toggles that value off. *@
+                        @foreach (object? value in values.Values)
+                        {
+                            object? captured = value;
+                            string label = Formatter.FormatValue(facet, value);
+                            <li class="l2d-chip" data-key="@facet.Key">
+                                @if (ShowFacetTitle)
+                                {
+                                    <span class="l2d-chip-facet">@facet.Title</span>
+                                }
+                                <span class="l2d-chip-label">@label</span>
+                                <button type="button" class="l2d-chip-remove" aria-label="@RemoveText @label" title="@RemoveText"
+                                        @onclick="() => Context.ToggleAsync(facet.Key, captured)">×</button>
+                            </li>
+                        }
+                        break;
+
+                    default:
+                        @* Range and date facets hold one interval; removing the chip clears the facet. *@
+                        <li class="l2d-chip" data-key="@facet.Key">
+                            @if (ShowFacetTitle)
+                            {
+                                <span class="l2d-chip-facet">@facet.Title</span>
+                            }
+                            <span class="l2d-chip-label">@IntervalLabel(facet)</span>
+                            <button type="button" class="l2d-chip-remove" aria-label="@RemoveText @facet.Title" title="@RemoveText"
+                                    @onclick="() => Context.ClearAsync(facet.Key)">×</button>
+                        </li>
+                        break;
+                }
             }
         </ul>
         <button type="button" class="l2d-active-clear-all" @onclick="() => Context.ClearAllAsync()">@ClearAllText</button>
@@ -37,6 +93,17 @@ else
     [Parameter]
     public bool ShowFacetTitle { get; set; } = true;
 
+    /// <summary>
+    /// One chip per facet with its selected values inside, each removable on its own, instead of one
+    /// chip per value. Default true: the values of one facet are one OR group (concept §4.1).
+    /// </summary>
+    [Parameter]
+    public bool GroupValues { get; set; } = true;
+
+    /// <summary>Text between values in a grouped chip. Default ", "; " or " states the semantics.</summary>
+    [Parameter]
+    public string ValueSeparator { get; set; } = ", ";
+
     [Parameter]
     public string EmptyText { get; set; } = "No selections";
 
@@ -46,67 +113,36 @@ else
     [Parameter]
     public string RemoveText { get; set; } = "Remove";
 
-    private IEnumerable<Chip> Chips()
+    /// <summary>The bucket's or preset's own label when the interval is exactly that, otherwise the formatter's interval text.</summary>
+    private string IntervalLabel(FacetState facet)
     {
-        foreach (FacetState facet in State.Facets)
+        switch (facet)
         {
-            switch (facet.Selection)
-            {
-                case null:
-                    continue;
+            case RangeFacetState range when facet.Selection is RangeSelection selection:
+                if (selection.OnlyNulls)
+                {
+                    return Formatter.NullLabel;
+                }
 
-                case ValueSelection values:
-                    // One chip per value; removing it toggles that value off (concept §4.1).
-                    foreach (object? value in values.Values)
-                    {
-                        object? captured = value;
-                        yield return new Chip(facet.Key, facet.Title, Formatter.FormatValue(facet, value), () => Context.ToggleAsync(facet.Key, captured));
-                    }
+                RangeBucket? bucket = range.Buckets.FirstOrDefault(b => b.ToSelection().Equals(selection));
+                return bucket is not null ? Formatter.FormatRangeBucket(bucket) : Formatter.FormatRangeSelection(selection);
 
-                    break;
+            case DateFacetState dates when facet.Selection is DateSelection selection:
+                if (selection.OnlyNulls)
+                {
+                    return Formatter.NullLabel;
+                }
 
-                case RangeSelection range when facet is RangeFacetState rangeFacet:
-                    yield return new Chip(facet.Key, facet.Title, RangeLabel(rangeFacet, range), () => Context.ClearAsync(facet.Key));
-                    break;
+                if (selection.Preset is DatePreset preset)
+                {
+                    return Formatter.FormatPreset(preset);
+                }
 
-                case DateSelection date when facet is DateFacetState dateFacet:
-                    yield return new Chip(facet.Key, facet.Title, DateLabel(dateFacet, date), () => Context.ClearAsync(facet.Key));
-                    break;
+                DateBucket? period = dates.Buckets.FirstOrDefault(b => b.ToSelection().Equals(selection));
+                return period is not null ? Formatter.FormatDateBucket(period, dates.Granularity) : Formatter.FormatDateSelection(selection);
 
-                default:
-                    yield return new Chip(facet.Key, facet.Title, facet.Selection.ToString() ?? string.Empty, () => Context.ClearAsync(facet.Key));
-                    break;
-            }
+            default:
+                return facet.Selection?.ToString() ?? string.Empty;
         }
     }
-
-    /// <summary>The bucket's own label when the interval is exactly a bucket, otherwise the formatter's interval text.</summary>
-    private string RangeLabel(RangeFacetState facet, RangeSelection selection)
-    {
-        if (selection.OnlyNulls)
-        {
-            return Formatter.NullLabel;
-        }
-
-        RangeBucket? bucket = facet.Buckets.FirstOrDefault(b => b.ToSelection().Equals(selection));
-        return bucket is not null ? Formatter.FormatRangeBucket(bucket) : Formatter.FormatRangeSelection(selection);
-    }
-
-    private string DateLabel(DateFacetState facet, DateSelection selection)
-    {
-        if (selection.OnlyNulls)
-        {
-            return Formatter.NullLabel;
-        }
-
-        if (selection.Preset is DatePreset preset)
-        {
-            return Formatter.FormatPreset(preset);
-        }
-
-        DateBucket? bucket = facet.Buckets.FirstOrDefault(b => b.ToSelection().Equals(selection));
-        return bucket is not null ? Formatter.FormatDateBucket(bucket, facet.Granularity) : Formatter.FormatDateSelection(selection);
-    }
-
-    private sealed record Chip(string Key, string FacetTitle, string Label, Func<Task> Remove);
 }

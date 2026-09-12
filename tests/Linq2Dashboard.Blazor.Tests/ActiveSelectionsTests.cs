@@ -37,7 +37,9 @@ public class ActiveSelectionsTests : BunitContext
 
     private static string Facet(IElement chip) => chip.QuerySelector(".l2d-chip-facet")?.TextContent.Trim() ?? string.Empty;
 
-    private static string Label(IElement chip) => chip.QuerySelector(".l2d-chip-label")!.TextContent.Trim();
+    private static IEnumerable<string> Labels(IElement chip) => chip.QuerySelectorAll(".l2d-chip-label").Select(l => l.TextContent.Trim());
+
+    private static string Label(IElement chip) => Labels(chip).Single();
 
     [Fact]
     public void Nothing_is_rendered_without_selections_unless_asked()
@@ -49,39 +51,84 @@ public class ActiveSelectionsTests : BunitContext
     }
 
     [Fact]
-    public void One_chip_per_selected_value_in_facet_order()
+    public void Values_of_one_facet_are_grouped_in_one_chip_in_facet_order()
     {
         var cut = RenderChips(Selections.Empty
             .With("Status", ValueSelection.Of("Open"))
             .With("Country", ValueSelection.Of("SE", null)));
 
         var chips = Chips(cut);
-        Assert.Equal(["Country", "Country", "Order status"], chips.Select(Facet));
-        Assert.Equal(["SE", "(none)", "Open"], chips.Select(Label));
+        Assert.Equal(["Country", "Order status"], chips.Select(Facet));
+        Assert.Equal(["SE", "(none)"], Labels(chips[0]));
+        Assert.Equal(["Open"], Labels(chips[1]));
+        Assert.Contains("l2d-chip-group", chips[0].ClassName);
+        Assert.Equal(", ", chips[0].QuerySelector(".l2d-chip-separator")!.TextContent);
+        Assert.Empty(chips[1].QuerySelectorAll(".l2d-chip-separator"));
         Assert.Single(cut.FindAll(".l2d-active-clear-all"));
     }
 
     [Fact]
-    public void Removing_a_value_chip_toggles_only_that_value()
+    public void Removing_one_value_inside_a_grouped_chip_toggles_only_that_value()
     {
         Selections? raised = null;
         var cut = RenderChips(Selections.Empty.With("Country", ValueSelection.Of("SE", "NO")), s => raised = s);
 
-        Chips(cut).Single(c => Label(c) == "SE").QuerySelector(".l2d-chip-remove")!.Click();
+        var chip = Chips(cut).Single();
+        chip.QuerySelectorAll(".l2d-chip-value").Single(v => v.QuerySelector(".l2d-chip-label")!.TextContent == "SE")
+            .QuerySelector(".l2d-chip-value-remove")!.Click();
 
         Assert.Equal(Selections.Empty.With("Country", ValueSelection.Of("NO")), raised);
-        Assert.Equal(["NO"], Chips(cut).Select(Label));
+        Assert.Equal(["NO"], Labels(Chips(cut).Single()));
     }
 
     [Fact]
-    public void Removing_the_null_chip_deselects_null()
+    public void Removing_a_grouped_chip_clears_the_whole_facet()
+    {
+        Selections? raised = null;
+        var cut = RenderChips(Selections.Empty.With("Country", ValueSelection.Of("SE", "NO")).With("Status", ValueSelection.Of("Open")), s => raised = s);
+
+        Chips(cut)[0].QuerySelector(".l2d-chip-remove")!.Click();
+
+        Assert.Equal(Selections.Empty.With("Status", ValueSelection.Of("Open")), raised);
+        Assert.Single(Chips(cut));
+    }
+
+    [Fact]
+    public void Removing_the_null_token_deselects_null()
     {
         Selections? raised = null;
         var cut = RenderChips(Selections.Empty.With("Country", ValueSelection.Of("SE", null)), s => raised = s);
 
-        Chips(cut).Single(c => Label(c) == "(none)").QuerySelector(".l2d-chip-remove")!.Click();
+        Chips(cut).Single().QuerySelectorAll(".l2d-chip-value").Single(v => v.QuerySelector(".l2d-chip-label")!.TextContent == "(none)")
+            .QuerySelector(".l2d-chip-value-remove")!.Click();
 
         Assert.Equal(Selections.Empty.With("Country", ValueSelection.Of("SE")), raised);
+    }
+
+    [Fact]
+    public void The_separator_is_configurable()
+    {
+        var cut = RenderChips(Selections.Empty.With("Country", ValueSelection.Of("SE", "NO", "DK")), configure: c => c.Add(x => x.ValueSeparator, " or "));
+
+        var separators = Chips(cut).Single().QuerySelectorAll(".l2d-chip-separator");
+        Assert.Equal(2, separators.Length);
+        Assert.All(separators, s => Assert.Equal(" or ", s.TextContent));
+    }
+
+    [Fact]
+    public void Grouping_can_be_turned_off_for_one_chip_per_value()
+    {
+        Selections? raised = null;
+        var cut = RenderChips(Selections.Empty.With("Country", ValueSelection.Of("SE", "NO")), s => raised = s, c => c.Add(x => x.GroupValues, false));
+
+        var chips = Chips(cut);
+        Assert.Equal(2, chips.Count);
+        Assert.Equal(["SE", "NO"], chips.Select(Label));
+        Assert.DoesNotContain(chips, c => c.ClassList.Contains("l2d-chip-group"));
+
+        chips[0].QuerySelector(".l2d-chip-remove")!.Click();
+
+        Assert.Equal(Selections.Empty.With("Country", ValueSelection.Of("NO")), raised);
     }
 
     [Fact]
@@ -93,6 +140,7 @@ public class ActiveSelectionsTests : BunitContext
         var chip = Chips(cut).Single();
         Assert.Equal("Amount", Facet(chip));
         Assert.Equal("100 – 500", Label(chip));
+        Assert.DoesNotContain("l2d-chip-group", chip.ClassName);
 
         chip.QuerySelector(".l2d-chip-remove")!.Click();
         Assert.Equal(Selections.Empty, raised);
