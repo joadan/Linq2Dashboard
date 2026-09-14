@@ -1,4 +1,4 @@
-`--l2d-input-background`, `--l2d-metric-background`, `--l2d-metric-icon-color`, `--l2d-metric-icon-background` |`--l2d-metric-min-width`, `--l2d-metric-padding`, `--l2d-metric-icon-size` |# Linq2Dashboard – Design
+# Linq2Dashboard – Design
 
 > Status: draft, being built iteratively. This document describes *how* the behaviour defined in
 > [Linq2Dashboard-concept.md](Linq2Dashboard-concept.md) is realised: public API, types, internal data model,
@@ -677,9 +677,9 @@ tests/Linq2Dashboard.Blazor.Tests/   bUnit: each component renders a given state
 
    | Property group | Properties |
    |---|---|
-   | Layout | `--l2d-gap`, `--l2d-section-gap`, `--l2d-radius`, `--l2d-chip-radius`, `--l2d-bar-height`, `--l2d-bucket-label-width`, `--l2d-metric-min-width`, `--l2d-metric-padding` |
+   | Layout | `--l2d-gap`, `--l2d-section-gap`, `--l2d-radius`, `--l2d-chip-radius`, `--l2d-bar-height`, `--l2d-bucket-label-width`, `--l2d-metric-min-width`, `--l2d-metric-padding`, `--l2d-metric-icon-size` |
    | Type | `--l2d-font-size`, `--l2d-title-size`, `--l2d-small-size`, `--l2d-tiny-size`, `--l2d-metric-size` |
-   | Colour | `--l2d-title-color`, `--l2d-muted`, `--l2d-border`, `--l2d-accent`, `--l2d-hover`, `--l2d-selected-background`, `--l2d-selected-color`, `--l2d-bar`, `--l2d-bar-total`, `--l2d-bar-track`, `--l2d-input-background`, `--l2d-metric-background` |
+   | Colour | `--l2d-title-color`, `--l2d-muted`, `--l2d-border`, `--l2d-accent`, `--l2d-hover`, `--l2d-selected-background`, `--l2d-selected-color`, `--l2d-bar`, `--l2d-bar-total`, `--l2d-bar-track`, `--l2d-input-background`, `--l2d-metric-background`, `--l2d-metric-icon-color`, `--l2d-metric-icon-background` |
 
    State classes the stylesheet and hosts can hook: `l2d-selected`, `l2d-zero` (filtered count zero), `l2d-null` (the null value), `l2d-metric-empty` (no value), `l2d-collapsed` (facet body hidden).
 
