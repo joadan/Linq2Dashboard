@@ -48,6 +48,11 @@ var dashboard = Dashboard.Create(orders, b =>
      .Granularity(DateGranularity.Month)
      .Presets(DatePreset.Today, DatePreset.Last7Days, DatePreset.ThisYear);
 
+    b.TextFacet("search", (x, text) =>                          // free text, matched by the application (§C5)
+        x.CustomerName.Contains(text, StringComparison.OrdinalIgnoreCase)
+     || x.Product.Contains(text, StringComparison.OrdinalIgnoreCase))
+     .Title("Search");
+
     b.Count("orders");
     b.Sum("revenue", x => x.Amount);
     b.Average("average", x => x.Amount).Title("Average order");
@@ -66,6 +71,7 @@ var dashboard = Dashboard.Create(orders, b =>
 - Metrics are builder methods (`Count`, `Sum`, `Average`, `Min`, `Max`, `Distinct`, `Calculated`) rather than a separate `Metric` factory, because C# cannot infer `T` for `Metric.Sum(x => x.Amount)` outside the builder. `Distinct` takes any equatable property and an optional `IEqualityComparer<TProp>`, with the value facet default (case-insensitive strings) when none is given. `Calculated` takes a `Func<MetricValues, double?>`; `MetricValues` exposes the values and shares of the metrics defined before it by key and throws on any other key. The builder runs the formula once at definition with every input at null, so an unconditionally read wrong key fails in the builder call; a key first read inside a branch fails at the first `Calculate` that reaches it, with the key in the message.
 - Range and metric selectors accept any numeric property, nullable or not; the conversion to `double` is compiled into the selector. Date selectors accept `DateTime`, `DateTimeOffset`, `DateOnly` and their nullable forms; anything else is rejected at `Create`.
 - `Buckets(100, 500, 1000)` names cut points, not edges: it yields "below 100", "100 to 500", "500 to 1000" and "1000 and above", so every value lands in a bucket.
+- `TextFacet` (§C5, added 2026-09-14) always takes an explicit key, since there is no selector to derive one from, and a `Func<T, string, bool>` that must be pure and thread-safe. The builder offers `Title` only; matching semantics live in the function.
 - All facet builders return a typed builder so kind-specific options are discoverable; the shape above is the whole configuration surface for the first version.
 
 ### 2.2 Selections
@@ -110,9 +116,11 @@ sealed record DateSelection : Selection
     bool IncludeNull;
     //  DateSelection.OnlyNull selects the null rows alone
 }
+
+sealed record TextSelection(string Text) : Selection;   // trimmed; whitespace-only is empty and clears the facet (§C5)
 ```
 
-`Selections` is keyed by facet key, compares by value, and treats an empty `ValueSelection` as "clear". `Toggle` uses default equality on the boxed value; the facet's comparer applies when values are mapped to codes, so `"se"` and `"SE"` may both sit in a selection and still select the same rows.
+`Selections` is keyed by facet key, compares by value, and treats an empty `ValueSelection` or an empty `TextSelection` as "clear". `Toggle` uses default equality on the boxed value; the facet's comparer applies when values are mapped to codes, so `"se"` and `"SE"` may both sit in a selection and still select the same rows.
 
 Selection values reaching a value facet are brought to the facet's value type: an exact type match passes through, and primitives, decimals, strings and enums are converted, so a value that arrived as `long` or as a string from JSON still selects an `int` or enum facet value. A value that does not occur in the dataset selects nothing rather than failing (a stale bookmark degrades to fewer rows). A value that cannot be converted is an error.
 
@@ -189,6 +197,11 @@ sealed class DateFacetState : FacetState
     FacetValue Null { get; }
 }
 
+sealed class TextFacetState : FacetState
+{
+    string? Text { get; }                       // the current text, null when unconstrained (§C5); nothing else to present
+}
+
 sealed record FacetValue(object? Value, int TotalCount, int FilteredCount, bool Selected, string? Label = null);   // Label only under a facet with a label selector (§C5)
 sealed record FacetCount(int TotalCount, int FilteredCount);                       // "Other"
 sealed record RangeBucket(double From, double To, int TotalCount, int FilteredCount, bool Selected)
@@ -201,7 +214,7 @@ readonly struct MetricValues { double? this[string key]; double? Value(string ke
 sealed record ResultPage<T>(IReadOnlyList<T> Items, int PageIndex, int PageSize, int MatchingCount);
 ```
 
-`Value` is `object?` on purpose. The UI formats it; the core does not know about cultures, which is also why buckets carry bounds rather than label strings. The one string the core carries is the application's own label for a value facet's value (§C5), supplied by the builder's `Label` selector: it is data read from the rows, not formatting, and it is on `FacetValue.Label` for presented values and behind `LabelOf` for any value, so the chip for a selected value can be named from the selection alone. The default formatter shows it when present and formats the value otherwise. Boolean facets reuse `ValueFacetState`. `FacetKind` has `Value`, `Boolean`, `Range` and `Date` in the first version.
+`Value` is `object?` on purpose. The UI formats it; the core does not know about cultures, which is also why buckets carry bounds rather than label strings. The one string the core carries is the application's own label for a value facet's value (§C5), supplied by the builder's `Label` selector: it is data read from the rows, not formatting, and it is on `FacetValue.Label` for presented values and behind `LabelOf` for any value, so the chip for a selected value can be named from the selection alone. The default formatter shows it when present and formats the value otherwise. Boolean facets reuse `ValueFacetState`. `FacetKind` has `Value`, `Boolean`, `Range` and `Date` in the first version, and `Text` since 2026-09-14.
 
 A bucket is `Selected` when the current interval fully covers it, so a wide interval lights up several buckets and a partial one lights up none. A preset is `Selected` when the selection is that preset or an absolute interval exactly equal to the preset's interval (clicking the March bar lights "This month"); coverage would light every preset inside a wide selection, which reads wrong. `ToSelection()` on a bucket gives exactly the selection a click should produce, so the UI never constructs interval bounds itself.
 
@@ -219,7 +232,8 @@ Selections restored = dashboard.Serializer.FromJson(json);
   "OrderDate": { "preset": "last30Days" },
   "Shipped":   { "from": "2026-03-01T00:00:00.0000000+01:00", "includeNull": true },
   "Discount":  { "onlyNull": true },
-  "status":    { "values": [null, "Open"] }
+  "status":    { "values": [null, "Open"] },
+  "search":    { "text": "acme" }
 }
 ```
 
@@ -344,6 +358,7 @@ For each facet `f` with a non-empty selection, produce `R_f`:
 - Value: scan `codes` and set a bit where `codes[row]` is in the selected code set. The selected codes are looked up in a `bool[V + 1]` mask built once per selection, so the inner loop is one array read and one branch per row.
 - Range: scan `values`; set a bit where the value is inside the interval. OR in `nulls` if `IncludeNull`.
 - Date: resolve preset to `[from, to)` ticks if needed; scan `ticks`. OR in `nulls` if `IncludeNull`.
+- Text (§C5): scan `_items` and set a bit where the application's function returns true for `(items[row], text)`. The only scan that touches row objects and runs application code, so it is the one scan whose cost the library does not control. When parallel counting is enabled it is split across cores over word-aligned chunks of 64 rows, which the contract (pure, thread-safe) allows; otherwise it runs serially like the other scans, so the option keeps its meaning of "this dashboard may use several cores per click". The result is cached like any other row set, so retyping a text or removing and re-adding it costs nothing.
 
 Each `R_f` is cached by `(facetKey, selection)` (§5). The scans are `O(N)` with sequential access, roughly 1 ms per million rows.
 
@@ -670,6 +685,8 @@ tests/Linq2Dashboard.Blazor.Tests/   bUnit: each component renders a given state
 
 9. **Collapsing (added after the first version).** Every facet component takes `Collapsible` (on by default since 2026-09-14; `false` gives a fixed header), which renders the title as a toggle with a chevron in the shared header, and a bindable `Collapsed` value with `CollapsedChanged`, so a host can set or remember which facets are open. Collapsed hides the body only; the header, including the clear link and a range facet's bounds, stays. The value is component-local UI state synced from the parameter the way the results page index is, so it survives state changes and works without a binding. A header template replaces the toggle, leaving `Collapsed` as the only control.
 
+10. **`TextFacet` (added 2026-09-14).** One text input in the shared header layout, bound to the facet's `TextSelection` through `Selections.With(key, new TextSelection(text))`; a cleared input or the clear link calls `Clear`. The component debounces: it sends the text after a pause (`DebounceMilliseconds`, 300 by default) or on Enter, since each new text costs a scan (§4.1), and the input shows the typed text meanwhile while the chip in `ActiveSelections` shows the applied one. The state's `ContextCount` is shown as "searched among N" through the formatter. Options: `Placeholder`, `DebounceMilliseconds`, `Collapsible`, `HeaderTemplate`, `Class` and attribute passthrough like the other facets. `ActiveSelections` renders a `TextSelection` as one chip with the text, removal clears the facet.
+
 ### Code layout
 
 Every component is a `.razor` file holding markup and directives only, with a `.razor.cs` partial class beside it holding parameters, state and methods. No `@code` blocks anywhere in the repository.
@@ -692,6 +709,7 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 - **Project renamed to `Linq2Dashboard` under `src/`.** First code change of the implementation. See §7.
 - **Selections serialise to JSON only.** No query-string format in the first version; applications encode the JSON for URLs themselves. See §2.5.
 - **Custom facets come later.** The facet interfaces are internal in the first version and become public when custom facets are added. See §6.
+- **Text facets are a `FacetIndex` like the others, with a predicate scan.** `TextFacetIndex<T>` is the one generic index, since it needs the row array; `Present` returns a state with only the text. The scan runs the application's function over row chunks on several cores when parallel counting is enabled and serially otherwise, so the existing option stays the single switch for multi-core work. The always-explicit key and the `{ "text": ... }` JSON shape are fixed so a later precomputed text column can share them. Decided 2026-09-14. See §2.1, §2.2, §4.1, §9.
 - **Blazor: Server primary, WebAssembly supported with smaller datasets.** See §7.
 - **Blazor: plain CSS with custom properties, one cascaded formatter service, paging only.** See §9. Paging remains the default; virtualisation was added afterwards as an opt-in on `Results`, and a slider as an opt-in on `RangeFacet`.
 

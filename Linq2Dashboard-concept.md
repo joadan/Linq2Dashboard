@@ -138,6 +138,8 @@ A **calculated metric** is a formula over the metrics defined before it, not ove
 
 Typing "ACME" into the Customer facet narrows *which values are listed*. It does not narrow the matching rows. Only clicking a value does that.
 
+A **text facet** (§5) is the other thing typing can do: its text is a selection and does narrow the matching rows, under the same rules as any other facet. The two are kept apart by name so that "search" always means the first.
+
 ### 4.6 Row selection is not filtering
 
 Ticking rows in a result grid marks them for an action (export, bulk edit, navigation). It has no effect on facets, metrics, or paging.
@@ -219,6 +221,17 @@ The property is a point in time: order date, created, last login.
 - A relative preset is stored in the selection as the preset, not as the interval it resolved to. A bookmarked "last 7 days" therefore stays relative when restored later. Because the data is fixed (§4.9), the same preset can still resolve differently on a different day; that is intended.
 - The bucket granularity (year, month, week, day) is a facet definition choice. Weeks follow ISO 8601 unless the definition says otherwise.
 
+### Text facet
+
+Free text the user types, matched against each row by a function the application supplies: `(row, text) => row.Name.Contains(text) || row.Notes.Contains(text)`.
+
+- Values: none. A text facet has nothing to list or count; its state carries only the current text. `ContextCount` still applies and says how many rows the text is searched among.
+- Selection: the text, trimmed. Whitespace-only text is no selection at all, the way an empty value set is.
+- Matching: the function decides. Which properties take part, case sensitivity and whether every word must match are the application's choice, made once in the function. The core passes the text as typed after trimming and never interprets it.
+- It is a facet so that everything key-addressed works unchanged: it joins the AND across facets (§4.1), its own text is excluded from nothing since it counts nothing, it appears in the state and among the active selections, and it serialises with the others (§7). Several text facets in one dashboard are allowed, each with its own key and function.
+- The function must be pure and safe to call from several threads at once; the core may evaluate it in parallel. Cost is one call per row in the dataset for each distinct text, so the UI should wait for the user to pause before sending a text.
+- Concerns: a text facet is the only facet whose matching is not a column lookup, so a large dataset pays for the function on every new text. A precomputed text column is a possible later addition behind the same selection; the function stays the primitive.
+
 ### Custom facet
 
 An extension point. A custom facet defines its own notion of value, selection, and how a selection matches a row. Everything in §4 still applies. This exists so that hierarchical facets, geo facets, or domain-specific facets can be added without changing the core.
@@ -282,7 +295,7 @@ The UI consumes a **UI-friendly state** and produces **selections**. It never se
 FacetState
     Key            stable string identity, e.g. "country"
     Title          display name
-    Kind           Value | Boolean | Range | Date | Custom
+    Kind           Value | Boolean | Range | Date | Text | Custom
     Values         presented values with total/filtered counts and selected flag
     Selection      the current selection in a serialisable form
     Other          remainder count when top N applies, otherwise absent
@@ -318,6 +331,7 @@ Because facets are identified by string keys and selections are serialisable, a 
 - Total and filtered counts with own-facet exclusion.
 - Top N with "Other" and pinned selected values.
 - Search within a value facet.
+- Text facets: a user-typed text matched by an application function. Added 2026-09-14; see §5.
 - Metrics: count, sum, average, min, max.
 - Result paging with application-defined sorting.
 - Immutable state snapshot with a UI-friendly facet model.
@@ -368,5 +382,6 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **Distinct count is a metric aggregation.** Different non-null values among the matching rows, with value facet equality (case-insensitive strings by default). Exact, never approximate; per-facet-value breakdowns stay with grouping. Added 2026-09-14. See §4.4.
 - **Calculated metrics are formulas over earlier metrics.** Null in, "no value" out; a non-finite result is "no value"; no share. Only metrics defined before the formula are visible, so cycles cannot be expressed. Added 2026-09-14. See §4.4.
 - **A value facet can carry a label per value, read from the row.** The value stays the identity for counting, selections and JSON; the label is what is shown and searched. First row wins, null means "show the value". Async lookups happen in the application before the dashboard is created. Added 2026-09-14. See §5.
+- **Free text is a facet kind, matched by an application function.** A text facet has no values and carries only its text; it joins the AND across facets and rides every key-addressed path (selections, state, active selections, JSON). The function `(row, text) => bool` is the primitive and owns the matching semantics; it must be pure and thread-safe. Whitespace-only text clears. Search within a facet (§4.5) stays a UI operation and keeps the word "search". Decided 2026-09-14. See §5.
 - **Range buckets are fixed at initialisation.** Either application-defined or derived once from the dataset, never from the current selections. See §5.
 - **"Other" is measured against the facet's own counting context.** Not against the matching rows. See §6.
