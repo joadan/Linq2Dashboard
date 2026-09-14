@@ -15,6 +15,10 @@ public partial class MatchingCount<T>
     [Parameter]
     public bool ShowShare { get; set; }
 
+    /// <summary>An icon shown beside the title and count, typically an inline SVG or an icon-font element (design §9.5).</summary>
+    [Parameter]
+    public RenderFragment? Icon { get; set; }
+
     private string? ShareText =>
         ShowShare && State.TotalCount > 0 ? Formatter.FormatShare((double)State.MatchingCount / State.TotalCount) : null;
 }

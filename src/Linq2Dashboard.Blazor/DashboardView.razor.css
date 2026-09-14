@@ -13,6 +13,7 @@
     --l2d-bucket-label-width: 6rem;
     --l2d-metric-min-width: 9rem;
     --l2d-metric-padding: 0.625rem 0.75rem;
+    --l2d-metric-icon-size: 2.25rem;
     --l2d-results-height: 30rem;
 
     /* type */
@@ -35,6 +36,8 @@
     --l2d-bar-track: transparent;
     --l2d-input-background: transparent;
     --l2d-metric-background: transparent;
+    --l2d-metric-icon-color: var(--l2d-accent);
+    --l2d-metric-icon-background: var(--l2d-selected-background);
     --l2d-sticky-background: #fff;
 
     display: flex;

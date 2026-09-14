@@ -95,10 +95,22 @@
     max-width: 60rem;
 }
 
+/* Metric tiles: as many per row as fit, never narrower than 11rem, so two per row on a phone. */
 .demo-metrics {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-    gap: 0.375rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
+    gap: 0.75rem;
+    --l2d-metric-padding: 0.875rem 1rem;
+    --l2d-metric-background: var(--docs-surface);
+    --l2d-metric-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
+}
+
+@media (max-width: 48rem) {
+    .demo-metrics {
+        gap: 0.5rem;
+        --l2d-metric-padding: 0.625rem 0.75rem;
+        --l2d-metric-icon-size: 2rem;
+    }
 }
 
 /* The demo uses the whole screen: results fill the viewport below the toolbar and metrics. */

@@ -27,6 +27,13 @@ public partial class MetricTile
     [Parameter]
     public string? CssClass { get; set; }
 
+    /// <summary>
+    /// An icon shown beside the title and value, typically an inline SVG or an icon-font element (design §9.5).
+    /// Null renders no icon slot. Decorative: it is hidden from assistive technology.
+    /// </summary>
+    [Parameter]
+    public RenderFragment? Icon { get; set; }
+
     /// <summary>Replaces the title and value; the tile element and its classes stay.</summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }

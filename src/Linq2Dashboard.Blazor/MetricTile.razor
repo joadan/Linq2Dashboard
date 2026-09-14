@@ -1,12 +1,16 @@
-@* The tile shared by Metric and MatchingCount: a title over a value, or custom content. *@
+@* The tile shared by Metric and MatchingCount: a title over a value, with an optional icon beside them, or custom content. *@
 
-<div class="l2d-metric @CssClass @(IsEmpty ? "l2d-metric-empty" : null)" data-key="@Key">
+<div class="l2d-metric @CssClass @(IsEmpty ? "l2d-metric-empty" : null) @(Icon is not null ? "l2d-metric-with-icon" : null)" data-key="@Key">
     @if (ChildContent is not null)
     {
         @ChildContent
     }
     else
     {
+        @if (Icon is not null)
+        {
+            <span class="l2d-metric-icon" aria-hidden="true">@Icon</span>
+        }
         <span class="l2d-metric-title">@Title</span>
         <span class="l2d-metric-value">@Value</span>
         @if (Share is not null)

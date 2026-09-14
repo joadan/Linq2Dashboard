@@ -183,6 +183,29 @@ public class MetricTests : BunitContext
     }
 
     [Fact]
+    public void An_icon_renders_in_its_own_slot_and_marks_the_tile()
+    {
+        var plain = RenderWith<Metric<Order>>(m => m.Add(x => x.Key, "revenue"));
+        Assert.Empty(plain.FindAll(".l2d-metric-icon"));
+        Assert.DoesNotContain("l2d-metric-with-icon", plain.Find(".l2d-metric").ClassName);
+
+        var withIcon = RenderWith<Metric<Order>>(m =>
+        {
+            m.Add(x => x.Key, "revenue");
+            m.Add(x => x.Icon, "<svg class=\"coin\"></svg>");
+        });
+
+        var tile = withIcon.Find(".l2d-metric");
+        Assert.Contains("l2d-metric-with-icon", tile.ClassName);
+        Assert.NotNull(tile.QuerySelector(".l2d-metric-icon svg.coin"));
+        Assert.Equal("true", tile.QuerySelector(".l2d-metric-icon")!.GetAttribute("aria-hidden"));
+        Assert.Equal("5,424.50", tile.QuerySelector(".l2d-metric-value")!.TextContent); // the icon adds no text
+
+        var matching = RenderWith<MatchingCount<Order>>(m => m.Add(x => x.Icon, "<svg class=\"cart\"></svg>"));
+        Assert.NotNull(matching.Find(".l2d-metric-icon svg.cart"));
+    }
+
+    [Fact]
     public void An_unknown_key_fails_clearly()
     {
         var error = Assert.ThrowsAny<Exception>(() => RenderWith<Metric<Order>>(m => m.Add(x => x.Key, "nope")));

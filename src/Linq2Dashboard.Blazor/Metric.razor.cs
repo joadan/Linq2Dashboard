@@ -23,6 +23,10 @@ public partial class Metric<T>
     [Parameter]
     public bool ShowShare { get; set; }
 
+    /// <summary>An icon shown beside the title and value, typically an inline SVG or an icon-font element (design §9.5).</summary>
+    [Parameter]
+    public RenderFragment? Icon { get; set; }
+
     /// <summary>Replaces the title and value inside the tile. The tile element and its classes stay.</summary>
     [Parameter]
     public RenderFragment<MetricState>? MetricTemplate { get; set; }

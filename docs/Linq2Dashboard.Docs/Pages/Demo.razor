@@ -48,14 +48,23 @@ else
                 <div class="demo-status">
                     <CalculationTiming />
                 </div>
-               
                 <ActiveSelections T="SampleOrder" />
                 <div class="demo-metrics">
-                    <MatchingCount T="SampleOrder" Title="Orders matching" ShowShare="true" />
-                    <Metric T="SampleOrder" Key="revenue" ShowShare="true" />
-                    <Metric T="SampleOrder" Key="average" />
-                    <Metric T="SampleOrder" Key="customers" ShowShare="true" />
-                    <Metric T="SampleOrder" Key="perCustomer" />
+                    <MatchingCount T="SampleOrder" Title="Orders matching" ShowShare="true">
+                        <Icon><DemoIcon Name="cart" /></Icon>
+                    </MatchingCount>
+                    <Metric T="SampleOrder" Key="revenue" ShowShare="true">
+                        <Icon><DemoIcon Name="banknote" /></Icon>
+                    </Metric>
+                    <Metric T="SampleOrder" Key="average">
+                        <Icon><DemoIcon Name="receipt" /></Icon>
+                    </Metric>
+                    <Metric T="SampleOrder" Key="customers" ShowShare="true">
+                        <Icon><DemoIcon Name="users" /></Icon>
+                    </Metric>
+                    <Metric T="SampleOrder" Key="perCustomer">
+                        <Icon><DemoIcon Name="trend" /></Icon>
+                    </Metric>
                 </div>
                 <Results T="SampleOrder" Layout="ResultsLayout.Table" Virtualize="true" ItemSize="33">
                     <HeaderTemplate>
