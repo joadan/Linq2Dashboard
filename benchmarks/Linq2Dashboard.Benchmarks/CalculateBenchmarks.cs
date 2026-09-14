@@ -83,6 +83,14 @@ public class CalculateBenchmarks
         return dashboard.CalculateUncached(DashboardFactory.Scenarios.RangeAndDate);
     }
 
+    /// <summary>A new text in the text facet: the predicate scan over every row, serial or parallel with the option (design §4.1).</summary>
+    [Benchmark]
+    public DashboardState<BenchmarkOrder> Text_Cold()
+    {
+        dashboard.ClearCaches();
+        return dashboard.CalculateUncached(DashboardFactory.Scenarios.Text);
+    }
+
     [Benchmark]
     public IReadOnlyList<FacetValue> Search_Customer() =>
         ((ValueFacetState)threeSelections.Facet("Customer")).Search("Customer 0042");

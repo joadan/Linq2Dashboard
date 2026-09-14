@@ -614,6 +614,7 @@ Intel Xeon W-2223 (4 cores), .NET 10, BenchmarkDotNet short job, 1 000 000 rows.
 | `Calculate`, range + date, cold caches | 22.2 ms | 16.5 ms | ✓ |
 | A click: 3 facets cold, then one value toggled | 33.4 ms | 24.0 ms | ✓ (the click alone is the difference, ~13 ms) |
 | `Search` over 100 000 customer labels | 4.3 ms | | |
+| `Calculate`, new text in a text facet, cold (two `Contains` per row) | 80.9 ms | 19.8 ms | see below |
 | `GetPage`, first / middle / last of 2 200 pages | 0.001 / 2.1 / 4.0 ms | | |
 
 | Memory above the 7.8 MB row array | |
@@ -635,6 +636,7 @@ Every target is met with margin, so per-value bitmaps stay out (§3.4). What the
 - **Date presets are rescanned on every calculation**, about 1 ms per preset, because their interval depends on "now". Caching the preset row set keyed by its resolved interval would make them free until midnight.
 - **Parallel counting gives 1.5 to 2× on four cores** for warm calculations. The default stays off as decided; the option is worth turning on for a desktop or single-user host.
 - **The no-selection state is unusually cheap** because a full context copies the precomputed totals instead of counting. It is not representative of a click.
+- **A text facet's scan is the one cost the library does not own** (added 2026-09-14). Two case-insensitive `Contains` over a million rows take about 80 ms serially and 20 ms with parallel counting on four cores, so a new text is four to eight times a cold click and the Blazor input debounces. Only a new text pays; the row set is cached by the text afterwards. An application with a heavy predicate or a large dataset should turn parallel counting on, or precompute what the predicate reads.
 
 ---
 

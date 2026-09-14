@@ -19,6 +19,9 @@ public static class DashboardFactory
              .TimeZone(Stockholm)
              .Granularity(DateGranularity.Month)
              .Presets(DatePreset.Last30Days, DatePreset.ThisYear);
+            b.TextFacet("search", (x, text) =>
+                x.Customer.Contains(text, StringComparison.OrdinalIgnoreCase)
+                || x.Brand.Contains(text, StringComparison.OrdinalIgnoreCase));
             b.Count("orders");
             b.Sum("revenue", x => x.Amount);
             b.Average("average", x => x.Amount);
@@ -48,5 +51,9 @@ public static class DashboardFactory
 
         /// <summary>A click: the previous selections with one more Country value toggled in.</summary>
         public static readonly Selections ThreePlusClick = Three.Toggle("Country", "C01");
+
+        /// <summary>A text typed into the text facet: two case-insensitive Contains per row (concept §5).</summary>
+        public static readonly Selections Text = Selections.Empty
+            .With("search", new TextSelection("Customer 0042"));
     }
 }

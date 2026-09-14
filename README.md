@@ -39,6 +39,8 @@ var dashboard = Dashboard.Create(orders, b =>
      .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
      .Granularity(DateGranularity.Month)
      .Presets(DatePreset.Last30Days, DatePreset.ThisYear);
+    b.TextFacet("search", (x, text) =>                       // free text; the function decides what matches
+        x.Customer.Contains(text, StringComparison.OrdinalIgnoreCase));
 
     b.Count("orders");
     b.Sum("revenue", x => x.Amount);
@@ -117,6 +119,7 @@ The rules are decisions, not options. They are spelled out in the [concept docum
 - **Null is a value.** It is shown, counted and selectable like any other, never silently dropped.
 - **Zero-count values stay in the state.** Hiding or greying them is the UI's choice.
 - **Range and date buckets are fixed at build**; only their counts change. A bucket click produces exactly the interval the bucket covers.
+- **Free text is a facet too.** A text facet has no values; its text narrows the matching rows through the function you give it, and searching inside a value facet's list never does.
 - **Metrics skip null** and divide averages by rows that have a value. Distinct counts different non-null values with the facets' equality rules. Count, sum and distinct also carry their share of the total, so a tile can read "12 400 (38 %)". Calculated metrics are formulas over earlier metrics: null in, no value out, and never infinity.
 - **The data is fixed at initialisation.** New data means a new dashboard; selections are serialisable, so the view carries over.
 
@@ -130,6 +133,7 @@ Measured at one million rows on a 4-core machine (`benchmarks/`):
 | Recalculate, 3 facets selected, warm | 9.4 ms (4.9 ms with parallel counting) |
 | Recalculate, cold caches | 20 ms |
 | Search over 100 000 customer values | 4.3 ms |
+| New text in a text facet, two `Contains` per row | 81 ms (20 ms with parallel counting) |
 | Memory for the full dashboard | 78 MB |
 
 Every facet is a dictionary-encoded column; counting is one pass over the rows in context and is independent of how many distinct values a facet has. Details in the [design document](Linq2Dashboard-design.md).

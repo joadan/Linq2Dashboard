@@ -26,7 +26,7 @@ internal sealed class DateFacetDefinition<T, TDate> : FacetDefinition<T>
 
     public DatePreset[] Presets { get; set; } = [];
 
-    public override FacetIndex Build(T[] items, TimeProvider timeProvider)
+    public override FacetIndex Build(T[] items, TimeProvider timeProvider, bool parallel)
     {
         TimeZoneInfo zone = Zone;
         var column = DateColumn.Build(items.Length, (int row, out DateTimeOffset value) =>

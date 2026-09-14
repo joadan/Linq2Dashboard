@@ -99,6 +99,24 @@ public sealed class DashboardBuilder<T>
             EnsureMutable);
     }
 
+    /// <summary>
+    /// A text facet (concept §5): free text the user types, matched row by row by
+    /// <paramref name="predicate"/>, called as <c>(row, text)</c> with the trimmed text. The
+    /// predicate owns the matching semantics and must be pure and thread-safe, since the scan runs
+    /// on several threads when parallel counting is enabled. The key is always explicit because
+    /// there is no selector to derive one from.
+    /// </summary>
+    public TextFacetBuilder<T> TextFacet(string key, Func<T, string, bool> predicate)
+    {
+        ValidateKey(key);
+        ArgumentNullException.ThrowIfNull(predicate);
+        EnsureMutable();
+
+        var definition = new TextFacetDefinition<T>(key, predicate);
+        AddFacet(definition);
+        return new TextFacetBuilder<T>(definition, EnsureMutable);
+    }
+
     /// <summary>Number of matching rows (concept §4.4).</summary>
     public MetricBuilder<T> Count(string key) => AddMetric(key, Aggregation.Count, null);
 
@@ -198,7 +216,7 @@ public sealed class DashboardBuilder<T>
         var facetIndexes = new FacetIndex[facets.Count];
         for (int i = 0; i < facetIndexes.Length; i++)
         {
-            facetIndexes[i] = facets[i].Build(items, timeProvider);
+            facetIndexes[i] = facets[i].Build(items, timeProvider, parallelCounting);
         }
 
         var metricIndexes = new MetricIndex[metrics.Count];

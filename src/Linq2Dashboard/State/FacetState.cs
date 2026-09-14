@@ -150,6 +150,21 @@ public sealed class DateFacetState : FacetState
 }
 
 /// <summary>
+/// State of a text facet (concept §5). There is nothing to list or count; the state carries the
+/// current text, and <see cref="FacetState.ContextCount"/> says how many rows it is matched among.
+/// </summary>
+public sealed class TextFacetState : FacetState
+{
+    internal TextFacetState(string key, string title, Selection? selection, int contextCount)
+        : base(key, title, FacetKind.Text, selection, contextCount)
+    {
+    }
+
+    /// <summary>The current text, or null when the facet is unconstrained.</summary>
+    public string? Text => (Selection as TextSelection)?.Text;
+}
+
+/// <summary>
 /// One value under a value facet (concept §4.3). <see cref="Value"/> is the facet's real value,
 /// boxed, or null for the null value; the UI formats it. <see cref="Label"/> is the application's
 /// label for the value when the facet defines one (concept §5), otherwise null.

@@ -27,7 +27,7 @@ internal sealed class ValueFacetDefinition<T, TProp> : FacetDefinition<T>
 
     public Func<T, string?>? Label { get; set; }
 
-    public override FacetIndex Build(T[] items, TimeProvider timeProvider)
+    public override FacetIndex Build(T[] items, TimeProvider timeProvider, bool parallel)
     {
         var column = ValueColumn<TProp>.Build(items.Length, (int row, out TProp value) =>
         {

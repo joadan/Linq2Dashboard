@@ -31,13 +31,13 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
 
     public bool Contains(string key) => map.ContainsKey(key);
 
-    /// <summary>Replaces the selection for <paramref name="key"/>. An empty value selection clears it instead.</summary>
+    /// <summary>Replaces the selection for <paramref name="key"/>. An empty value or text selection clears it instead.</summary>
     public Selections With(string key, Selection selection)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
         ArgumentNullException.ThrowIfNull(selection);
 
-        if (selection is ValueSelection { IsEmpty: true })
+        if (selection is ValueSelection { IsEmpty: true } or TextSelection { IsEmpty: true })
         {
             return Clear(key);
         }

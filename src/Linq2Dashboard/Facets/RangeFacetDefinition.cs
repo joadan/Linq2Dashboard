@@ -15,7 +15,7 @@ internal sealed class RangeFacetDefinition<T> : FacetDefinition<T>
 
     public RangeBucketing Bucketing { get; set; } = RangeBucketing.Auto(10);
 
-    public override FacetIndex Build(T[] items, TimeProvider timeProvider)
+    public override FacetIndex Build(T[] items, TimeProvider timeProvider, bool parallel)
     {
         var column = RangeColumn.Build(items.Length, (int row, out double value) =>
         {

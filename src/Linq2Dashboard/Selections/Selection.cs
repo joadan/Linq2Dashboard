@@ -12,6 +12,27 @@ public abstract record Selection
 }
 
 /// <summary>
+/// The text typed into a text facet (concept §5). Trimmed on construction; whitespace-only text is
+/// <see cref="IsEmpty"/> and clears the facet when applied, like an empty value set. The core
+/// never interprets the text: the facet's function decides what matches.
+/// </summary>
+public sealed record TextSelection : Selection
+{
+    public TextSelection(string text)
+    {
+        ArgumentNullException.ThrowIfNull(text);
+        Text = text.Trim();
+    }
+
+    /// <summary>The trimmed text.</summary>
+    public string Text { get; }
+
+    public bool IsEmpty => Text.Length == 0;
+
+    public override string ToString() => $"TextSelection(\"{Text}\")";
+}
+
+/// <summary>
 /// A set of chosen values for a value or boolean facet. A <c>null</c> entry selects the null facet
 /// value (concept §4.8). Values combine as OR (concept §4.1). Order is irrelevant to equality.
 /// </summary>

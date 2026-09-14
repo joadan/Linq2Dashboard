@@ -25,7 +25,11 @@ internal abstract class FacetDefinition<T>
 
     public FacetInfo Info => new(Key, Title, Kind);
 
-    public abstract FacetIndex Build(T[] items, TimeProvider timeProvider);
+    /// <summary>
+    /// Builds the index once, at <c>Create</c>. <paramref name="parallel"/> is the dashboard's
+    /// parallel-counting option, which the text facet's scan follows (design §4.1).
+    /// </summary>
+    public abstract FacetIndex Build(T[] items, TimeProvider timeProvider, bool parallel);
 }
 
 /// <summary>Derives a facet or metric key from a selector expression (concept §7).</summary>
