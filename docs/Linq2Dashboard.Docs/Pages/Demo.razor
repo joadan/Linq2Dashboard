@@ -33,7 +33,7 @@
 }
 else
 {
-    <DashboardView T="SampleOrder" @ref="view" Dashboard="dashboard" Selections="selections" SelectionsChanged="OnSelectionsChanged" StateChanged="OnStateChanged">
+    <DashboardView T="SampleOrder" @ref="view" Dashboard="dashboard" Formatter="DemoFormatter.Instance" Selections="selections" SelectionsChanged="OnSelectionsChanged" StateChanged="OnStateChanged">
         <div class="demo-layout">
             <aside class="demo-facets">
                 <ValueFacet T="SampleOrder" Key="Country" />

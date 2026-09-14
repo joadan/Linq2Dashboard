@@ -106,7 +106,7 @@
     --demo-metric-icon-glyph: 2.25rem;
     --l2d-metric-padding: var(--demo-metric-pad-y) var(--demo-metric-pad-x);
     --l2d-metric-background: var(--docs-surface);
-    --l2d-metric-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
+    --l2d-metric-size: clamp(1.0625rem, 0.875rem + 0.5vw, 1.25rem);
     --l2d-metric-icon-size: var(--demo-metric-icon-panel);
 }
 
