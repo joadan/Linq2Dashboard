@@ -100,16 +100,41 @@
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
     gap: 0.75rem;
-    --l2d-metric-padding: 0.875rem 1rem;
+    --demo-metric-pad-y: 0.875rem;
+    --demo-metric-pad-x: 1rem;
+    --demo-metric-icon-panel: 4.5rem;
+    --demo-metric-icon-glyph: 2.25rem;
+    --l2d-metric-padding: var(--demo-metric-pad-y) var(--demo-metric-pad-x);
     --l2d-metric-background: var(--docs-surface);
     --l2d-metric-size: clamp(1.25rem, 1rem + 0.8vw, 1.625rem);
+    --l2d-metric-icon-size: var(--demo-metric-icon-panel);
+}
+
+/* The icon fills the whole right side of the tile: a panel the tile's full height, flush with its edge.
+   Negative margins let it bleed through the padding while the padding still frames the text. */
+.demo-metrics ::deep .l2d-metric-with-icon {
+    overflow: hidden;
+}
+
+.demo-metrics ::deep .l2d-metric-icon {
+    align-self: stretch;
+    height: auto;
+    margin: calc(-1 * var(--demo-metric-pad-y)) calc(-1 * var(--demo-metric-pad-x)) calc(-1 * var(--demo-metric-pad-y)) 0;
+    border-radius: 0;
+}
+
+.demo-metrics ::deep .l2d-metric-icon svg {
+    width: var(--demo-metric-icon-glyph);
+    height: var(--demo-metric-icon-glyph);
 }
 
 @media (max-width: 48rem) {
     .demo-metrics {
         gap: 0.5rem;
-        --l2d-metric-padding: 0.625rem 0.75rem;
-        --l2d-metric-icon-size: 2rem;
+        --demo-metric-pad-y: 0.625rem;
+        --demo-metric-pad-x: 0.75rem;
+        --demo-metric-icon-panel: 3.5rem;
+        --demo-metric-icon-glyph: 1.75rem;
     }
 }
 
