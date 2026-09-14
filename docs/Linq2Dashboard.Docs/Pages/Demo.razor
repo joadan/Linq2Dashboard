@@ -33,7 +33,7 @@
 }
 else
 {
-    <DashboardView T="SampleOrder" Dashboard="dashboard" Selections="selections" SelectionsChanged="OnSelectionsChanged">
+    <DashboardView T="SampleOrder" @ref="view" Dashboard="dashboard" Selections="selections" SelectionsChanged="OnSelectionsChanged" StateChanged="OnStateChanged">
         <div class="demo-layout">
             <aside class="demo-facets">
                 <ValueFacet T="SampleOrder" Key="Country" />
@@ -66,6 +66,35 @@ else
                         <Icon><DemoIcon Name="trend" /></Icon>
                     </Metric>
                 </div>
+                @* The page's own chart, drawn from the state that StateChanged delivers. Nothing in the library knows it exists. *@
+                <section class="demo-chart">
+                    <div class="demo-chart-header">
+                        <span class="demo-chart-title">Orders per month</span>
+                        <span class="demo-chart-note">drawn by the page from <code>StateChanged</code> · click a month to select it</span>
+                    </div>
+                    @if (timeline is not null)
+                    {
+                        <div class="demo-chart-bars @(timeline.HasSelection ? "demo-chart-has-selection" : null)">
+                            @foreach (DateBucket bucket in timeline.Buckets)
+                            {
+                                <button type="button"
+                                        class="demo-chart-bar @(bucket.Selected ? "demo-chart-selected" : null)"
+                                        style="--total: @Share(bucket.TotalCount); --filtered: @Share(bucket.FilteredCount)"
+                                        title="@BarTitle(bucket)"
+                                        @onclick="() => OnBarClicked(bucket)">
+                                    <span class="demo-chart-total"></span>
+                                    <span class="demo-chart-filtered"></span>
+                                </button>
+                            }
+                        </div>
+                        <div class="demo-chart-axis">
+                            @foreach (DateBucket bucket in timeline.Buckets)
+                            {
+                                <span>@(bucket.PeriodStart.Month == 1 ? bucket.PeriodStart.Year.ToString() : null)</span>
+                            }
+                        </div>
+                    }
+                </section>
                 <Results T="SampleOrder" Layout="ResultsLayout.Table" Virtualize="true" ItemSize="33">
                     <HeaderTemplate>
                         <tr>

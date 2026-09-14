@@ -1,4 +1,6 @@
+using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Linq2Dashboard.Blazor;
 using Linq2Dashboard.SampleData;
 
 namespace Linq2Dashboard.Docs.Pages;
@@ -10,8 +12,11 @@ public partial class Demo
     private const string SelectionsParameter = "s";
     private const string RowsParameter = "rows";
 
+    private DashboardView<SampleOrder>? view;
     private Dashboard<SampleOrder>? dashboard;
     private Selections selections = Selections.Empty;
+    private DateFacetState? timeline;
+    private int timelineMax = 1;
     private int rows = DefaultRows;
     private long? generateMilliseconds;
     private long? buildMilliseconds;
@@ -85,6 +90,35 @@ public partial class Demo
         UpdateUrl();
         return Task.CompletedTask;
     }
+
+    /// <summary>
+    /// Every calculation, the first one included, hands the page the new state. The chart above the
+    /// results is drawn from the date facet's monthly buckets; the page only stores what it needs to draw.
+    /// </summary>
+    private void OnStateChanged(DashboardState<SampleOrder> state)
+    {
+        timeline = (DateFacetState)state.Facet("OrderDate");
+        // Bars are scaled to the largest total, so the histogram keeps its shape while the filtered part follows the selections (concept §5).
+        timelineMax = Math.Max(1, timeline.Buckets.Count == 0 ? 1 : timeline.Buckets.Max(b => b.TotalCount));
+    }
+
+    /// <summary>A click on a bar selects that month; a click on a selected one clears the facet, as the facet's own bars do.</summary>
+    private Task OnBarClicked(DateBucket bucket)
+    {
+        if (view is null)
+        {
+            return Task.CompletedTask;
+        }
+
+        return bucket.Selected
+            ? view.Context.ClearAsync("OrderDate")
+            : view.Context.SelectAsync("OrderDate", bucket.ToSelection());
+    }
+
+    private string Share(int count) => (count / (double)timelineMax).ToString("0.###", CultureInfo.InvariantCulture);
+
+    private static string BarTitle(DateBucket bucket) =>
+        $"{bucket.PeriodStart:MMM yyyy}: {bucket.FilteredCount:N0} of {bucket.TotalCount:N0} orders";
 
     private void UpdateUrl()
     {

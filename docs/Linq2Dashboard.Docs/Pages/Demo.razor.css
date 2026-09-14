@@ -158,7 +158,104 @@
     }
 }
 
-/* The demo uses the whole screen: results fill the viewport below the toolbar and metrics. */
+/* The page's own chart: one column per month, the total faint behind the filtered count, both scaled to the
+   largest total so the shape holds. A 2px gap of surface separates the columns; text stays in the muted ink. */
+.demo-chart {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    padding: 0.75rem 1rem 0.5rem;
+    border: 1px solid var(--docs-border);
+    border-radius: 0.5rem;
+    background: var(--docs-surface);
+}
+
+.demo-chart-header {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 0.25rem 1rem;
+    font-size: 0.875rem;
+}
+
+.demo-chart-title {
+    font-weight: 600;
+}
+
+.demo-chart-note {
+    color: var(--docs-muted);
+}
+
+.demo-chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 5rem;
+}
+
+.demo-chart-bar {
+    flex: 1 1 0;
+    min-width: 0;
+    position: relative;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: none;
+    cursor: pointer;
+}
+
+.demo-chart-bar:hover {
+    background: color-mix(in srgb, var(--docs-accent) 8%, transparent);
+}
+
+.demo-chart-total,
+.demo-chart-filtered {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 2px 2px 0 0;
+}
+
+.demo-chart-total {
+    height: calc(var(--total) * 100%);
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.demo-chart-filtered {
+    height: calc(var(--filtered) * 100%);
+    background: var(--docs-accent);
+}
+
+/* While a month is selected, the facet's own counts ignore that selection (concept §4.2), so every bar stays full;
+   the selected month is marked by dimming the others, the way a selected value stands out in a facet. */
+.demo-chart-has-selection .demo-chart-bar:not(.demo-chart-selected) .demo-chart-filtered {
+    opacity: 0.35;
+}
+
+.demo-chart-axis {
+    display: flex;
+    gap: 2px;
+    padding-top: 0.25rem;
+    border-top: 1px solid var(--docs-border);
+    font-size: 0.75rem;
+    color: var(--docs-muted);
+}
+
+.demo-chart-axis span {
+    flex: 1 1 0;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+@media (prefers-color-scheme: dark) {
+    .demo-chart-total {
+        background: rgba(255, 255, 255, 0.12);
+    }
+}
+
+/* The demo uses the whole screen: results fill the viewport below the toolbar, metrics and chart. */
 .demo-layout {
-    --l2d-results-height: max(20rem, calc(100vh - 26rem));
+    --l2d-results-height: max(20rem, calc(100vh - 34rem));
 }

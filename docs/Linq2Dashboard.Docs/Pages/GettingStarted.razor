@@ -37,7 +37,7 @@ dotnet add package Linq2Dashboard.Blazor --prerelease</code></pre>
         <tr><th>Component</th><th>Renders</th><th>Notable options</th></tr>
     </thead>
     <tbody>
-        <tr><td><code>DashboardView</code></td><td>Owns selections and state; cascades them. Bindable <code>Selections</code>.</td><td><code>Formatter</code>, custom child content</td></tr>
+        <tr><td><code>DashboardView</code></td><td>Owns selections and state; cascades them. Bindable <code>Selections</code>; <code>StateChanged</code> hands the page every new state, the initial one included, for charts of its own.</td><td><code>Formatter</code>, <code>StateChanged</code>, custom child content</td></tr>
         <tr><td><code>ValueFacet</code></td><td>Values with counts, the null value, "Other", search.</td><td><code>ShowTotals</code>, <code>HideZeroCounts</code>, <code>Collapsible</code>, templates</td></tr>
         <tr><td><code>RangeFacet</code></td><td>Fixed buckets as a histogram or list; optional slider.</td><td><code>ShowSlider</code>, <code>Layout</code>, <code>ShowBounds</code></td></tr>
         <tr><td><code>DateFacet</code></td><td>Presets with counts and periods as bars.</td><td><code>ShowPresets</code>, <code>Layout</code></td></tr>
