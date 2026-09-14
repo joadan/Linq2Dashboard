@@ -16,11 +16,20 @@ public partial class Metric<T>
     [Parameter]
     public string? Title { get; set; }
 
+    /// <summary>
+    /// Shows the metric's share of its total under the value, as a percentage (concept §4.4). Only
+    /// count and sum metrics have a share; for the others nothing is added.
+    /// </summary>
+    [Parameter]
+    public bool ShowShare { get; set; }
+
     /// <summary>Replaces the title and value inside the tile. The tile element and its classes stay.</summary>
     [Parameter]
     public RenderFragment<MetricState>? MetricTemplate { get; set; }
 
     private MetricState Current => State.Metric(Key);
+
+    private string? ShareText => ShowShare && Current.Share is double share ? Formatter.FormatShare(share) : null;
 
     private RenderFragment? Template => MetricTemplate is null ? null : MetricTemplate(Current);
 }

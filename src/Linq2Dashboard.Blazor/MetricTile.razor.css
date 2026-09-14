@@ -23,3 +23,9 @@
 .l2d-metric-empty .l2d-metric-value {
     color: var(--l2d-muted, #71717a);
 }
+
+.l2d-metric-share {
+    font-size: var(--l2d-small-size, 0.8125rem);
+    color: var(--l2d-muted, #71717a);
+    font-variant-numeric: tabular-nums;
+}

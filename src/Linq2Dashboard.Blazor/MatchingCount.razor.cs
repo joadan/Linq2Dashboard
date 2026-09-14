@@ -10,4 +10,11 @@ public partial class MatchingCount<T>
 {
     [Parameter]
     public string Title { get; set; } = "Matching";
+
+    /// <summary>Shows the matching rows as a percentage of all rows after fixed filters, under the count.</summary>
+    [Parameter]
+    public bool ShowShare { get; set; }
+
+    private string? ShareText =>
+        ShowShare && State.TotalCount > 0 ? Formatter.FormatShare((double)State.MatchingCount / State.TotalCount) : null;
 }

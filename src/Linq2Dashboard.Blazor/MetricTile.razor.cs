@@ -16,6 +16,10 @@ public partial class MetricTile
     [Parameter, EditorRequired]
     public string Value { get; set; } = string.Empty;
 
+    /// <summary>The formatted share of the total, shown under the value; null renders nothing (concept §4.4).</summary>
+    [Parameter]
+    public string? Share { get; set; }
+
     /// <summary>Marks a tile whose metric has no value (concept §4.4).</summary>
     [Parameter]
     public bool IsEmpty { get; set; }

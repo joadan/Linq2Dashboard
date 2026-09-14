@@ -38,6 +38,9 @@ public class DefaultDashboardFormatter : IDashboardFormatter
     public virtual string FormatMetric(MetricState metric) =>
         metric.Value is double value ? FormatNumber(value) : "–";
 
+    /// <summary>One decimal, so a small share does not round to zero.</summary>
+    public virtual string FormatShare(double share) => share.ToString("P1", Culture);
+
     public virtual string FormatRangeBucket(RangeBucket bucket)
     {
         if (double.IsNegativeInfinity(bucket.From))

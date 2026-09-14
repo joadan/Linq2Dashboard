@@ -66,23 +66,30 @@ internal sealed class MetricIndex
 
     public MetricInfo Info => new(Key, Title, Aggregation);
 
-    /// <summary>The metric's value over <paramref name="matching"/>; null when no row contributed (concept §4.4).</summary>
-    public double? Evaluate(RowSet matching)
+    /// <summary>
+    /// The metric's state over <paramref name="matching"/>: its value, null when no row contributed,
+    /// and for count and sum the value's share of the total over every row after fixed filters
+    /// (concept §4.4, design §4.6).
+    /// </summary>
+    public MetricState Present(RowSet matching)
     {
         ArgumentNullException.ThrowIfNull(matching);
         if (Column is null)
         {
-            return matching.Count;
+            return new MetricState(Key, Title, Aggregation, matching.Count, ShareOf(matching.Count, RowCount));
         }
 
         MetricAggregate aggregate = Column.Aggregate(matching);
         return Aggregation switch
         {
-            Aggregation.Sum => aggregate.SumOrNull,
-            Aggregation.Average => aggregate.Average,
-            Aggregation.Min => aggregate.MinOrNull,
-            Aggregation.Max => aggregate.MaxOrNull,
+            Aggregation.Sum => new MetricState(Key, Title, Aggregation, aggregate.SumOrNull, aggregate.IsEmpty ? null : ShareOf(aggregate.Sum, Column.Total.Sum)),
+            Aggregation.Average => new MetricState(Key, Title, Aggregation, aggregate.Average, null),
+            Aggregation.Min => new MetricState(Key, Title, Aggregation, aggregate.MinOrNull, null),
+            Aggregation.Max => new MetricState(Key, Title, Aggregation, aggregate.MaxOrNull, null),
             _ => throw new InvalidOperationException($"Unexpected aggregation {Aggregation}."),
         };
     }
+
+    /// <summary>A share of a zero total is undefined: there is nothing to be a part of.</summary>
+    private static double? ShareOf(double value, double total) => total == 0 ? null : value / total;
 }

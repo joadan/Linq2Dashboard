@@ -9,5 +9,9 @@
     {
         <span class="l2d-metric-title">@Title</span>
         <span class="l2d-metric-value">@Value</span>
+        @if (Share is not null)
+        {
+            <span class="l2d-metric-share">@Share</span>
+        }
     }
 </div>

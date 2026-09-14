@@ -57,6 +57,44 @@ public class MetricTests : BunitContext
     }
 
     [Fact]
+    public void The_share_of_the_total_is_shown_only_when_asked_for()
+    {
+        var selections = Selections.Empty.With("Country", ValueSelection.Of("SE"));
+
+        var plain = RenderWith<Metric<Order>>(m => m.Add(x => x.Key, "revenue"), selections);
+        Assert.Empty(plain.FindAll(".l2d-metric-share"));
+
+        var withShare = RenderWith<Metric<Order>>(m =>
+        {
+            m.Add(x => x.Key, "revenue");
+            m.Add(x => x.ShowShare, true);
+        }, selections);
+        Assert.Equal("3,599.50", withShare.Find(".l2d-metric-value").TextContent);
+        Assert.Equal("66.4 %", withShare.Find(".l2d-metric-share").TextContent); // 3 599.5 of 5 424.5
+    }
+
+    [Fact]
+    public void An_average_has_no_share_even_when_asked_for()
+    {
+        var cut = RenderWith<Metric<Order>>(m =>
+        {
+            m.Add(x => x.Key, "avgDiscount");
+            m.Add(x => x.ShowShare, true);
+        });
+
+        Assert.Empty(cut.FindAll(".l2d-metric-share"));
+    }
+
+    [Fact]
+    public void Matching_count_can_show_its_share_of_all_rows()
+    {
+        var cut = RenderWith<MatchingCount<Order>>(m => m.Add(x => x.ShowShare, true), Selections.Empty.With("Country", ValueSelection.Of("SE")));
+
+        Assert.Equal("3", cut.Find(".l2d-metric-value").TextContent);
+        Assert.Equal("37.5 %", cut.Find(".l2d-metric-share").TextContent);
+    }
+
+    [Fact]
     public void A_metric_without_a_value_shows_a_dash_and_is_marked()
     {
         var cut = RenderWith<Metric<Order>>(m => m.Add(x => x.Key, "avgDiscount"), Selections.Empty.With("Discount", RangeSelection.OnlyNull));

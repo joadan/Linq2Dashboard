@@ -56,6 +56,7 @@ DashboardState<Order> state = dashboard.Calculate(selections);
 
 state.MatchingCount;                                     // rows matching every selection
 state.Metric("revenue").Value;                           // sum over the matching rows, null if none
+state.Metric("revenue").Share;                           // that sum as a fraction of the sum over all rows
 
 var country = (ValueFacetState)state.Facet("Country");
 foreach (FacetValue value in country.Values)             // SE is selected and still shows every other country's count
@@ -113,7 +114,7 @@ The rules are decisions, not options. They are spelled out in the [concept docum
 - **Null is a value.** It is shown, counted and selectable like any other, never silently dropped.
 - **Zero-count values stay in the state.** Hiding or greying them is the UI's choice.
 - **Range and date buckets are fixed at build**; only their counts change. A bucket click produces exactly the interval the bucket covers.
-- **Metrics skip null** and divide averages by rows that have a value.
+- **Metrics skip null** and divide averages by rows that have a value. Count and sum also carry their share of the total, so a tile can read "12 400 (38 %)".
 - **The data is fixed at initialisation.** New data means a new dashboard; selections are serialisable, so the view carries over.
 
 ## Performance

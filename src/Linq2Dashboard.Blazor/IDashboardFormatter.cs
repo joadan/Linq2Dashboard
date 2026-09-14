@@ -20,6 +20,9 @@ public interface IDashboardFormatter
     /// <summary>A metric's value; <see cref="MetricState.Value"/> is null when no row contributed.</summary>
     string FormatMetric(MetricState metric);
 
+    /// <summary>A metric's share of its total as a percentage, for example "38 %" for 0.38 (concept §4.4).</summary>
+    string FormatShare(double share);
+
     /// <summary>A range bucket, for example "100 – 500", "&lt; 100" or "≥ 1 000".</summary>
     string FormatRangeBucket(RangeBucket bucket);
 

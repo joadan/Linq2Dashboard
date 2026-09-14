@@ -309,8 +309,57 @@ public class CalculateTests
         var noDiscounts = Shared.Calculate(Selections.Empty.With("Discount", RangeSelection.OnlyNull));
         Assert.Equal(3, noDiscounts.Metric("orders").Value);
         Assert.Null(noDiscounts.Metric("avgDiscount").Value);
-        Assert.Equal(new MetricState("revenue", "revenue", Aggregation.Sum, 1250), noDiscounts.Metric("revenue"));
+        Assert.Equal(new MetricState("revenue", "revenue", Aggregation.Sum, 1250, 1250 / 5424.5), noDiscounts.Metric("revenue"));
     }
+
+    [Fact]
+    public void Count_and_sum_metrics_report_their_share_of_the_total()
+    {
+        var all = Shared.Calculate();
+        Assert.Equal(1.0, all.Metric("orders").Share);
+        Assert.Equal(1.0, all.Metric("revenue").Share);
+        Assert.False(all.Metric("avgDiscount").HasShare); // an average has no total to be a part of
+
+        var se = Shared.Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));
+        Assert.Equal(3 / 8.0, se.Metric("orders").Share);
+        Assert.Equal(3599.5 / 5424.5, se.Metric("revenue").Share);
+        Assert.Null(se.Metric("avgDiscount").Share);
+
+        var none = Shared.Calculate(Selections.Empty.With("Country", ValueSelection.Of("FI")));
+        Assert.Equal(0.0, none.Metric("orders").Share);
+        Assert.Null(none.Metric("revenue").Share); // no value, so no share
+
+        var minMax = Build(b =>
+        {
+            b.Min("cheapest", x => x.Amount);
+            b.Max("dearest", x => x.Amount);
+        }).Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));
+        Assert.Null(minMax.Metric("cheapest").Share);
+        Assert.Null(minMax.Metric("dearest").Share);
+    }
+
+    [Fact]
+    public void A_share_of_a_zero_total_is_undefined()
+    {
+        var empty = Dashboard.Create(Array.Empty<Order>(), b =>
+        {
+            b.Count("orders");
+            b.Sum("revenue", x => x.Amount);
+        }).Calculate();
+        Assert.Equal(0, empty.Metric("orders").Value);
+        Assert.Null(empty.Metric("orders").Share);
+        Assert.Null(empty.Metric("revenue").Share);
+
+        var cancelling = Dashboard.Create([new Signed(1, 10), new Signed(2, -10)], b =>
+        {
+            b.ValueFacet(x => x.Id);
+            b.Sum("net", x => x.Amount);
+        }).Calculate(Selections.Empty.With("Id", ValueSelection.Of(1)));
+        Assert.Equal(10, cancelling.Metric("net").Value);
+        Assert.Null(cancelling.Metric("net").Share);
+    }
+
+    private sealed record Signed(int Id, decimal Amount);
 
     [Fact]
     public void Pages_follow_the_application_order()
