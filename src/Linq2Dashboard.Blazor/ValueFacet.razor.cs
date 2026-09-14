@@ -35,9 +35,9 @@ public partial class ValueFacet<T>
     [Parameter]
     public bool HideZeroCounts { get; set; }
 
-    /// <summary>Show the total in parentheses after the filtered count, "filtered (total)", instead of the filtered count alone.</summary>
+    /// <summary>Show the total in parentheses after the filtered count, "filtered (total)". On by default; turn off to show the filtered count alone.</summary>
     [Parameter]
-    public bool ShowTotals { get; set; }
+    public bool ShowTotals { get; set; } = true;
 
     /// <summary>Maximum number of search results (concept §4.5).</summary>
     [Parameter]

@@ -17,7 +17,7 @@ public partial class BucketBars
     public bool ShowCounts { get; set; } = true;
 
     [Parameter]
-    public bool ShowTotals { get; set; }
+    public bool ShowTotals { get; set; } = true;
 
     private static string Share(int count, int scale) =>
         ((double)count / scale).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);

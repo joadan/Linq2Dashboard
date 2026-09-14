@@ -58,7 +58,7 @@ public class RangeFacetTests : BunitContext
         Assert.Equal("0 – 2,500", cut.Find(".l2d-facet-bounds").TextContent);
         var buckets = Buckets(cut);
         Assert.Equal(["< 100", "100 – 500", "500 – 1,000", "≥ 1,000"], buckets.Select(Label));
-        Assert.Equal(["2", "2", "2", "2"], buckets.Select(Count));
+        Assert.Equal(["2 (2)", "2 (2)", "2 (2)", "2 (2)"], buckets.Select(Count));
         Assert.Contains("l2d-range-histogram", cut.Find(".l2d-range-facet").ClassName);
         Assert.Empty(cut.FindAll(".l2d-facet-clear"));
     }
@@ -89,7 +89,7 @@ public class RangeFacetTests : BunitContext
         Assert.Equal("true", Buckets(cut)[1].QuerySelector("button")!.GetAttribute("aria-pressed"));
         Assert.Single(cut.FindAll(".l2d-facet-clear"));
         // The facet's own counts do not change on its own selection (concept §4.2).
-        Assert.Equal(["2", "2", "2", "2"], Buckets(cut).Select(Count));
+        Assert.Equal(["2 (2)", "2 (2)", "2 (2)", "2 (2)"], Buckets(cut).Select(Count));
 
         Buckets(cut)[1].QuerySelector("button")!.Click();
 
@@ -114,7 +114,7 @@ public class RangeFacetTests : BunitContext
         var cut = RenderFacet("Discount", onChanged: s => raised = s);
         var nullBucket = Buckets(cut).Single(b => b.ClassList.Contains("l2d-null"));
         Assert.Equal("(none)", Label(nullBucket));
-        Assert.Equal("3", Count(nullBucket));
+        Assert.Equal("3 (3)", Count(nullBucket));
 
         nullBucket.QuerySelector("button")!.Click();
         Assert.Equal(Selections.Empty.With("Discount", RangeSelection.OnlyNull), raised);
@@ -127,10 +127,19 @@ public class RangeFacetTests : BunitContext
     [Fact]
     public void Counts_follow_other_facets_selections()
     {
-        var cut = RenderFacet("Amount", Selections.Empty.With("Country", ValueSelection.Of("SE")), configure: f => f.Add(x => x.ShowTotals, true));
+        var cut = RenderFacet("Amount", Selections.Empty.With("Country", ValueSelection.Of("SE")));
 
-        // SE amounts: 100, 999.5, 2500
+        // SE amounts: 100, 999.5, 2500. Totals are shown by default.
         Assert.Equal(["0 (2)", "1 (2)", "1 (2)", "1 (2)"], Buckets(cut).Select(Count));
+    }
+
+    [Fact]
+    public void ShowTotals_off_shows_the_filtered_count_alone()
+    {
+        var cut = RenderFacet("Amount", Selections.Empty.With("Country", ValueSelection.Of("SE")), configure: f => f.Add(x => x.ShowTotals, false));
+
+        Assert.Equal(["0", "1", "1", "1"], Buckets(cut).Select(Count));
+        Assert.Empty(cut.FindAll(".l2d-bucket-total"));
     }
 
     [Fact]

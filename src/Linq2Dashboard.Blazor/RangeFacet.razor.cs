@@ -37,9 +37,9 @@ public partial class RangeFacet<T>
     [Parameter]
     public bool ShowCounts { get; set; } = true;
 
-    /// <summary>Show the total in parentheses after the filtered count, "filtered (total)", instead of the filtered count alone.</summary>
+    /// <summary>Show the total in parentheses after the filtered count, "filtered (total)". On by default; turn off to show the filtered count alone.</summary>
     [Parameter]
-    public bool ShowTotals { get; set; }
+    public bool ShowTotals { get; set; } = true;
 
     /// <summary>
     /// A dual-handle slider beneath the buckets for a continuous interval (concept §5). Applies on

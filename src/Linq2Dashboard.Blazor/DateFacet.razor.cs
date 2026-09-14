@@ -37,9 +37,9 @@ public partial class DateFacet<T>
     [Parameter]
     public bool ShowCounts { get; set; } = true;
 
-    /// <summary>Show the total in parentheses after the filtered count, "filtered (total)", instead of the filtered count alone.</summary>
+    /// <summary>Show the total in parentheses after the filtered count, "filtered (total)". On by default; turn off to show the filtered count alone.</summary>
     [Parameter]
-    public bool ShowTotals { get; set; }
+    public bool ShowTotals { get; set; } = true;
 
     [Parameter]
     public string ClearText { get; set; } = "Clear";
