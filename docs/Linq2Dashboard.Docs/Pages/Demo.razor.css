@@ -128,6 +128,26 @@
     height: var(--demo-metric-icon-glyph);
 }
 
+/* One hue per tile: the icon takes the colour, its panel a light tint of the same colour. */
+.demo-metrics ::deep .l2d-metric {
+    --l2d-metric-icon-color: var(--demo-tile-color);
+    --l2d-metric-icon-background: color-mix(in srgb, var(--demo-tile-color) 14%, transparent);
+}
+
+.demo-metrics ::deep .l2d-metric-matching { --demo-tile-color: #2563eb; }
+.demo-metrics ::deep [data-key="revenue"] { --demo-tile-color: #16a34a; }
+.demo-metrics ::deep [data-key="average"] { --demo-tile-color: #d97706; }
+.demo-metrics ::deep [data-key="customers"] { --demo-tile-color: #7c3aed; }
+.demo-metrics ::deep [data-key="perCustomer"] { --demo-tile-color: #0d9488; }
+
+@media (prefers-color-scheme: dark) {
+    .demo-metrics ::deep .l2d-metric-matching { --demo-tile-color: #60a5fa; }
+    .demo-metrics ::deep [data-key="revenue"] { --demo-tile-color: #4ade80; }
+    .demo-metrics ::deep [data-key="average"] { --demo-tile-color: #fbbf24; }
+    .demo-metrics ::deep [data-key="customers"] { --demo-tile-color: #a78bfa; }
+    .demo-metrics ::deep [data-key="perCustomer"] { --demo-tile-color: #2dd4bf; }
+}
+
 @media (max-width: 48rem) {
     .demo-metrics {
         gap: 0.5rem;
