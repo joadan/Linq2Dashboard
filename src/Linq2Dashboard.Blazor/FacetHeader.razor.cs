@@ -1,8 +1,14 @@
+using System.ComponentModel;
 using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
 
-/// <summary>The header shared by every facet component: title, optional extra content, a clear link and a collapse toggle (design §9).</summary>
+/// <summary>
+/// The header shared by every facet component: title, optional extra content, a clear link and a collapse toggle (design §9).
+/// A rendering detail of the facet components, not part of the supported API: it is public only because Razor
+/// components cannot be internal, is hidden from IntelliSense, and may change without notice.
+/// </summary>
+[EditorBrowsable(EditorBrowsableState.Never)]
 public partial class FacetHeader
 {
     /// <summary>The facet's title.</summary>

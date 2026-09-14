@@ -1,8 +1,14 @@
+using System.ComponentModel;
 using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
 
-/// <summary>A dual-handle slider over a range facet's bounds, with optional number inputs. Raises <see cref="OnChange"/> on release with the closed interval (design §9).</summary>
+/// <summary>
+/// A dual-handle slider over a range facet's bounds, with optional number inputs. Raises <see cref="OnChange"/> on release with the closed interval (design §9).
+/// A rendering detail of <see cref="RangeFacet{T}"/>, not part of the supported API: it is public only because Razor
+/// components cannot be internal, is hidden from IntelliSense, and may change without notice.
+/// </summary>
+[EditorBrowsable(EditorBrowsableState.Never)]
 public partial class RangeSlider
 {
     private double from;
