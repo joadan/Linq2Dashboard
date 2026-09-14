@@ -58,7 +58,7 @@ public partial class GettingStarted
         <DashboardView T="Order" Dashboard="Dashboard" @bind-Selections="selections">
             <aside>
                 <ValueFacet T="Order" Key="Country" />
-                <ValueFacet T="Order" Key="Customer" Collapsible="true" />
+                <ValueFacet T="Order" Key="Customer" />
                 <RangeFacet T="Order" Key="Amount" ShowSlider="true" />
                 <DateFacet  T="Order" Key="OrderDate" />
             </aside>

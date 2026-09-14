@@ -644,7 +644,7 @@ tests/Linq2Dashboard.Blazor.Tests/   bUnit: each component renders a given state
 
    State classes the stylesheet and hosts can hook: `l2d-selected`, `l2d-zero` (filtered count zero), `l2d-null` (the null value), `l2d-metric-empty` (no value), `l2d-collapsed` (facet body hidden).
 
-9. **Collapsing (added after the first version).** Every facet component takes `Collapsible`, which renders the title as a toggle with a chevron in the shared header, and a bindable `Collapsed` value with `CollapsedChanged`, so a host can set or remember which facets are open. Collapsed hides the body only; the header, including the clear link and a range facet's bounds, stays. The value is component-local UI state synced from the parameter the way the results page index is, so it survives state changes and works without a binding. A header template replaces the toggle, leaving `Collapsed` as the only control.
+9. **Collapsing (added after the first version).** Every facet component takes `Collapsible` (on by default since 2026-09-14; `false` gives a fixed header), which renders the title as a toggle with a chevron in the shared header, and a bindable `Collapsed` value with `CollapsedChanged`, so a host can set or remember which facets are open. Collapsed hides the body only; the header, including the clear link and a range facet's bounds, stays. The value is component-local UI state synced from the parameter the way the results page index is, so it survives state changes and works without a binding. A header template replaces the toggle, leaving `Collapsed` as the only control.
 
 ### Code layout
 

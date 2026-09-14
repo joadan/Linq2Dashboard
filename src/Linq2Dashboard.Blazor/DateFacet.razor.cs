@@ -15,9 +15,9 @@ public partial class DateFacet<T>
     [Parameter]
     public RenderFragment<DateFacetState>? HeaderTemplate { get; set; }
 
-    /// <summary>Let the user collapse the facet from its header. Off by default.</summary>
+    /// <summary>Let the user collapse the facet from its header. On by default; set false for a fixed header.</summary>
     [Parameter]
-    public bool Collapsible { get; set; }
+    public bool Collapsible { get; set; } = true;
 
     /// <summary>Whether the body is hidden. Bindable: <c>@@bind-Collapsed</c> follows the user's toggling, and setting it applies from the host.</summary>
     [Parameter]

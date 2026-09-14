@@ -30,13 +30,27 @@ public class CollapseTests : BunitContext
         });
 
     [Fact]
-    public void Facets_are_expanded_and_not_collapsible_by_default()
+    public void Facets_are_collapsible_and_expanded_by_default()
     {
         var cut = RenderWith<ValueFacet<Order>>(f => f.Add(x => x.Key, "Country"));
 
-        Assert.Empty(cut.FindAll(".l2d-facet-toggle"));
+        Assert.Equal("true", cut.Find(".l2d-facet-toggle").GetAttribute("aria-expanded"));
         Assert.Equal(4, cut.FindAll("li.l2d-facet-value").Count);
         Assert.DoesNotContain("l2d-collapsed", cut.Find(".l2d-facet").ClassName);
+    }
+
+    [Fact]
+    public void Collapsible_false_gives_a_fixed_header()
+    {
+        var cut = RenderWith<ValueFacet<Order>>(f =>
+        {
+            f.Add(x => x.Key, "Country");
+            f.Add(x => x.Collapsible, false);
+        });
+
+        Assert.Empty(cut.FindAll(".l2d-facet-toggle"));
+        Assert.Single(cut.FindAll(".l2d-facet-title"));
+        Assert.Equal(4, cut.FindAll("li.l2d-facet-value").Count);
     }
 
     [Fact]
@@ -74,6 +88,7 @@ public class CollapseTests : BunitContext
         var cut = RenderWith<ValueFacet<Order>>(f =>
         {
             f.Add(x => x.Key, "Country");
+            f.Add(x => x.Collapsible, false);
             f.Add(x => x.Collapsed, true);
         });
 
@@ -84,6 +99,7 @@ public class CollapseTests : BunitContext
         cut.Render(parameters => parameters.AddChildContent<ValueFacet<Order>>(f =>
         {
             f.Add(x => x.Key, "Country");
+            f.Add(x => x.Collapsible, false);
             f.Add(x => x.Collapsed, false);
         }));
 
