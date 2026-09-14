@@ -31,6 +31,7 @@ public partial class TextFacet<T>
     [Parameter]
     public bool Collapsed { get; set; }
 
+    /// <summary>Raised when the user toggles the header; the second half of <c>@bind-Collapsed</c>.</summary>
     [Parameter]
     public EventCallback<bool> CollapsedChanged { get; set; }
 
@@ -49,21 +50,25 @@ public partial class TextFacet<T>
     [Parameter]
     public string ContextText { get; set; } = "Among {0} rows";
 
+    /// <summary>Placeholder of the input.</summary>
     [Parameter]
     public string Placeholder { get; set; } = "Type to filter";
 
+    /// <summary>Text of the clear link in the header.</summary>
     [Parameter]
     public string ClearText { get; set; } = "Clear";
 
     private TextFacetState Facet => State.Facet(Key) as TextFacetState
         ?? throw new InvalidOperationException($"Facet '{Key}' is not a text facet; use the component for its kind.");
 
+    /// <inheritdoc />
     protected override void OnInitialized()
     {
         base.OnInitialized();
         text = Facet.Text ?? string.Empty;
     }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (Collapsed != lastCollapsedParameter)
@@ -83,6 +88,7 @@ public partial class TextFacet<T>
         }
     }
 
+    /// <summary>Cancels a pending debounce.</summary>
     protected override void Disposing() => CancelPending();
 
     private Task OnInput(ChangeEventArgs e)

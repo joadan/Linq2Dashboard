@@ -17,18 +17,25 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
         this.map = map;
     }
 
+    /// <summary>No selections at all: every facet unconstrained. The starting point for every UI.</summary>
     public static Selections Empty { get; } = new(ImmutableSortedDictionary.Create<string, Selection>(StringComparer.Ordinal));
 
+    /// <summary>Number of facets with a selection.</summary>
     public int Count => map.Count;
 
+    /// <summary>True when no facet has a selection.</summary>
     public bool IsEmpty => map.IsEmpty;
 
+    /// <summary>Keys of the facets with a selection, in ordinal order.</summary>
     public IEnumerable<string> Keys => map.Keys;
 
+    /// <summary>The selection for <paramref name="key"/>, or null when the facet is unconstrained.</summary>
     public Selection? this[string key] => map.TryGetValue(key, out Selection? selection) ? selection : null;
 
+    /// <summary>Gets the selection for <paramref name="key"/>; false when the facet is unconstrained.</summary>
     public bool TryGet(string key, out Selection selection) => map.TryGetValue(key, out selection!);
 
+    /// <summary>True when the facet with <paramref name="key"/> has a selection.</summary>
     public bool Contains(string key) => map.ContainsKey(key);
 
     /// <summary>Replaces the selection for <paramref name="key"/>. An empty value or text selection clears it instead.</summary>
@@ -52,6 +59,7 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
         return map.ContainsKey(key) ? new Selections(map.Remove(key)) : this;
     }
 
+    /// <summary>Removes every selection. The same as <see cref="Empty"/>.</summary>
     public Selections ClearAll() => Empty;
 
     /// <summary>
@@ -74,6 +82,7 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
         return With(key, current.Contains(value) ? current.Remove(value) : current.Add(value));
     }
 
+    /// <summary>Value equality: the same keys with equal selections.</summary>
     public bool Equals(Selections? other)
     {
         if (other is null)
@@ -102,8 +111,10 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
         return true;
     }
 
+    /// <inheritdoc />
     public override bool Equals(object? obj) => Equals(obj as Selections);
 
+    /// <inheritdoc />
     public override int GetHashCode()
     {
         var hash = new HashCode();
@@ -116,10 +127,12 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
         return hash.ToHashCode();
     }
 
+    /// <summary>Enumerates the facet keys and their selections in ordinal key order.</summary>
     public IEnumerator<KeyValuePair<string, Selection>> GetEnumerator() => map.GetEnumerator();
 
     IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
 
+    /// <inheritdoc />
     public override string ToString() => IsEmpty
         ? "Selections(empty)"
         : $"Selections({string.Join("; ", map.Select(p => $"{p.Key}={p.Value}"))})";

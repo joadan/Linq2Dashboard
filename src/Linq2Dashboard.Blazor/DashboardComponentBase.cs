@@ -8,11 +8,14 @@ namespace Linq2Dashboard.Blazor;
 /// </summary>
 public abstract class DashboardComponentBase<T> : ComponentBase, IDisposable
 {
+    /// <summary>The shared context from the enclosing <see cref="DashboardView{T}"/>. Cascaded; never set by hand.</summary>
     [CascadingParameter]
     public DashboardContext<T> Context { get; set; } = default!;
 
+    /// <summary>The current state, from the context.</summary>
     protected DashboardState<T> State => Context.State;
 
+    /// <summary>The formatter, from the context.</summary>
     protected IDashboardFormatter Formatter => Context.Formatter;
 
     /// <summary>
@@ -35,6 +38,7 @@ public abstract class DashboardComponentBase<T> : ComponentBase, IDisposable
     protected string RootClass(string libraryClasses) =>
         string.IsNullOrWhiteSpace(Class) ? libraryClasses : $"{libraryClasses} {Class.Trim()}";
 
+    /// <summary>Subscribes to the context; throws when the component is not inside a <see cref="DashboardView{T}"/>.</summary>
     protected override void OnInitialized()
     {
         if (Context is null)
@@ -46,6 +50,7 @@ public abstract class DashboardComponentBase<T> : ComponentBase, IDisposable
         Context.StateChanged += OnStateChanged;
     }
 
+    /// <summary>Stops listening to the context, then calls <see cref="Disposing"/>.</summary>
     public void Dispose()
     {
         if (Context is not null)

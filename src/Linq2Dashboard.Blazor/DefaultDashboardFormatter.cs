@@ -10,15 +10,19 @@ public class DefaultDashboardFormatter : IDashboardFormatter
 {
     private readonly CultureInfo? culture;
 
+    /// <summary>Creates a formatter for <paramref name="culture"/>, or for the current culture at each call when null.</summary>
     public DefaultDashboardFormatter(CultureInfo? culture = null)
     {
         this.culture = culture;
     }
 
+    /// <summary>A shared instance that formats in the current culture.</summary>
     public static DefaultDashboardFormatter Instance { get; } = new();
 
+    /// <summary>The culture to format in: the one given, else the current culture.</summary>
     protected CultureInfo Culture => culture ?? CultureInfo.CurrentCulture;
 
+    /// <inheritdoc />
     public virtual string NullLabel => "(none)";
 
     /// <summary>An application-defined label (concept §5) wins; otherwise the value is formatted by type in the formatter's culture.</summary>
@@ -35,14 +39,17 @@ public class DefaultDashboardFormatter : IDashboardFormatter
         _ => value.ToString() ?? string.Empty,
     };
 
+    /// <inheritdoc />
     public virtual string FormatCount(int count) => count.ToString("N0", Culture);
 
+    /// <inheritdoc />
     public virtual string FormatMetric(MetricState metric) =>
         metric.Value is double value ? FormatNumber(value) : "–";
 
     /// <summary>One decimal, so a small share does not round to zero.</summary>
     public virtual string FormatShare(double share) => share.ToString("P1", Culture);
 
+    /// <inheritdoc />
     public virtual string FormatRangeBucket(RangeBucket bucket)
     {
         if (double.IsNegativeInfinity(bucket.From))
@@ -58,6 +65,7 @@ public class DefaultDashboardFormatter : IDashboardFormatter
         return $"{FormatNumber(bucket.From)} – {FormatNumber(bucket.To)}";
     }
 
+    /// <inheritdoc />
     public virtual string FormatDateBucket(DateBucket bucket, DateGranularity granularity)
     {
         DateTime start = bucket.PeriodStart;
@@ -71,6 +79,7 @@ public class DefaultDashboardFormatter : IDashboardFormatter
         };
     }
 
+    /// <inheritdoc />
     public virtual string FormatPreset(DatePreset preset) => preset switch
     {
         DatePreset.Today => "Today",
@@ -83,6 +92,7 @@ public class DefaultDashboardFormatter : IDashboardFormatter
         _ => preset.ToString(),
     };
 
+    /// <inheritdoc />
     public virtual string FormatRangeSelection(RangeSelection selection)
     {
         if (selection.OnlyNulls)
@@ -101,6 +111,7 @@ public class DefaultDashboardFormatter : IDashboardFormatter
         return selection.IncludeNull ? $"{text} or {NullLabel}" : text;
     }
 
+    /// <inheritdoc />
     public virtual string FormatDateSelection(DateSelection selection)
     {
         if (selection.OnlyNulls)

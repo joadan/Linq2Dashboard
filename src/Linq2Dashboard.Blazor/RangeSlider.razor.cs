@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
 
+/// <summary>A dual-handle slider over a range facet's bounds, with optional number inputs. Raises <see cref="OnChange"/> on release with the closed interval (design §9).</summary>
 public partial class RangeSlider
 {
     private double from;
@@ -10,9 +11,11 @@ public partial class RangeSlider
     private double? lastTo;
     private bool initialised;
 
+    /// <summary>Lower end of the slider: the dataset's minimum.</summary>
     [Parameter, EditorRequired]
     public double Min { get; set; }
 
+    /// <summary>Upper end of the slider: the dataset's maximum.</summary>
     [Parameter, EditorRequired]
     public double Max { get; set; }
 
@@ -28,6 +31,7 @@ public partial class RangeSlider
     [Parameter]
     public double? Step { get; set; }
 
+    /// <summary>Formats the bound labels.</summary>
     [Parameter, EditorRequired]
     public IDashboardFormatter Formatter { get; set; } = default!;
 
@@ -35,9 +39,11 @@ public partial class RangeSlider
     [Parameter]
     public bool ShowInputs { get; set; } = true;
 
+    /// <summary>Accessible label of the lower handle and its input.</summary>
     [Parameter]
     public string FromLabel { get; set; } = "From";
 
+    /// <summary>Accessible label of the upper handle and its input.</summary>
     [Parameter]
     public string ToLabel { get; set; } = "To";
 
@@ -45,6 +51,7 @@ public partial class RangeSlider
     [Parameter]
     public EventCallback<(double From, double To)> OnChange { get; set; }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (Max < Min)

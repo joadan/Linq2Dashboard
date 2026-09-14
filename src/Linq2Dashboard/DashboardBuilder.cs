@@ -41,15 +41,19 @@ public sealed class DashboardBuilder<T>
     public ValueFacetBuilder<T, TProp> ValueFacet<TProp>(string key, Expression<Func<T, TProp>> selector) =>
         AddValueFacet(key, selector, FacetKind.Value);
 
+    /// <summary>A boolean facet keyed by the selector's member name: the values true and false (concept §5).</summary>
     public ValueFacetBuilder<T, bool> BooleanFacet(Expression<Func<T, bool>> selector) =>
         BooleanFacet(DeriveKey(selector), selector);
 
+    /// <summary>A boolean facet with an explicit key.</summary>
     public ValueFacetBuilder<T, bool> BooleanFacet(string key, Expression<Func<T, bool>> selector) =>
         AddValueFacet(key, selector, FacetKind.Boolean);
 
+    /// <summary>A boolean facet over a nullable member, keyed by its name. Null is a third value (concept §4.8).</summary>
     public ValueFacetBuilder<T, bool?> BooleanFacet(Expression<Func<T, bool?>> selector) =>
         BooleanFacet(DeriveKey(selector), selector);
 
+    /// <summary>A boolean facet over a nullable member, with an explicit key.</summary>
     public ValueFacetBuilder<T, bool?> BooleanFacet(string key, Expression<Func<T, bool?>> selector) =>
         AddValueFacet(key, selector, FacetKind.Boolean);
 
@@ -57,6 +61,7 @@ public sealed class DashboardBuilder<T>
     public RangeFacetBuilder<T> RangeFacet<TProp>(Expression<Func<T, TProp>> selector) =>
         RangeFacet(DeriveKey(selector), selector);
 
+    /// <summary>A numeric range facet with an explicit key. <typeparamref name="TProp"/> must be a numeric type or its nullable form.</summary>
     public RangeFacetBuilder<T> RangeFacet<TProp>(string key, Expression<Func<T, TProp>> selector)
     {
         ValidateKey(key);
@@ -76,6 +81,7 @@ public sealed class DashboardBuilder<T>
     public DateFacetBuilder<T> DateFacet<TDate>(Expression<Func<T, TDate>> selector) =>
         DateFacet(DeriveKey(selector), selector);
 
+    /// <summary>A date facet with an explicit key. <typeparamref name="TDate"/> must be <see cref="DateTime"/>, <see cref="DateTimeOffset"/>, <see cref="DateOnly"/> or one of their nullable forms.</summary>
     public DateFacetBuilder<T> DateFacet<TDate>(string key, Expression<Func<T, TDate>> selector)
     {
         ValidateKey(key);
@@ -127,15 +133,19 @@ public sealed class DashboardBuilder<T>
     /// <summary>Number of matching rows (concept §4.4).</summary>
     public MetricBuilder<T> Count(string key) => AddMetric(key, Aggregation.Count, null);
 
+    /// <summary>Sum of <paramref name="selector"/> over the matching rows, skipping null (concept §4.4). Any numeric type or its nullable form.</summary>
     public MetricBuilder<T> Sum<TProp>(string key, Expression<Func<T, TProp>> selector) =>
         AddMetric(key, Aggregation.Sum, NumericConversion.ToNullableDouble(selector, nameof(selector)));
 
+    /// <summary>Average of <paramref name="selector"/> over the matching rows that have a value, not over all matching rows (concept §4.4).</summary>
     public MetricBuilder<T> Average<TProp>(string key, Expression<Func<T, TProp>> selector) =>
         AddMetric(key, Aggregation.Average, NumericConversion.ToNullableDouble(selector, nameof(selector)));
 
+    /// <summary>Smallest non-null value of <paramref name="selector"/> among the matching rows (concept §4.4).</summary>
     public MetricBuilder<T> Min<TProp>(string key, Expression<Func<T, TProp>> selector) =>
         AddMetric(key, Aggregation.Min, NumericConversion.ToNullableDouble(selector, nameof(selector)));
 
+    /// <summary>Largest non-null value of <paramref name="selector"/> among the matching rows (concept §4.4).</summary>
     public MetricBuilder<T> Max<TProp>(string key, Expression<Func<T, TProp>> selector) =>
         AddMetric(key, Aggregation.Max, NumericConversion.ToNullableDouble(selector, nameof(selector)));
 
@@ -183,12 +193,15 @@ public sealed class DashboardBuilder<T>
     public DashboardBuilder<T> OrderBy<TKey>(Expression<Func<T, TKey>> keySelector, IComparer<TKey>? comparer = null) =>
         AddSortKey(keySelector, descending: false, comparer, primary: true);
 
+    /// <summary>Primary result order, descending (concept §8). Call once; add keys with <see cref="ThenBy{TKey}"/> or <see cref="ThenByDescending{TKey}"/>.</summary>
     public DashboardBuilder<T> OrderByDescending<TKey>(Expression<Func<T, TKey>> keySelector, IComparer<TKey>? comparer = null) =>
         AddSortKey(keySelector, descending: true, comparer, primary: true);
 
+    /// <summary>A further ascending sort key, applied within rows equal on the earlier keys. Requires a preceding <see cref="OrderBy{TKey}"/> or <see cref="OrderByDescending{TKey}"/>.</summary>
     public DashboardBuilder<T> ThenBy<TKey>(Expression<Func<T, TKey>> keySelector, IComparer<TKey>? comparer = null) =>
         AddSortKey(keySelector, descending: false, comparer, primary: false);
 
+    /// <summary>A further descending sort key, applied within rows equal on the earlier keys.</summary>
     public DashboardBuilder<T> ThenByDescending<TKey>(Expression<Func<T, TKey>> keySelector, IComparer<TKey>? comparer = null) =>
         AddSortKey(keySelector, descending: true, comparer, primary: false);
 

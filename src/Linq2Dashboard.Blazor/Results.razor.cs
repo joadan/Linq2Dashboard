@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Components.Web.Virtualization;
 
 namespace Linq2Dashboard.Blazor;
 
+/// <summary>The matching rows in the application-defined order (concept §3), paged or virtualised, as a list or a table. The row markup is the host's, through <see cref="RowTemplate"/>.</summary>
 public partial class Results<T>
 {
     private int pageIndex;
@@ -40,6 +41,7 @@ public partial class Results<T>
     [Parameter]
     public int OverscanCount { get; set; } = 5;
 
+    /// <summary>Rows per page when paging. Default 50.</summary>
     [Parameter]
     public int PageSize { get; set; } = 50;
 
@@ -47,9 +49,11 @@ public partial class Results<T>
     [Parameter]
     public int PageIndex { get; set; }
 
+    /// <summary>Raised when the user changes page; the second half of <c>@bind-PageIndex</c>.</summary>
     [Parameter]
     public EventCallback<int> PageIndexChanged { get; set; }
 
+    /// <summary>Show the summary line above the rows. Default true.</summary>
     [Parameter]
     public bool ShowSummary { get; set; } = true;
 
@@ -65,12 +69,15 @@ public partial class Results<T>
     [Parameter]
     public string PageFormat { get; set; } = "Page {0} of {1}";
 
+    /// <summary>Shown when no row matches and there is no <see cref="EmptyTemplate"/>.</summary>
     [Parameter]
     public string EmptyText { get; set; } = "No matching rows";
 
+    /// <summary>Accessible label of the pager navigation.</summary>
     [Parameter]
     public string PagerLabel { get; set; } = "Pages";
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         ArgumentNullException.ThrowIfNull(RowTemplate);

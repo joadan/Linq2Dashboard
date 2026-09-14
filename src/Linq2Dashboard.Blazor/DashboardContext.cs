@@ -25,8 +25,10 @@ public sealed class DashboardContext<T>
         this.onStateChanged = onStateChanged;
     }
 
+    /// <summary>The dashboard being rendered.</summary>
     public Dashboard<T> Dashboard { get; }
 
+    /// <summary>The formatter every component inside uses.</summary>
     public IDashboardFormatter Formatter { get; }
 
     /// <summary>The current selections. Immutable; every change produces a new instance.</summary>
@@ -61,8 +63,10 @@ public sealed class DashboardContext<T>
     /// <summary>The click on a bucket or preset, or a slider change: replace the facet's selection.</summary>
     public Task SelectAsync(string key, Selection selection) => ApplyAsync(Selections.With(key, selection));
 
+    /// <summary>Removes one facet's selection: a header's clear link or a chip.</summary>
     public Task ClearAsync(string key) => ApplyAsync(Selections.Clear(key));
 
+    /// <summary>Removes every selection.</summary>
     public Task ClearAllAsync() => ApplyAsync(Selections.Empty);
 
     /// <summary>Adopts selections set by the host through the component parameter, without echoing them back. The host still hears about the new state.</summary>

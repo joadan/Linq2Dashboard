@@ -6,8 +6,12 @@ namespace Linq2Dashboard;
 /// </summary>
 public enum DateGranularity
 {
+    /// <summary>Calendar year.</summary>
     Year,
+    /// <summary>Calendar month.</summary>
     Month,
+    /// <summary>ISO 8601 week, Monday to Sunday.</summary>
     Week,
+    /// <summary>Calendar day.</summary>
     Day,
 }

@@ -9,6 +9,7 @@ public partial class MetricTile
     [Parameter]
     public string Key { get; set; } = string.Empty;
 
+    /// <summary>The tile's title.</summary>
     [Parameter, EditorRequired]
     public string Title { get; set; } = string.Empty;
 

@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
 
+/// <summary>A date facet: presets with counts, one bar per calendar period, and the null value beside them (concept §5).</summary>
 public partial class DateFacet<T>
 {
     private bool collapsed;
@@ -23,6 +24,7 @@ public partial class DateFacet<T>
     [Parameter]
     public bool Collapsed { get; set; }
 
+    /// <summary>Raised when the user toggles the header; the second half of <c>@bind-Collapsed</c>.</summary>
     [Parameter]
     public EventCallback<bool> CollapsedChanged { get; set; }
 
@@ -34,6 +36,7 @@ public partial class DateFacet<T>
     [Parameter]
     public bool ShowPresets { get; set; } = true;
 
+    /// <summary>Show the count on each period and preset. Default true.</summary>
     [Parameter]
     public bool ShowCounts { get; set; } = true;
 
@@ -41,9 +44,11 @@ public partial class DateFacet<T>
     [Parameter]
     public bool ShowTotals { get; set; } = true;
 
+    /// <summary>Text of the clear link in the header.</summary>
     [Parameter]
     public string ClearText { get; set; } = "Clear";
 
+    /// <summary>Shown when the dataset has no value for this facet.</summary>
     [Parameter]
     public string NoValuesText { get; set; } = "No values";
 
@@ -81,6 +86,7 @@ public partial class DateFacet<T>
     private Task ClickNull() =>
         Facet.Selection is DateSelection { OnlyNulls: true } ? Context.ClearAsync(Key) : Context.SelectAsync(Key, DateSelection.OnlyNull);
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (Collapsed != lastCollapsedParameter)

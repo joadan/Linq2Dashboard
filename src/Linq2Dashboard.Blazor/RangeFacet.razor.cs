@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
 
+/// <summary>A numeric range facet: fixed buckets as a histogram or a list, the null value beside them, and an optional slider (concept §5). A bucket click selects exactly its interval.</summary>
 public partial class RangeFacet<T>
 {
     private bool collapsed;
@@ -23,6 +24,7 @@ public partial class RangeFacet<T>
     [Parameter]
     public bool Collapsed { get; set; }
 
+    /// <summary>Raised when the user toggles the header; the second half of <c>@bind-Collapsed</c>.</summary>
     [Parameter]
     public EventCallback<bool> CollapsedChanged { get; set; }
 
@@ -34,6 +36,7 @@ public partial class RangeFacet<T>
     [Parameter]
     public bool ShowBounds { get; set; } = true;
 
+    /// <summary>Show the count on each bucket. Default true.</summary>
     [Parameter]
     public bool ShowCounts { get; set; } = true;
 
@@ -56,9 +59,11 @@ public partial class RangeFacet<T>
     [Parameter]
     public bool SliderInputs { get; set; } = true;
 
+    /// <summary>Text of the clear link in the header.</summary>
     [Parameter]
     public string ClearText { get; set; } = "Clear";
 
+    /// <summary>Shown when the dataset has no value for this facet.</summary>
     [Parameter]
     public string NoValuesText { get; set; } = "No values";
 
@@ -98,6 +103,7 @@ public partial class RangeFacet<T>
     private Task ClickNull() =>
         Facet.Selection is RangeSelection { OnlyNulls: true } ? Context.ClearAsync(Key) : Context.SelectAsync(Key, RangeSelection.OnlyNull);
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (Collapsed != lastCollapsedParameter)

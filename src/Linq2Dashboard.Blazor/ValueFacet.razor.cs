@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
 
+/// <summary>A value or boolean facet: each value with its counts, the null value, the "Other" remainder and an optional search box (concept §5, §6). A click toggles the value (concept §4.1).</summary>
 public partial class ValueFacet<T>
 {
     private string searchText = string.Empty;
@@ -28,6 +29,7 @@ public partial class ValueFacet<T>
     [Parameter]
     public bool Collapsed { get; set; }
 
+    /// <summary>Raised when the user toggles the header; the second half of <c>@bind-Collapsed</c>.</summary>
     [Parameter]
     public EventCallback<bool> CollapsedChanged { get; set; }
 
@@ -43,15 +45,19 @@ public partial class ValueFacet<T>
     [Parameter]
     public int SearchLimit { get; set; } = 20;
 
+    /// <summary>Placeholder of the search box.</summary>
     [Parameter]
     public string SearchPlaceholder { get; set; } = "Search";
 
+    /// <summary>Text of the clear link in the header.</summary>
     [Parameter]
     public string ClearText { get; set; } = "Clear";
 
+    /// <summary>Label of the "Other" row that holds the values Top N left out (concept §6).</summary>
     [Parameter]
     public string OtherText { get; set; } = "Other";
 
+    /// <summary>Shown when a search matches no value.</summary>
     [Parameter]
     public string NoMatchesText { get; set; } = "No matches";
 
@@ -69,6 +75,7 @@ public partial class ValueFacet<T>
         }
     }
 
+    /// <inheritdoc />
     protected override void OnParametersSet()
     {
         if (Collapsed != lastCollapsedParameter)

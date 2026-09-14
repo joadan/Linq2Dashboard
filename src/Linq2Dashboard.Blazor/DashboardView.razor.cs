@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
 
+/// <summary>The root of a dashboard UI (design §9). Owns the selections and the state, cascades a <see cref="DashboardContext{T}"/> to every component inside, and counts nothing itself.</summary>
 public partial class DashboardView<T>
 {
     private DashboardContext<T>? context;
@@ -20,6 +21,7 @@ public partial class DashboardView<T>
     [Parameter]
     public Selections? Selections { get; set; }
 
+    /// <summary>Raised with the new selections after every click, for <c>@bind-Selections</c> and for bookmarking.</summary>
     [Parameter]
     public EventCallback<Selections> SelectionsChanged { get; set; }
 
@@ -52,6 +54,7 @@ public partial class DashboardView<T>
 
     private string RootClass => string.IsNullOrWhiteSpace(Class) ? "l2d-dashboard" : $"l2d-dashboard {Class.Trim()}";
 
+    /// <inheritdoc />
     protected override Task OnParametersSetAsync()
     {
         ArgumentNullException.ThrowIfNull(Dashboard);

@@ -14,6 +14,7 @@ public sealed class MetricBuilder<T>
         this.ensureMutable = ensureMutable;
     }
 
+    /// <summary>The metric key, used to read the metric from a state and by the Blazor components.</summary>
     public string Key => definition.Key;
 
     /// <summary>Display name. Defaults to the key.</summary>

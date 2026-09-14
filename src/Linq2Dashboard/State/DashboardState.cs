@@ -34,17 +34,22 @@ public sealed class DashboardState<T>
     /// <summary>Rows satisfying every current selection (concept §3).</summary>
     public int MatchingCount => matching.Count;
 
+    /// <summary>Every facet's state, in definition order.</summary>
     public IReadOnlyList<FacetState> Facets { get; }
 
+    /// <summary>Every metric's state, in definition order.</summary>
     public IReadOnlyList<MetricState> Metrics { get; }
 
+    /// <summary>The state of the facet with <paramref name="key"/>. Throws for an unknown key: keys are a code path, not external input.</summary>
     public FacetState Facet(string key) =>
         facetsByKey.TryGetValue(key, out FacetState? facet)
             ? facet
             : throw new ArgumentException($"Unknown facet key '{key}'.", nameof(key));
 
+    /// <summary>Gets the state of the facet with <paramref name="key"/>; false for an unknown key.</summary>
     public bool TryGetFacet(string key, out FacetState facet) => facetsByKey.TryGetValue(key, out facet!);
 
+    /// <summary>The state of the metric with <paramref name="key"/>. Throws for an unknown key.</summary>
     public MetricState Metric(string key) =>
         metricsByKey.TryGetValue(key, out MetricState? metric)
             ? metric

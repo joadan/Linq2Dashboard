@@ -18,8 +18,10 @@ public abstract class FacetState
     /// <summary>Stable identity used in selections, state and bookmarks.</summary>
     public string Key { get; }
 
+    /// <summary>Display title: the key unless the builder set one.</summary>
     public string Title { get; }
 
+    /// <summary>Which kind of facet this is, and so which subclass of <see cref="FacetState"/> to cast to.</summary>
     public FacetKind Kind { get; }
 
     /// <summary>The current selection in this facet, or null when unconstrained.</summary>
@@ -31,6 +33,7 @@ public abstract class FacetState
     /// </summary>
     public int ContextCount { get; }
 
+    /// <summary>True when this facet constrains the result.</summary>
     public bool HasSelection => Selection is not null;
 }
 
@@ -134,6 +137,7 @@ public sealed class DateFacetState : FacetState
         Null = @null;
     }
 
+    /// <summary>The calendar period each bucket covers (concept §5). Fixed at build.</summary>
     public DateGranularity Granularity { get; }
 
     /// <summary>The zone periods and presets are computed in (concept §5).</summary>
@@ -171,6 +175,7 @@ public sealed class TextFacetState : FacetState
 /// </summary>
 public sealed record FacetValue(object? Value, int TotalCount, int FilteredCount, bool Selected, string? Label = null)
 {
+    /// <summary>True for the null facet value (concept §4.8).</summary>
     public bool IsNull => Value is null;
 }
 
@@ -205,5 +210,6 @@ public sealed record DateBucket(DateTimeOffset From, DateTimeOffset To, DateTime
 /// <summary>A relative preset resolved as of this calculation (concept §5), with its counts.</summary>
 public sealed record PresetState(DatePreset Preset, DateTimeOffset From, DateTimeOffset To, int TotalCount, int FilteredCount, bool Selected)
 {
+    /// <summary>The selection a click on this preset produces: relative, so it follows the clock (design §2.2).</summary>
     public DateSelection ToSelection() => DateSelection.Relative(Preset);
 }

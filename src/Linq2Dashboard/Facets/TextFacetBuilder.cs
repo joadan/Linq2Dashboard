@@ -14,6 +14,7 @@ public sealed class TextFacetBuilder<T>
         this.ensureMutable = ensureMutable;
     }
 
+    /// <summary>The facet key, used in selections, state and the Blazor components.</summary>
     public string Key => definition.Key;
 
     /// <summary>Display name. Defaults to the key.</summary>

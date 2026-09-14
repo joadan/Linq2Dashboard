@@ -18,6 +18,7 @@ public abstract record Selection
 /// </summary>
 public sealed record TextSelection : Selection
 {
+    /// <summary>Creates a selection for <paramref name="text"/>, trimmed. Whitespace-only text gives an empty selection.</summary>
     public TextSelection(string text)
     {
         ArgumentNullException.ThrowIfNull(text);
@@ -27,8 +28,10 @@ public sealed record TextSelection : Selection
     /// <summary>The trimmed text.</summary>
     public string Text { get; }
 
+    /// <summary>True when the trimmed text is empty; applying it clears the facet.</summary>
     public bool IsEmpty => Text.Length == 0;
 
+    /// <inheritdoc />
     public override string ToString() => $"TextSelection(\"{Text}\")";
 }
 
@@ -40,24 +43,32 @@ public sealed record ValueSelection : Selection
 {
     private readonly object?[] values;
 
+    /// <summary>Creates a selection of <paramref name="values"/>; duplicates are dropped. A null entry selects the null facet value (concept §4.8).</summary>
     public ValueSelection(IEnumerable<object?> values)
     {
         ArgumentNullException.ThrowIfNull(values);
         this.values = values.Distinct().ToArray();
     }
 
+    /// <summary>A selection of the given values. A single <c>null</c> argument selects the null facet value.</summary>
     public static ValueSelection Of(params object?[]? values) => new(values ?? [null]);
 
+    /// <summary>The selected values, distinct, in no particular order.</summary>
     public IReadOnlyList<object?> Values => values;
 
+    /// <summary>True when no value is selected; applying it clears the facet.</summary>
     public bool IsEmpty => values.Length == 0;
 
+    /// <summary>True when <paramref name="value"/> is selected, by default equality.</summary>
     public bool Contains(object? value) => Array.IndexOf(values, value) >= 0;
 
+    /// <summary>A selection with <paramref name="value"/> added; this instance when it is already present.</summary>
     public ValueSelection Add(object? value) => Contains(value) ? this : new(values.Append(value));
 
+    /// <summary>A selection with <paramref name="value"/> removed; this instance when it is absent.</summary>
     public ValueSelection Remove(object? value) => Contains(value) ? new(values.Where(v => !Equals(v, value))) : this;
 
+    /// <summary>Order-independent value equality: the same set of values.</summary>
     public bool Equals(ValueSelection? other)
     {
         if (other is null)
@@ -86,6 +97,7 @@ public sealed record ValueSelection : Selection
         return true;
     }
 
+    /// <inheritdoc />
     public override int GetHashCode()
     {
         // Order-independent: XOR of element hashes, plus the count.
@@ -98,6 +110,7 @@ public sealed record ValueSelection : Selection
         return hash;
     }
 
+    /// <inheritdoc />
     public override string ToString() => $"ValueSelection({string.Join(", ", values.Select(v => v?.ToString() ?? "null"))})";
 }
 
@@ -108,6 +121,7 @@ public sealed record ValueSelection : Selection
 /// </summary>
 public sealed record RangeSelection : Selection
 {
+    /// <summary>Creates an interval. Throws when a bound is NaN or <paramref name="from"/> is after <paramref name="to"/>.</summary>
     public RangeSelection(double? from, double? to, bool fromInclusive = true, bool toInclusive = true, bool includeNull = false)
     {
         if (from is double f && double.IsNaN(f))
@@ -132,21 +146,28 @@ public sealed record RangeSelection : Selection
         IncludeNull = includeNull;
     }
 
+    /// <summary>Lower bound; null means unbounded below.</summary>
     public double? From { get; init; }
 
+    /// <summary>Upper bound; null means unbounded above.</summary>
     public double? To { get; init; }
 
+    /// <summary>Whether a row equal to <see cref="From"/> matches. Default true.</summary>
     public bool FromInclusive { get; init; }
 
+    /// <summary>Whether a row equal to <see cref="To"/> matches. Default true; a bucket click sets it false.</summary>
     public bool ToInclusive { get; init; }
 
+    /// <summary>Whether rows without a value match in addition to the interval (concept §4.8).</summary>
     public bool IncludeNull { get; init; }
 
     /// <summary>Closed interval <c>[from, to]</c>.</summary>
     public static RangeSelection Between(double from, double to) => new(from, to);
 
+    /// <summary>Interval <c>[from, ∞)</c>.</summary>
     public static RangeSelection AtLeast(double from) => new(from, null);
 
+    /// <summary>Interval <c>(-∞, to]</c>.</summary>
     public static RangeSelection AtMost(double to) => new(null, to);
 
     /// <summary>Selects only the null rows.</summary>
@@ -176,11 +197,13 @@ public sealed record DateSelection : Selection
     /// <summary>The relative preset, when this selection is relative rather than absolute.</summary>
     public DatePreset? Preset { get; private init; }
 
+    /// <summary>Whether rows without a value match in addition to the interval (concept §4.8).</summary>
     public bool IncludeNull { get; init; }
 
     /// <summary>True when the selection is the null rows alone, with no interval.</summary>
     public bool OnlyNulls { get; private init; }
 
+    /// <summary>True when this is a preset resolved at each calculation rather than a fixed interval.</summary>
     public bool IsRelative => Preset is not null;
 
     /// <summary>Absolute interval <c>[from, to)</c>. Either bound may be null for unbounded.</summary>
@@ -194,6 +217,7 @@ public sealed record DateSelection : Selection
         return new DateSelection { From = from, To = to };
     }
 
+    /// <summary>A relative preset such as "last 30 days", resolved against the clock at each calculation (concept §5).</summary>
     public static DateSelection Relative(DatePreset preset)
     {
         if (!Enum.IsDefined(preset))

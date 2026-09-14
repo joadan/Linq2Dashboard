@@ -8,6 +8,7 @@ namespace Linq2Dashboard.Blazor;
 /// </summary>
 public partial class MatchingCount<T>
 {
+    /// <summary>The tile's title. Default "Matching".</summary>
     [Parameter]
     public string Title { get; set; } = "Matching";
 

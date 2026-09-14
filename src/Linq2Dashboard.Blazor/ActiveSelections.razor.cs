@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
 
+/// <summary>Chips for the current selections, one per facet or per value, each removable, with a clear-all link (design §9). Text comes from the formatter, so chips read like the facets.</summary>
 public partial class ActiveSelections<T>
 {
     /// <summary>Render nothing when there is no selection. Default true.</summary>
@@ -23,12 +24,15 @@ public partial class ActiveSelections<T>
     [Parameter]
     public string ValueSeparator { get; set; } = ", ";
 
+    /// <summary>Shown when nothing is selected and <see cref="HideWhenEmpty"/> is false.</summary>
     [Parameter]
     public string EmptyText { get; set; } = "No selections";
 
+    /// <summary>Text of the clear-all link.</summary>
     [Parameter]
     public string ClearAllText { get; set; } = "Clear all";
 
+    /// <summary>Accessible label of each chip's remove button.</summary>
     [Parameter]
     public string RemoveText { get; set; } = "Remove";
 

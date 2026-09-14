@@ -36,9 +36,11 @@ public sealed class SelectionSerializer
         this.facets = facets.ToDictionary(f => f.Key, StringComparer.Ordinal);
     }
 
+    /// <summary>Writes <paramref name="selections"/> as JSON text, for a bookmark or a URL (concept §4.9).</summary>
     public string ToJson(Selections selections, bool indented = false) =>
         ToJsonObject(selections).ToJsonString(indented ? Indented : Compact);
 
+    /// <summary>Writes <paramref name="selections"/> as a JSON object, for embedding in a larger document.</summary>
     public JsonObject ToJsonObject(Selections selections)
     {
         ArgumentNullException.ThrowIfNull(selections);
@@ -65,6 +67,7 @@ public sealed class SelectionSerializer
         return node is JsonObject root ? FromJsonObject(root) : Selections.Empty;
     }
 
+    /// <summary>Reads selections from a JSON object, leniently: unknown facets and values that cannot be read are dropped.</summary>
     public Selections FromJsonObject(JsonObject json)
     {
         ArgumentNullException.ThrowIfNull(json);

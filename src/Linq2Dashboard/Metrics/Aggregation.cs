@@ -6,13 +6,16 @@ public enum Aggregation
     /// <summary>Number of matching rows. Needs no property and is unaffected by null.</summary>
     Count,
 
+    /// <summary>Sum of the values, skipping null.</summary>
     Sum,
 
     /// <summary>Sum divided by the number of matching rows that have a value, not by all matching rows.</summary>
     Average,
 
+    /// <summary>Smallest non-null value.</summary>
     Min,
 
+    /// <summary>Largest non-null value.</summary>
     Max,
 
     /// <summary>Number of distinct non-null values among the matching rows. Equality follows the value facet rules: strings ignore case unless a comparer is given.</summary>
