@@ -171,6 +171,7 @@ docs/Linq2Dashboard.Docs/        Blazor WebAssembly docs site with the live demo
 tests/Linq2Dashboard.Tests/      xUnit; every behavioural rule has a named test
 tests/Linq2Dashboard.Blazor.Tests/   bUnit component tests
 benchmarks/Linq2Dashboard.Benchmarks/   BenchmarkDotNet suite and a --memory report
+Linq2Dashboard-usage.md          the guide for using it in another project; paste it into that project's instructions
 Linq2Dashboard-concept.md        what it is and how it behaves
 Linq2Dashboard-design.md         how it is built, with measured numbers
 ```

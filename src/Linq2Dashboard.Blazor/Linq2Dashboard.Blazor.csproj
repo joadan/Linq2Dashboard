@@ -29,6 +29,7 @@
 
   <ItemGroup>
     <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\Linq2Dashboard-usage.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

@@ -27,6 +27,7 @@
   <ItemGroup>
     <RepositoryDocument Include="..\..\Linq2Dashboard-concept.md" Name="concept.md" />
     <RepositoryDocument Include="..\..\Linq2Dashboard-design.md" Name="design.md" />
+    <RepositoryDocument Include="..\..\Linq2Dashboard-usage.md" Name="usage.md" />
   </ItemGroup>
 
   <Target Name="CopyRepositoryDocuments" BeforeTargets="ResolveStaticWebAssetsInputs;BeforeBuild">

@@ -6,6 +6,7 @@ This site is a Blazor WebAssembly application and its pages are not readable wit
 
 ## Documentation
 
+- [Usage](https://joadan.github.io/Linq2Dashboard/docs/usage.md): the guide to read first when using the library in another project. The API surface, the wiring checklist, the rules that surprise and the mistakes to avoid, in about 1 500 words. Written to be pasted into a project's own instructions file.
 - [README](https://raw.githubusercontent.com/joadan/Linq2Dashboard/master/README.md): install, a complete builder example, the Blazor wiring (registration, usings, stylesheet, a page), the behavioural rules in short form, measured performance.
 - [Concept](https://joadan.github.io/Linq2Dashboard/docs/concept.md): what the library is, the mental model, the behavioural rules (numbered §4.1 to §4.9), facet kinds, the contract between core and UI, and the list of decided questions.
 - [Design](https://joadan.github.io/Linq2Dashboard/docs/design.md): how it is built, the data structures, the calculation pipeline, measured numbers, and section 9 on the Blazor components and their parameters.

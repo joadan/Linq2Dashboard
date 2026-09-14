@@ -1,0 +1,180 @@
+# Linq2Dashboard – Usage
+
+A short guide for using the library in another project. It is written so it can be pasted into a project's own instructions file, for a person or a coding assistant, and covers the API surface, the rules that surprise, and the mistakes to avoid. The [concept](Linq2Dashboard-concept.md) is the full specification; the [design](Linq2Dashboard-design.md) explains how it is built.
+
+## What it is
+
+Interactive exploration of a large in-memory collection: facets with counts, metrics and paged results that all update together on every selection. The faceted search of an e-commerce site, applied to any `IEnumerable<T>`.
+
+| Package | Namespace | Contents |
+|---|---|---|
+| `Linq2Dashboard` | `Linq2Dashboard` | The engine. net10.0, no dependencies. |
+| `Linq2Dashboard.Blazor` | `Linq2Dashboard.Blazor` | Components that render a dashboard and turn clicks into selections. |
+
+Both are prerelease on NuGet while the API settles: `dotnet add package Linq2Dashboard --prerelease`.
+
+## Wiring checklist
+
+1. **Build once.** `Dashboard.Create(rows, b => { ... })` indexes the collection. Facets, metrics and sort order are fixed here. It takes about a second per million rows.
+2. **Register as a singleton.** The dashboard is immutable and thread-safe; one instance serves every user. `builder.Services.AddSingleton<Dashboard<Order>>(_ => Dashboard.Create(...))`.
+3. **Add both usings** to `_Imports.razor`: `@using Linq2Dashboard` and `@using Linq2Dashboard.Blazor`.
+4. **Reference the app's scoped-CSS bundle** in the host page, `YourApp.styles.css`. The components' styles are bundled into it. No other stylesheet or script is needed.
+5. **Wrap the page in `DashboardView`**, inject the dashboard, bind `Selections`, and place components inside. Every component takes `T`, the row type, and a `Key` from the builder.
+
+```razor
+@inject Dashboard<Order> Dashboard
+
+<DashboardView T="Order" Dashboard="Dashboard" @bind-Selections="selections">
+    <ValueFacet T="Order" Key="Country" />
+    <MatchingCount T="Order" />
+    <Results T="Order" PageSize="25">
+        <RowTemplate Context="order"><div>@order.Id</div></RowTemplate>
+    </Results>
+</DashboardView>
+
+@code {
+    private Selections selections = Selections.Empty;
+}
+```
+
+## The builder
+
+```csharp
+var dashboard = Dashboard.Create(orders, b =>
+{
+    b.Where(x => x.CompanyId == 42);                 // fixed filter; defines the dataset
+
+    b.ValueFacet(x => x.Country);                    // key "Country", from the member name
+    b.ValueFacet("Customer", x => x.CustomerId)      // explicit key; count and select by id...
+     .Label(x => x.CustomerName)                     // ...show and search by name
+     .Title("Customer").Top(20).Searchable();
+    b.BooleanFacet(x => x.IsActive);
+    b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);   // or .AutoBuckets(10)
+    b.DateFacet(x => x.OrderDate)
+     .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
+     .Granularity(DateGranularity.Month)
+     .Presets(DatePreset.Last30Days, DatePreset.ThisYear);
+    b.TextFacet("search", (x, text) => x.CustomerName.Contains(text, StringComparison.OrdinalIgnoreCase));
+
+    b.Count("orders");
+    b.Sum("revenue", x => x.Amount).Title("Revenue");
+    b.Average("average", x => x.Amount);
+    b.Min("smallest", x => x.Amount);
+    b.Max("largest", x => x.Amount);
+    b.Distinct("customers", x => x.CustomerId);
+    b.Calculated("perCustomer", m => m["revenue"] / m["customers"]);
+
+    b.OrderByDescending(x => x.OrderDate).ThenBy(x => x.Id);
+    b.EnableParallelCounting();                      // off by default; helps text facets most
+});
+```
+
+Rules of the builder:
+
+- A facet declared from a member expression takes the member's name as its key. Anything else needs an explicit key. Keys are case-sensitive and must be unique among facets and among metrics.
+- Range facets accept any numeric type or its nullable form. Date facets accept `DateTime`, `DateTimeOffset`, `DateOnly` or their nullable forms.
+- Value facet options: `Title`, `Top(n)` with an "Other" remainder, `RankBy(RankMode.TotalCount)` for a stable list, `Searchable()`, `Label(row => text)`, `Comparer(...)`, `Serialize(format, parse)` for value types JSON cannot round-trip by default.
+- Range facet options: `Title`, `Buckets(cuts...)` strictly ascending, or `AutoBuckets(count)` for equal widths.
+- Date facet options: `Title`, `TimeZone`, `Granularity` (Year, Month, ISO Week, Day), `Presets` (Today, Yesterday, Last7Days, Last30Days, ThisWeek, ThisMonth, ThisYear).
+- `Calculated` reads earlier metrics by key through `m["key"]`. It gives no value when any input has none or the result is not finite. Define its inputs before it.
+- `UseTimeProvider` supplies "now" for relative presets, for tests.
+- Mistakes surface inside `Create`, not at first use: an unknown metric key in a formula, a non-numeric range selector, non-ascending cuts, a duplicate key.
+
+## Selections
+
+The UI owns the selections. The dashboard holds none. `Selections` is an immutable map from facet key to `Selection`; every method returns a new instance, so always use the result.
+
+```csharp
+var s = Selections.Empty
+    .Toggle("Country", "SE")                                  // add if absent, remove if present
+    .With("Amount", RangeSelection.Between(100, 1000))        // replace the facet's selection
+    .With("OrderDate", DateSelection.Relative(DatePreset.Last30Days))
+    .With("search", new TextSelection("acme"))
+    .Clear("Country");                                        // remove one facet's selection
+```
+
+| Facet kind | Selection type | Constructors |
+|---|---|---|
+| Value, Boolean | `ValueSelection` | `ValueSelection.Of(a, b)`, `.Add`, `.Remove`; a `null` value selects the null facet value |
+| Range | `RangeSelection` | `Between(from, to)`, `AtLeast(from)`, `AtMost(to)`, `OnlyNull`; `IncludeNull` adds the null rows |
+| Date | `DateSelection` | `Between(from, to)` half-open instants, `Relative(preset)`, `OnlyNull` |
+| Text | `TextSelection` | `new TextSelection(text)`; whitespace-only clears |
+
+Bookmarks: `dashboard.Serializer.ToJson(selections)` and `FromJson(json)`. Reading is lenient. Unknown facets and unreadable values are dropped, so a stale bookmark gives fewer selections, never an error.
+
+## The state
+
+`dashboard.Calculate(selections)` returns a `DashboardState<T>`: a consistent, immutable snapshot. Same selections, same state, and the result is cached by selections.
+
+```csharp
+DashboardState<Order> state = dashboard.Calculate(selections);
+
+state.TotalCount;                                 // rows after fixed filters
+state.MatchingCount;                              // rows matching every selection
+state.Metric("revenue").Value;                    // double?, null when no row contributed
+state.Metric("revenue").Share;                    // fraction of the total, for Count, Sum and Distinct
+
+var country = (ValueFacetState)state.Facet("Country");
+country.Values;                                   // FacetValue: Value, Label, TotalCount, FilteredCount, Selected
+country.Other;                                    // counts Top N left out, or null
+country.Search("swe", max: 20);                   // a UI operation, not a selection
+
+var amount = (RangeFacetState)state.Facet("Amount");
+amount.Buckets[1].ToSelection();                  // exactly the interval a click on that bucket means
+
+var date = (DateFacetState)state.Facet("OrderDate");
+date.Presets[0].ToSelection();                    // DateSelection.Relative(preset)
+
+state.GetPage(pageIndex: 0, pageSize: 50);        // ResultPage<T>: Items, PageCount, HasNext
+state.GetItems(skip: 200, take: 50);              // a slice, for virtualisation
+state.Items;                                      // every matching row, lazily, for export
+```
+
+Cast `state.Facet(key)` by the facet's kind: `ValueFacetState` for value and boolean facets, `RangeFacetState`, `DateFacetState`, `TextFacetState`. `FacetState.Kind` says which.
+
+## The components
+
+All live inside `DashboardView<T>`, read the cascaded state and never count anything themselves.
+
+| Component | Renders | Notable parameters |
+|---|---|---|
+| `DashboardView` | Owns selections and state, cascades them. | `Dashboard`, `@bind-Selections`, `StateChanged`, `Formatter` |
+| `ValueFacet` | Values with counts, the null value, "Other", search. | `Key`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate` |
+| `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Layout`, `ShowSlider`, `ShowBounds` |
+| `DateFacet` | Presets with counts, one bar per period. | `Key`, `Layout`, `ShowPresets` |
+| `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `DebounceMilliseconds`, `Placeholder`, `ShowContextCount` |
+| `ActiveSelections` | One removable chip per selection, clear all. | `ShowFacetTitle`, `GroupValues` |
+| `Metric` | One tile by key; a dash when there is no value. | `Key`, `Title`, `ShowShare`, `Icon`, `MetricTemplate` |
+| `MatchingCount` | A tile with the matching row count. | `Title`, `ShowShare`, `Icon` |
+| `Results` | Matching rows through your template, paged or virtualised. | `RowTemplate`, `HeaderTemplate`, `EmptyTemplate`, `Layout`, `PageSize`, `Virtualize` |
+
+- **Formatting** goes through one `IDashboardFormatter` cascaded from `DashboardView`. Derive from `DefaultDashboardFormatter` to change culture, number formats, the null label or preset names. Pass a fixed culture in tests.
+- **Styling** is plain CSS. Every `--l2d-*` custom property is declared on `.l2d-dashboard`; override them on that element or an ancestor. Every component takes `Class` and passes unknown attributes to its root element. State classes `l2d-selected`, `l2d-zero`, `l2d-null`, `l2d-collapsed` and `l2d-metric-empty` are stable hooks.
+- **Callbacks.** `SelectionsChanged` fires on every click, for bookmarking. `StateChanged` hands the host each new `DashboardState<T>`, the initial one included, for a chart of its own.
+- **Hosting.** Blazor Server is the primary target. WebAssembly works unchanged within the browser's memory.
+
+## Rules that surprise
+
+These are decisions from the concept, not options.
+
+- **OR within a facet, AND across facets.** Sweden or Norway, and status Open.
+- **A facet's own selection is excluded from its own counts.** Under Country, with Sweden selected, Norway still shows what selecting it would add.
+- **Two counts per value.** `TotalCount` over the dataset, `FilteredCount` under the other facets' selections. Filtered counts always sum to the facet's `ContextCount`.
+- **Null is a value.** It is listed, counted and selectable. Never drop it.
+- **Zero-count values stay in the state.** Hiding them is the UI's choice (`HideZeroCounts`).
+- **Buckets are fixed at build.** Only their counts change. A bucket click selects exactly its interval.
+- **Searching within a facet is not a selection.** It narrows the list shown, nothing else.
+- **Metrics skip null.** Averages divide by rows that have a value. Distinct counts non-null values.
+- **The data is fixed at creation.** New data means a new dashboard; selections carry over through JSON.
+- **A text facet is the one expensive operation.** A new text calls your predicate once per row. Keep it cheap and pure; it may run on several threads.
+
+## Mistakes to avoid
+
+- Counting or filtering in the UI. Everything comes from the state.
+- Creating a dashboard per request or per user. Build once; register a singleton.
+- Discarding the result of a `Selections` method. Every call returns a new instance.
+- Using a `TextFacet` to search a value list. `ValueFacet` with `Searchable()` does that without a scan.
+- Mutating the source collection after `Create`. The dashboard indexed a snapshot.
+- A `Key` that does not match the builder, or a facet component of the wrong kind for its key. Both throw at render time and name the key. Leaving out `T="Order"` is a compile error.
+- Placing a component outside `DashboardView`. It throws on initialisation.
+- Hard-coding colours or sizes in a stylesheet that targets the components' markup. Use the `--l2d-*` properties.

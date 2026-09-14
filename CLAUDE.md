@@ -7,6 +7,7 @@
 - `Linq2Dashboard-concept.md` says what the library is and how it behaves. Its rules are decisions. If code and concept disagree, the code is wrong.
 - `Linq2Dashboard-design.md` says how it is built and records measured numbers. Section 9 is the Blazor plan. If design and concept disagree, the concept wins.
 - Both end with a **Decided** list. Do not reopen those decisions; when a new one is made, add it there and point to the section that implements it.
+- `Linq2Dashboard-usage.md` is the guide for consumers, written to be pasted into another project's instructions file. It is served by the docs site and packed into both NuGet packages. Keep it short and keep it current: a public API change updates it in the same commit.
 - When code changes the public API or a behavioural rule, update the relevant document in the same commit.
 
 ## Layout

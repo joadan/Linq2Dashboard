@@ -42,5 +42,6 @@ public partial class MarkdownDocument
     /// <summary>The documents link to each other by file name in the repository; on the site they are pages.</summary>
     private static string RewriteLinks(string markdown) => markdown
         .Replace("](Linq2Dashboard-concept.md)", "](concept)")
-        .Replace("](Linq2Dashboard-design.md)", "](design)");
+        .Replace("](Linq2Dashboard-design.md)", "](design)")
+        .Replace("](Linq2Dashboard-usage.md)", "](usage)");
 }
