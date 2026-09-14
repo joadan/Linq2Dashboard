@@ -24,17 +24,17 @@ jobs:
     name: Build and test
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
         with:
           fetch-depth: 0   # Nerdbank.GitVersioning needs the full history for the version height
 
       - name: Setup .NET ${{ env.NETCORE_VERSION }}
-        uses: actions/setup-dotnet@v4
+        uses: actions/setup-dotnet@v6
         with:
           dotnet-version: ${{ env.NETCORE_VERSION }}
 
       - name: Cache NuGet packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.nuget/packages
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
@@ -51,7 +51,7 @@ jobs:
 
       - name: Upload coverage artifact
         if: ${{ always() }}
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: code-coverage
           path: ./coverage/**/coverage.cobertura.xml
@@ -63,7 +63,7 @@ jobs:
           dotnet pack src/Linq2Dashboard.Blazor/Linq2Dashboard.Blazor.csproj -c Release --no-build -o artifacts
 
       - name: Upload packages artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: packages
           path: artifacts/*.nupkg
@@ -88,9 +88,11 @@ jobs:
 
       - name: Upload Pages artifact
         if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: publish/wwwroot
+          # Keeps the .nojekyll file created above.
+          include-hidden-files: true
 
   deploy:
     name: Deploy to GitHub Pages
@@ -103,4 +105,4 @@ jobs:
     steps:
       - name: Deploy
         id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5
