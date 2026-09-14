@@ -23,6 +23,14 @@ public partial class DashboardView<T>
     [Parameter]
     public EventCallback<Selections> SelectionsChanged { get; set; }
 
+    /// <summary>
+    /// Raised with the new <see cref="DashboardState{T}"/> after every calculation: the initial one, every click,
+    /// and selections set by the host. On a click it follows <see cref="SelectionsChanged"/>. For hosts that
+    /// render something of their own from the result, such as a chart, without reaching into the context.
+    /// </summary>
+    [Parameter]
+    public EventCallback<DashboardState<T>> StateChanged { get; set; }
+
     /// <summary>Text formatting for every component inside. Defaults to <see cref="DefaultDashboardFormatter"/>.</summary>
     [Parameter]
     public IDashboardFormatter? Formatter { get; set; }
@@ -34,7 +42,7 @@ public partial class DashboardView<T>
     /// <summary>The shared context, for hosts that render their own children.</summary>
     public DashboardContext<T> Context => context ?? throw new InvalidOperationException("The component has not received its parameters yet.");
 
-    protected override void OnParametersSet()
+    protected override Task OnParametersSetAsync()
     {
         ArgumentNullException.ThrowIfNull(Dashboard);
         IDashboardFormatter formatter = Formatter ?? DefaultDashboardFormatter.Instance;
@@ -42,16 +50,20 @@ public partial class DashboardView<T>
 
         if (context is null || !ReferenceEquals(contextDashboard, Dashboard) || !ReferenceEquals(contextFormatter, formatter))
         {
-            context = new DashboardContext<T>(Dashboard, selections, formatter, OnSelectionsChangedAsync);
+            context = new DashboardContext<T>(Dashboard, selections, formatter, OnSelectionsChangedAsync, OnStateChangedAsync);
             contextDashboard = Dashboard;
             contextFormatter = formatter;
             lastSelectionsParameter = Selections;
+            return OnStateChangedAsync(context.State);
         }
-        else if (!Equals(Selections, lastSelectionsParameter))
+
+        if (!Equals(Selections, lastSelectionsParameter))
         {
             lastSelectionsParameter = Selections;
-            context.Sync(selections);
+            return context.SyncAsync(selections);
         }
+
+        return Task.CompletedTask;
     }
 
     private async Task OnSelectionsChangedAsync(Selections selections)
@@ -60,4 +72,6 @@ public partial class DashboardView<T>
         await SelectionsChanged.InvokeAsync(selections);
         StateHasChanged();
     }
+
+    private Task OnStateChangedAsync(DashboardState<T> state) => StateChanged.InvokeAsync(state);
 }

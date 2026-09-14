@@ -8,14 +8,21 @@ namespace Linq2Dashboard.Blazor;
 public sealed class DashboardContext<T>
 {
     private readonly Func<Selections, Task> onSelectionsChanged;
+    private readonly Func<DashboardState<T>, Task> onStateChanged;
 
-    internal DashboardContext(Dashboard<T> dashboard, Selections selections, IDashboardFormatter formatter, Func<Selections, Task> onSelectionsChanged)
+    internal DashboardContext(
+        Dashboard<T> dashboard,
+        Selections selections,
+        IDashboardFormatter formatter,
+        Func<Selections, Task> onSelectionsChanged,
+        Func<DashboardState<T>, Task> onStateChanged)
     {
         Dashboard = dashboard;
         Formatter = formatter;
         Selections = selections;
         State = TimedCalculate(selections);
         this.onSelectionsChanged = onSelectionsChanged;
+        this.onStateChanged = onStateChanged;
     }
 
     public Dashboard<T> Dashboard { get; }
@@ -28,23 +35,24 @@ public sealed class DashboardContext<T>
     /// <summary>The state for <see cref="Selections"/>. Always consistent with it.</summary>
     public DashboardState<T> State { get; private set; }
 
-    /// <summary>Raised after <see cref="State"/> changed. Components re-render on it.</summary>
+    /// <summary>Raised after <see cref="State"/> changed. Components re-render on it; the host listens through <see cref="DashboardView{T}.StateChanged"/>.</summary>
     public event Action? StateChanged;
 
     /// <summary>Wall time of the most recent <c>Calculate</c>, including the initial one. A cache hit reads as near zero.</summary>
     public TimeSpan LastCalculation { get; private set; }
 
-    /// <summary>Replaces the selections, recalculates, notifies components and the host.</summary>
-    public Task ApplyAsync(Selections selections)
+    /// <summary>Replaces the selections, recalculates, notifies components and the host: selections first, then the state.</summary>
+    public async Task ApplyAsync(Selections selections)
     {
         ArgumentNullException.ThrowIfNull(selections);
         if (selections.Equals(Selections))
         {
-            return Task.CompletedTask;
+            return;
         }
 
         Recalculate(selections);
-        return onSelectionsChanged(selections);
+        await onSelectionsChanged(selections);
+        await onStateChanged(State);
     }
 
     /// <summary>The click on a value facet: add the value if absent, remove it if present.</summary>
@@ -57,13 +65,16 @@ public sealed class DashboardContext<T>
 
     public Task ClearAllAsync() => ApplyAsync(Selections.Empty);
 
-    /// <summary>Adopts selections set by the host through the component parameter, without echoing them back.</summary>
-    internal void Sync(Selections selections)
+    /// <summary>Adopts selections set by the host through the component parameter, without echoing them back. The host still hears about the new state.</summary>
+    internal Task SyncAsync(Selections selections)
     {
-        if (!selections.Equals(Selections))
+        if (selections.Equals(Selections))
         {
-            Recalculate(selections);
+            return Task.CompletedTask;
         }
+
+        Recalculate(selections);
+        return onStateChanged(State);
     }
 
     private void Recalculate(Selections selections)

@@ -21,7 +21,11 @@ public class DashboardViewTests : BunitContext
         });
 
     private IRenderedComponent<DashboardView<Order>> RenderView(
-        Dashboard<Order> dashboard, Selections? selections = null, Action<Selections>? onChanged = null, IDashboardFormatter? formatter = null) =>
+        Dashboard<Order> dashboard,
+        Selections? selections = null,
+        Action<Selections>? onChanged = null,
+        IDashboardFormatter? formatter = null,
+        Action<DashboardState<Order>>? onStateChanged = null) =>
         Render<DashboardView<Order>>(parameters =>
         {
             parameters.Add(p => p.Dashboard, dashboard);
@@ -33,6 +37,11 @@ public class DashboardViewTests : BunitContext
             if (onChanged is not null)
             {
                 parameters.Add(p => p.SelectionsChanged, onChanged);
+            }
+
+            if (onStateChanged is not null)
+            {
+                parameters.Add(p => p.StateChanged, onStateChanged);
             }
 
             // Invariant culture unless a test supplies its own, so expectations do not depend on the machine.
@@ -134,6 +143,46 @@ public class DashboardViewTests : BunitContext
 
         Assert.Equal("2", cut.Find(".l2d-matching").TextContent);
         Assert.Equal(0, raisedCount);
+    }
+
+    [Fact]
+    public void StateChanged_delivers_the_new_state_after_the_initial_calculation_and_after_every_click()
+    {
+        var order = new List<string>();
+        var states = new List<DashboardState<Order>>();
+        var cut = RenderView(
+            BuildDashboard(),
+            onChanged: _ => order.Add("selections"),
+            onStateChanged: s =>
+            {
+                order.Add("state");
+                states.Add(s);
+            });
+
+        Assert.Equal([8], states.Select(s => s.MatchingCount));
+
+        ValueButton(cut, "Country", "SE").Click();
+
+        Assert.Equal([8, 3], states.Select(s => s.MatchingCount));
+        Assert.Equal(Selections.Empty.With("Country", ValueSelection.Of("SE")), states[1].Selections);
+        Assert.Same(cut.Instance.Context.State, states[1]);
+        // Selections first (the cause), then the state (the result).
+        Assert.Equal(["state", "selections", "state"], order);
+    }
+
+    [Fact]
+    public void StateChanged_is_also_raised_for_selections_set_by_the_host()
+    {
+        var states = new List<DashboardState<Order>>();
+        var cut = RenderView(BuildDashboard(), onStateChanged: states.Add);
+        var selections = Selections.Empty.With("Country", ValueSelection.Of("NO"));
+
+        cut.Render(parameters => parameters.Add(p => p.Selections, selections));
+        Assert.Equal([8, 2], states.Select(s => s.MatchingCount));
+
+        // The same selections again are not a change.
+        cut.Render(parameters => parameters.Add(p => p.Selections, selections));
+        Assert.Equal(2, states.Count);
     }
 
     [Fact]
