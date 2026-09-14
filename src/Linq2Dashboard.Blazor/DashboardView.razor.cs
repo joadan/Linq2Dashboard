@@ -39,8 +39,18 @@ public partial class DashboardView<T>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>Extra classes for the root element, after <c>l2d-dashboard</c> (design §9).</summary>
+    [Parameter]
+    public string? Class { get; set; }
+
+    /// <summary>Every attribute that is not a parameter is rendered on the root element, before the library's own, so <c>class</c> cannot be overridden this way (design §9).</summary>
+    [Parameter(CaptureUnmatchedValues = true)]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
+
     /// <summary>The shared context, for hosts that render their own children.</summary>
     public DashboardContext<T> Context => context ?? throw new InvalidOperationException("The component has not received its parameters yet.");
+
+    private string RootClass => string.IsNullOrWhiteSpace(Class) ? "l2d-dashboard" : $"l2d-dashboard {Class.Trim()}";
 
     protected override Task OnParametersSetAsync()
     {

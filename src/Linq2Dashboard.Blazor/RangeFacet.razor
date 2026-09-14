@@ -1,7 +1,7 @@
 @typeparam T
 @inherits DashboardComponentBase<T>
 
-<section class="l2d-facet l2d-range-facet l2d-range-@Layout.ToString().ToLowerInvariant() @(collapsed ? "l2d-collapsed" : null)" data-key="@Key">
+<section @attributes="AdditionalAttributes" class="@RootClass($"l2d-facet l2d-range-facet l2d-range-{Layout.ToString().ToLowerInvariant()}{(collapsed ? " l2d-collapsed" : "")}")" data-key="@Key">
     @if (HeaderTemplate is not null)
     {
         @HeaderTemplate(Facet)

@@ -24,8 +24,13 @@ public partial class MetricTile
     [Parameter]
     public bool IsEmpty { get; set; }
 
+    /// <summary>Extra classes after the tile's own, from the placing component's <c>Class</c> (design §9).</summary>
     [Parameter]
-    public string? CssClass { get; set; }
+    public string? Class { get; set; }
+
+    /// <summary>Attributes the placing component passes through onto the tile element (design §9).</summary>
+    [Parameter]
+    public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
     /// <summary>
     /// An icon shown beside the title and value, typically an inline SVG or an icon-font element (design §9.5).
@@ -37,4 +42,23 @@ public partial class MetricTile
     /// <summary>Replaces the title and value; the tile element and its classes stay.</summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
+
+    private string RootClass
+    {
+        get
+        {
+            string classes = "l2d-metric";
+            if (IsEmpty)
+            {
+                classes += " l2d-metric-empty";
+            }
+
+            if (Icon is not null)
+            {
+                classes += " l2d-metric-with-icon";
+            }
+
+            return string.IsNullOrWhiteSpace(Class) ? classes : $"{classes} {Class.Trim()}";
+        }
+    }
 }

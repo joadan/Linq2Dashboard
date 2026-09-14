@@ -5,12 +5,12 @@
 {
     @if (!HideWhenEmpty)
     {
-        <div class="l2d-active l2d-active-empty">@EmptyText</div>
+        <div @attributes="AdditionalAttributes" class="@RootClass("l2d-active l2d-active-empty")">@EmptyText</div>
     }
 }
 else
 {
-    <div class="l2d-active">
+    <div @attributes="AdditionalAttributes" class="@RootClass("l2d-active")">
         <ul class="l2d-active-chips">
             @foreach (FacetState facet in State.Facets)
             {

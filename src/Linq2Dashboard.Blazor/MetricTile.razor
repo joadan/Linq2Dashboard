@@ -1,6 +1,6 @@
 @* The tile shared by Metric and MatchingCount: a title over a value, with an optional icon beside them, or custom content. *@
 
-<div class="l2d-metric @CssClass @(IsEmpty ? "l2d-metric-empty" : null) @(Icon is not null ? "l2d-metric-with-icon" : null)" data-key="@Key">
+<div @attributes="AdditionalAttributes" class="@RootClass" data-key="@Key">
     @if (ChildContent is not null)
     {
         @ChildContent

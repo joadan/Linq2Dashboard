@@ -1,7 +1,7 @@
 @typeparam T
 
 <CascadingValue Value="context" IsFixed="true">
-    <div class="l2d-dashboard">
+    <div @attributes="AdditionalAttributes" class="@RootClass">
         @if (ChildContent is null)
         {
             <StateSummary T="T" />

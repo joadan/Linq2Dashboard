@@ -1,7 +1,7 @@
 @typeparam T
 @inherits DashboardComponentBase<T>
 
-<div class="l2d-summary">
+<div @attributes="AdditionalAttributes" class="@RootClass("l2d-summary")">
     <p class="l2d-summary-counts">
         <strong class="l2d-matching">@Formatter.FormatCount(State.MatchingCount)</strong> of
         <span class="l2d-total">@Formatter.FormatCount(State.TotalCount)</span>

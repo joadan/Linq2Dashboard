@@ -2,7 +2,7 @@
 @inherits DashboardComponentBase<T>
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 
-<div class="l2d-results @(Virtualize ? "l2d-results-virtualized" : null)">
+<div @attributes="AdditionalAttributes" class="@RootClass($"l2d-results{(Virtualize ? " l2d-results-virtualized" : "")}")">
     @if (State.MatchingCount == 0)
     {
         <div class="l2d-results-empty">
