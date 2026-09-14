@@ -25,6 +25,7 @@ public partial class GettingStarted
             b.Sum("revenue", x => x.Amount);
             b.Average("average", x => x.Amount);
             b.Distinct("customers", x => x.Customer);
+            b.Calculated("perCustomer", m => m["revenue"] / m["customers"]);
 
             b.OrderByDescending(x => x.OrderDate);
         });

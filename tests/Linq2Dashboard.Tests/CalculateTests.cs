@@ -397,6 +397,43 @@ public class CalculateTests
         Assert.Equal(new MetricState("tags", "tags", Aggregation.Distinct, null, null), untagged.Metric("tags"));
     }
 
+    [Fact]
+    public void Calculated_metrics_derive_from_the_metrics_defined_before_them()
+    {
+        var dashboard = Build(b =>
+        {
+            b.Calculated("aov", m => m["revenue"] / m["orders"]).Title("Average order");
+            b.Calculated("aovShare", m => m.Share("revenue") / m.Share("orders")); // reads shares, and an earlier calculated metric is visible too
+            b.Calculated("doubleAov", m => m["aov"] * 2);
+        });
+
+        var all = dashboard.Calculate();
+        Assert.Equal(new MetricState("aov", "Average order", Aggregation.Calculated, 5424.5 / 8, null), all.Metric("aov"));
+        Assert.Equal(1.0, all.Metric("aovShare").Value);
+        Assert.Equal(5424.5 / 4, all.Metric("doubleAov").Value);
+
+        var se = dashboard.Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));
+        Assert.Equal(3599.5 / 3, se.Metric("aov").Value);
+        Assert.Null(se.Metric("aov").Share); // a ratio is not a part of anything
+
+        var none = dashboard.Calculate(Selections.Empty.With("Country", ValueSelection.Of("FI")));
+        Assert.Null(none.Metric("aov").Value); // revenue has no value, so neither has the formula
+        Assert.Null(none.Metric("doubleAov").Value);
+    }
+
+    [Fact]
+    public void A_calculated_metric_that_is_not_finite_has_no_value()
+    {
+        var state = Build(b =>
+        {
+            b.Calculated("byZero", m => m["revenue"] / (m["orders"] - 8));
+            b.Calculated("nan", m => double.NaN);
+        }).Calculate();
+
+        Assert.Null(state.Metric("byZero").Value); // 5 424.5 / 0 is "no value", never infinity
+        Assert.False(state.Metric("nan").HasValue);
+    }
+
     private sealed record Signed(int Id, decimal Amount);
 
     private sealed record Tagged(int Id, string? Tag);

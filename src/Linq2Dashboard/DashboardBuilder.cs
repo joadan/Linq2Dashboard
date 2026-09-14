@@ -130,6 +130,30 @@ public sealed class DashboardBuilder<T>
         }, comparer)));
     }
 
+    /// <summary>
+    /// A metric computed from the metrics defined before it, for example
+    /// <c>m => m["revenue"] / m["orders"]</c> (concept §4.4). No value when any input has none or the
+    /// result is not finite, so a division by zero is "no value", never infinity. The formula is run
+    /// once here with every earlier metric at "no value", so a key it reads unconditionally is
+    /// checked now; a key first read inside a branch is checked at the first calculation that
+    /// reaches it.
+    /// </summary>
+    public MetricBuilder<T> Calculated(string key, Func<MetricValues, double?> formula)
+    {
+        ValidateKey(key);
+        ArgumentNullException.ThrowIfNull(formula);
+        EnsureMutable();
+
+        var earlier = new MetricState[metrics.Count];
+        for (int i = 0; i < earlier.Length; i++)
+        {
+            earlier[i] = new MetricState(metrics[i].Key, metrics[i].Title, metrics[i].Aggregation, null, null);
+        }
+
+        formula(new MetricValues(earlier, earlier.Length));
+        return AddMetric(new MetricDefinition<T>(key, formula));
+    }
+
     /// <summary>Primary result order (concept §8). Call once; add keys with <see cref="ThenBy{TKey}"/>.</summary>
     public DashboardBuilder<T> OrderBy<TKey>(Expression<Func<T, TKey>> keySelector, IComparer<TKey>? comparer = null) =>
         AddSortKey(keySelector, descending: false, comparer, primary: true);

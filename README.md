@@ -44,6 +44,7 @@ var dashboard = Dashboard.Create(orders, b =>
     b.Sum("revenue", x => x.Amount);
     b.Average("average", x => x.Amount);
     b.Distinct("customers", x => x.Customer);              // how many different customers the selection touches
+    b.Calculated("perCustomer", m => m["revenue"] / m["customers"]);   // a formula over earlier metrics
 
     b.OrderByDescending(x => x.OrderDate);
 });
@@ -115,7 +116,7 @@ The rules are decisions, not options. They are spelled out in the [concept docum
 - **Null is a value.** It is shown, counted and selectable like any other, never silently dropped.
 - **Zero-count values stay in the state.** Hiding or greying them is the UI's choice.
 - **Range and date buckets are fixed at build**; only their counts change. A bucket click produces exactly the interval the bucket covers.
-- **Metrics skip null** and divide averages by rows that have a value. Distinct counts different non-null values with the facets' equality rules. Count, sum and distinct also carry their share of the total, so a tile can read "12 400 (38 %)".
+- **Metrics skip null** and divide averages by rows that have a value. Distinct counts different non-null values with the facets' equality rules. Count, sum and distinct also carry their share of the total, so a tile can read "12 400 (38 %)". Calculated metrics are formulas over earlier metrics: null in, no value out, and never infinity.
 - **The data is fixed at initialisation.** New data means a new dashboard; selections are serialisable, so the view carries over.
 
 ## Performance

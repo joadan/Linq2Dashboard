@@ -296,6 +296,35 @@ public class DashboardBuilderTests
     }
 
     [Fact]
+    public void A_calculated_metric_checks_its_keys_when_it_is_defined()
+    {
+        var unknown = Assert.Throws<ArgumentException>(() => Create(b =>
+        {
+            b.Count("orders");
+            b.Calculated("aov", m => m["revenue"] / m["orders"]);
+        }));
+        Assert.Contains("revenue", unknown.Message);
+
+        var later = Assert.Throws<ArgumentException>(() => Create(b =>
+        {
+            b.Calculated("aov", m => m["revenue"] / m["orders"]); // defined before its inputs
+            b.Count("orders");
+            b.Sum("revenue", x => x.Amount);
+        }));
+        Assert.Contains("defined earlier", later.Message);
+
+        Assert.Throws<ArgumentNullException>(() => Create(b => b.Calculated("aov", null!)));
+
+        var dashboard = Create(b =>
+        {
+            b.Count("orders");
+            b.Calculated("half", m => m["orders"] / 2);
+        });
+        Assert.Equal(new MetricInfo("half", "half", Aggregation.Calculated), dashboard.Metrics[1]);
+        Assert.Null(dashboard.MetricIndex("half").Column);
+    }
+
+    [Fact]
     public void Distinct_validates_like_every_other_metric()
     {
         Assert.Throws<ArgumentNullException>(() => Create(b => b.Distinct<string?>("countries", null!)));

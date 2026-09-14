@@ -130,7 +130,9 @@ Null is skipped by metrics that read a property. Sum, average, min and max are c
 
 **Distinct count** is the number of different non-null values of a property among the matching rows: how many customers, products or countries the selection touches. Two values are the same by the rules a value facet uses (§5): strings compare ignoring case unless the application gives a comparer. Null is not a value, so it is never one of the distinct ones, and a distinct count over rows that have only nulls is "no value". A distinct count per facet value (customers per country) is grouping and belongs to §8.
 
-Every metric also carries its **share of the total**: the same aggregation over all rows (after fixed filters, like total counts in §4.3), with the matching value as a fraction of it. Revenue 12 400 out of 32 600 has the share 0.38; the UI decides whether and how to show it as a percentage. Count, sum and distinct count have a share, because the matching value is a part of the whole: rows of all rows, revenue of all revenue, customers of all customers. An average, a minimum or a maximum over a subset is not a part of the whole, so their share is "no value". A share is also "no value" when the metric has no value or when the total is zero, since there is nothing to be a part of. A share above one or below zero is possible when a sum has negative contributions; the core reports it as it is.
+Every metric also carries its **share of the total**: the same aggregation over all rows (after fixed filters, like total counts in §4.3), with the matching value as a fraction of it. Revenue 12 400 out of 32 600 has the share 0.38; the UI decides whether and how to show it as a percentage. Count, sum and distinct count have a share, because the matching value is a part of the whole: rows of all rows, revenue of all revenue, customers of all customers. An average, a minimum or a maximum over a subset is not a part of the whole, so their share is "no value".
+
+A **calculated metric** is a formula over the metrics defined before it, not over rows: average order value as revenue over orders, revenue per customer as revenue over distinct customers. It reads their values and shares by key and follows all selections because its inputs do. If any input has "no value" the result has "no value", and so has a result that is not a finite number: revenue over zero orders is "no value", never infinity or zero. A calculated metric has no share, since a ratio is not a part of anything. It can read only metrics defined earlier, which is what keeps formulas acyclic; a formula that names an unknown metric is a mistake and fails when the dashboard is defined. Anything computed per row, such as quantity times price, is a base metric whose selector does the multiplication. A share is also "no value" when the metric has no value or when the total is zero, since there is nothing to be a part of. A share above one or below zero is possible when a sum has negative contributions; the core reports it as it is.
 
 ### 4.5 Searching within a facet is not a selection
 
@@ -330,7 +332,7 @@ Because facets are identified by string keys and selections are serialisable, a 
 
 - Grouping and hierarchical facets, including metrics per facet value (revenue per country).
 - Multi-valued facets over collection properties (tags, categories). One row appears under several values, so counts no longer sum to the matching total. Needs its own rules for counting and for AND versus OR within the facet.
-- Calculated metrics. (Percentage of total and distinct count were added on 2026-09-14, §4.4.)
+- ~~Distinct count, percentage-of-total, calculated metrics.~~ All three were added on 2026-09-14; see §4.4.
 - Exclusion selections ("everything except Sweden") as an additional mode on value facets.
 - Saved views and bookmarks (the state contract already allows it).
 - Export.
@@ -363,5 +365,6 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **Metrics skip null.** Sum, average, min and max use rows with a value; average divides by that number. Count is unaffected. See §4.4.
 - **Every metric carries its share of the total.** A fraction of the same aggregation over all rows after fixed filters, on the state itself rather than as a separate metric kind. Defined for count, sum and distinct count; "no value" for the other aggregations, for a metric without a value and for a zero total. Added 2026-09-14. See §4.4.
 - **Distinct count is a metric aggregation.** Different non-null values among the matching rows, with value facet equality (case-insensitive strings by default). Exact, never approximate; per-facet-value breakdowns stay with grouping. Added 2026-09-14. See §4.4.
+- **Calculated metrics are formulas over earlier metrics.** Null in, "no value" out; a non-finite result is "no value"; no share. Only metrics defined before the formula are visible, so cycles cannot be expressed. Added 2026-09-14. See §4.4.
 - **Range buckets are fixed at initialisation.** Either application-defined or derived once from the dataset, never from the current selections. See §5.
 - **"Other" is measured against the facet's own counting context.** Not against the matching rows. See §6.

@@ -81,7 +81,7 @@ internal static class DashboardCalculator
         var metricStates = new MetricState[metrics.Count];
         for (int i = 0; i < metricStates.Length; i++)
         {
-            metricStates[i] = metrics[i].Present(matching);
+            metricStates[i] = metrics[i].Present(matching, new MetricValues(metricStates, i));
         }
 
         return new DashboardState<T>(dashboard, selections, matching, facetStates, metricStates);

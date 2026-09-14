@@ -16,6 +16,7 @@ public class MetricTests : BunitContext
             b.Sum("revenue", x => x.Amount).Title("Revenue");
             b.Average("avgDiscount", x => x.Discount).Title("Average discount");
             b.Distinct("countries", x => x.Country).Title("Countries");
+            b.Calculated("aov", m => m["revenue"] / m["orders"]).Title("Average order");
         });
 
     private IRenderedComponent<DashboardView<Order>> RenderWith<TComponent>(Action<ComponentParameterCollectionBuilder<TComponent>> configure, Selections? selections = null)
@@ -98,6 +99,20 @@ public class MetricTests : BunitContext
         Assert.Equal("Countries", cut.Find(".l2d-metric-title").TextContent);
         Assert.Equal("2", cut.Find(".l2d-metric-value").TextContent); // of SE, NO, DK
         Assert.Equal("66.7 %", cut.Find(".l2d-metric-share").TextContent);
+    }
+
+    [Fact]
+    public void A_calculated_metric_renders_like_any_other_and_has_no_share()
+    {
+        var cut = RenderWith<Metric<Order>>(m =>
+        {
+            m.Add(x => x.Key, "aov");
+            m.Add(x => x.ShowShare, true);
+        });
+
+        Assert.Equal("Average order", cut.Find(".l2d-metric-title").TextContent);
+        Assert.Equal("678.06", cut.Find(".l2d-metric-value").TextContent); // 5 424.5 / 8
+        Assert.Empty(cut.FindAll(".l2d-metric-share"));
     }
 
     [Fact]

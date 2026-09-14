@@ -17,4 +17,7 @@ public enum Aggregation
 
     /// <summary>Number of distinct non-null values among the matching rows. Equality follows the value facet rules: strings ignore case unless a comparer is given.</summary>
     Distinct,
+
+    /// <summary>A formula over the metrics defined before it, computed from their values rather than from rows. No value when any input has none or the result is not finite.</summary>
+    Calculated,
 }

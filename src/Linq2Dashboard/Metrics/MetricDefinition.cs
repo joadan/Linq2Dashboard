@@ -4,12 +4,14 @@ namespace Linq2Dashboard.Metrics;
 
 /// <summary>
 /// A metric as configured by the builder. Count has no selector; sum, average, min and max read a
-/// nullable double; distinct encodes its values into a <see cref="DistinctColumn"/>.
+/// nullable double; distinct encodes its values into a <see cref="DistinctColumn"/>; calculated
+/// holds a formula over the metrics defined before it.
 /// </summary>
 internal sealed class MetricDefinition<T>
 {
     private readonly Func<T, double?>? selector;
     private readonly Func<T[], DistinctColumn>? buildDistinct;
+    private readonly Func<MetricValues, double?>? formula;
 
     /// <summary>A count (no selector) or a numeric aggregation over <paramref name="selector"/>.</summary>
     public MetricDefinition(string key, Aggregation aggregation, Func<T, double?>? selector)
@@ -29,6 +31,15 @@ internal sealed class MetricDefinition<T>
         this.buildDistinct = buildDistinct;
     }
 
+    /// <summary>A calculated metric: <paramref name="formula"/> over the values of earlier metrics.</summary>
+    public MetricDefinition(string key, Func<MetricValues, double?> formula)
+    {
+        Key = key;
+        Title = key;
+        Aggregation = Aggregation.Calculated;
+        this.formula = formula;
+    }
+
     public string Key { get; }
 
     public string Title { get; set; }
@@ -39,14 +50,19 @@ internal sealed class MetricDefinition<T>
 
     public MetricIndex Build(T[] items)
     {
+        if (formula is not null)
+        {
+            return new MetricIndex(Key, Title, Aggregation, null, null, formula, items.Length);
+        }
+
         if (buildDistinct is not null)
         {
-            return new MetricIndex(Key, Title, Aggregation, null, buildDistinct(items), items.Length);
+            return new MetricIndex(Key, Title, Aggregation, null, buildDistinct(items), null, items.Length);
         }
 
         if (selector is null)
         {
-            return new MetricIndex(Key, Title, Aggregation, null, null, items.Length);
+            return new MetricIndex(Key, Title, Aggregation, null, null, null, items.Length);
         }
 
         var column = MetricColumn.Build(items.Length, (int row, out double value) =>
@@ -56,20 +72,23 @@ internal sealed class MetricDefinition<T>
             return read.HasValue;
         });
 
-        return new MetricIndex(Key, Title, Aggregation, column, null, items.Length);
+        return new MetricIndex(Key, Title, Aggregation, column, null, null, items.Length);
     }
 }
 
-/// <summary>Built metric: its aggregation and, unless it is a count, the column it reads.</summary>
+/// <summary>Built metric: its aggregation and, depending on it, the column it reads or the formula it applies.</summary>
 internal sealed class MetricIndex
 {
-    public MetricIndex(string key, string title, Aggregation aggregation, MetricColumn? column, DistinctColumn? distinct, int rowCount)
+    private readonly Func<MetricValues, double?>? formula;
+
+    public MetricIndex(string key, string title, Aggregation aggregation, MetricColumn? column, DistinctColumn? distinct, Func<MetricValues, double?>? formula, int rowCount)
     {
         Key = key;
         Title = title;
         Aggregation = aggregation;
         Column = column;
         Distinct = distinct;
+        this.formula = formula;
         RowCount = rowCount;
     }
 
@@ -79,7 +98,7 @@ internal sealed class MetricIndex
 
     public Aggregation Aggregation { get; }
 
-    /// <summary>The numeric column of sum, average, min and max; null for count and distinct.</summary>
+    /// <summary>The numeric column of sum, average, min and max; null for the other aggregations.</summary>
     public MetricColumn? Column { get; }
 
     /// <summary>The code column of a distinct count; null for every other aggregation.</summary>
@@ -92,11 +111,18 @@ internal sealed class MetricIndex
     /// <summary>
     /// The metric's state over <paramref name="matching"/>: its value, null when no row contributed,
     /// and for count, sum and distinct the value's share of the total over every row after fixed
-    /// filters (concept §4.4, design §4.6).
+    /// filters (concept §4.4, design §4.6). A calculated metric reads <paramref name="earlier"/>,
+    /// the states of the metrics defined before it, and has no share.
     /// </summary>
-    public MetricState Present(RowSet matching)
+    public MetricState Present(RowSet matching, MetricValues earlier)
     {
         ArgumentNullException.ThrowIfNull(matching);
+        if (formula is not null)
+        {
+            double? result = formula(earlier);
+            return new MetricState(Key, Title, Aggregation, result is double r && double.IsFinite(r) ? r : null, null);
+        }
+
         if (Distinct is not null)
         {
             int distinct = Distinct.CountIn(matching);

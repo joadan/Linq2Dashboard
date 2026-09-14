@@ -51,6 +51,7 @@ var dashboard = Dashboard.Create(orders, b =>
     b.Sum("revenue", x => x.Amount);
     b.Average("average", x => x.Amount).Title("Average order");
     b.Distinct("customers", x => x.Customer);                  // different non-null values; optional comparer
+    b.Calculated("perCustomer", m => m["revenue"] / m["customers"]);   // formula over earlier metrics; null in, null out
 
     b.OrderByDescending(x => x.OrderDate)                      // application-defined sort (§C8)
      .ThenBy(x => x.Id);
@@ -61,7 +62,7 @@ var dashboard = Dashboard.Create(orders, b =>
 
 - `Dashboard.Create` enumerates the source exactly once, applies fixed filters, and builds every column and index. After it returns, the dashboard is immutable and thread-safe.
 - Every builder method validates eagerly. Duplicate keys, a non-member selector without an explicit key, or a range facet over a non-numeric property throw at `Create`, not at first use. The builder and every facet builder refuse further configuration once the dashboard is built.
-- Metrics are builder methods (`Count`, `Sum`, `Average`, `Min`, `Max`, `Distinct`) rather than a separate `Metric` factory, because C# cannot infer `T` for `Metric.Sum(x => x.Amount)` outside the builder. `Distinct` takes any equatable property and an optional `IEqualityComparer<TProp>`, with the value facet default (case-insensitive strings) when none is given.
+- Metrics are builder methods (`Count`, `Sum`, `Average`, `Min`, `Max`, `Distinct`, `Calculated`) rather than a separate `Metric` factory, because C# cannot infer `T` for `Metric.Sum(x => x.Amount)` outside the builder. `Distinct` takes any equatable property and an optional `IEqualityComparer<TProp>`, with the value facet default (case-insensitive strings) when none is given. `Calculated` takes a `Func<MetricValues, double?>`; `MetricValues` exposes the values and shares of the metrics defined before it by key and throws on any other key. The builder runs the formula once at definition with every input at null, so an unconditionally read wrong key fails in the builder call; a key first read inside a branch fails at the first `Calculate` that reaches it, with the key in the message.
 - Range and metric selectors accept any numeric property, nullable or not; the conversion to `double` is compiled into the selector. Date selectors accept `DateTime`, `DateTimeOffset`, `DateOnly` and their nullable forms; anything else is rejected at `Create`.
 - `Buckets(100, 500, 1000)` names cut points, not edges: it yields "below 100", "100 to 500", "500 to 1000" and "1000 and above", so every value lands in a bucket.
 - All facet builders return a typed builder so kind-specific options are discoverable; the shape above is the whole configuration surface for the first version.
@@ -193,7 +194,8 @@ sealed record RangeBucket(double From, double To, int TotalCount, int FilteredCo
 sealed record DateBucket(DateTimeOffset From, DateTimeOffset To, DateTime PeriodStart, int TotalCount, int FilteredCount, bool Selected)
     { DateSelection ToSelection(); }                                                 // [From, To) instants; PeriodStart local, for labels
 sealed record PresetState(DatePreset Preset, DateTimeOffset From, DateTimeOffset To, int TotalCount, int FilteredCount, bool Selected);
-sealed record MetricState(string Key, string Title, Aggregation Aggregation, double? Value, double? Share);   // null = no value; Share = Value / total, count and sum only (§C4.4)
+sealed record MetricState(string Key, string Title, Aggregation Aggregation, double? Value, double? Share);   // null = no value; Share = Value / total, count, sum and distinct only (§C4.4)
+readonly struct MetricValues { double? this[string key]; double? Value(string key); double? Share(string key); }   // what a Calculated formula reads: earlier metrics by key
 sealed record ResultPage<T>(IReadOnlyList<T> Items, int PageIndex, int PageSize, int MatchingCount);
 ```
 
@@ -401,6 +403,8 @@ One pass over `M.Rows()` per metric column, accumulating sum, count-of-values, m
 **Share of the total (§C4.4, added 2026-09-14).** `MetricColumn` already keeps the aggregate over every row from the build, so the share costs one division per metric: `M.Count / N` for count, `Sum(M) / Total.Sum` for sum. Average, min and max get `null`, as does a sum without contributing rows and any share whose total is zero. `MetricIndex.Present(matching)` produces the whole `MetricState`, so the value and its share cannot disagree.
 
 **Distinct (§C4.4, added 2026-09-14).** One pass over `M.Rows()` reading the distinct column's code per row and marking it in a bit set of V bits; the count of newly marked bits is the answer, and the full dataset answers with V without a scan. The share is that count over V. With no non-null value in the matching rows both are `null`. At a million rows this is the same sequential scan as facet counting, so it sits inside the per-click budget; the bit set is 12.5 KB for a 100 000-value customer column and is allocated per calculation.
+
+**Calculated (§C4.4, added 2026-09-14).** Metrics are presented in definition order into one `MetricState[]`; a calculated metric receives a `MetricValues` over the states filled so far (a struct holding the array and the count, no allocation) and applies its formula. Lifted nullable arithmetic gives null-in-null-out for free; the result is then kept only if `double.IsFinite`, so division by zero and NaN become `null`. No column, no row work, no share. A formula that throws propagates: it is application code with a bug, not data.
 
 ### 4.7 Result page
 
@@ -691,3 +695,4 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 - **The dashboard is stateless.** `Calculate(selections)` is the only entry point; the UI owns the current `Selections`. See §2.3, §7.
 - **Share of the total is a field on `MetricState`, not a metric kind.** Every state carries `Share`; the tile shows it on request. Decided 2026-09-14. See §2.2, §4.6, §9.5.
 - **Distinct count has its own code column and does not share a facet's.** Exact bit-set counting over dictionary codes, dictionary discarded after build. Decided 2026-09-14. See §3.3, §4.6.
+- **Calculated metrics take a delegate over keyed values, not an expression or a fixed ratio shape.** Keys are checked by a dry run at definition; definition order is the dependency order. Decided 2026-09-14. See §2.1, §4.6.
