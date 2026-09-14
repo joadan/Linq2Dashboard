@@ -8,7 +8,7 @@ namespace Linq2Dashboard.Docs.Shared;
 /// </summary>
 public sealed class DemoFormatter : DefaultDashboardFormatter
 {
-    public static DemoFormatter Instance { get; } = new();
+    public static new DemoFormatter Instance { get; } = new();
 
     public override string FormatMetric(MetricState metric) =>
         metric.Value is double value ? Math.Round(value).ToString("N0", Culture) : "–";
