@@ -77,9 +77,24 @@ Selections restored = dashboard.Serializer.FromJson(bookmark);
 
 ## Blazor
 
-`Linq2Dashboard.Blazor` renders a dashboard and turns clicks into selections. It never counts anything itself. Register the dashboard once, then:
+`Linq2Dashboard.Blazor` renders a dashboard and turns clicks into selections. It never counts anything itself. Three things wire it into an app:
+
+```csharp
+// Program.cs: one dashboard for the whole application, built once at startup
+builder.Services.AddSingleton<Dashboard<Order>>(_ => Dashboard.Create(orders, b => { /* as above */ }));
+```
 
 ```razor
+@* _Imports.razor: the engine's types and the components live in different namespaces *@
+@using Linq2Dashboard
+@using Linq2Dashboard.Blazor
+```
+
+The components are styled with scoped CSS, which Blazor bundles into the app's own stylesheet. The host page needs the usual `<link rel="stylesheet" href="YourApp.styles.css" />` (or `@Assets["YourApp.styles.css"]`); no other stylesheet or script is required. Then, on a page:
+
+```razor
+@inject Dashboard<Order> Dashboard
+
 <DashboardView T="Order" Dashboard="Dashboard" @bind-Selections="selections">
     <aside>
         <TextFacet  T="Order" Key="search" />             @* free text, applied after a pause *@
@@ -98,7 +113,13 @@ Selections restored = dashboard.Serializer.FromJson(bookmark);
         </Results>
     </main>
 </DashboardView>
+
+@code {
+    private Selections selections = Selections.Empty;
+}
 ```
+
+`Key` is the facet or metric key given in the builder; a facet declared from a member expression takes the member's name (`x => x.Country` is `"Country"`). `T` is the row type on every component.
 
 - **One formatter.** An `IDashboardFormatter` cascades from `DashboardView`; culture, number formats, the null label and preset names all come from it. Pass your own for other wording.
 - **Two callbacks.** `SelectionsChanged` gives the host every click for bookmarking; `StateChanged` gives it the new `DashboardState<T>` after every calculation, the initial one included, for rendering a chart or summary of its own.

@@ -1,0 +1,24 @@
+# Linq2Dashboard
+
+> .NET library for interactive exploration of large in-memory collections: facets with total and filtered counts, metrics and paged results that all update together on every selection. The core package (Linq2Dashboard, net10.0, no dependencies) is the engine; Linq2Dashboard.Blazor renders it. Both are on NuGet.
+
+This site is a Blazor WebAssembly application and its pages are not readable without running it. Everything it shows is also available as plain text at the links below. The concept document is the specification: its rules are decisions, and the code follows them.
+
+## Documentation
+
+- [README](https://raw.githubusercontent.com/joadan/Linq2Dashboard/master/README.md): install, a complete builder example, the Blazor wiring (registration, usings, stylesheet, a page), the behavioural rules in short form, measured performance.
+- [Concept](https://joadan.github.io/Linq2Dashboard/docs/concept.md): what the library is, the mental model, the behavioural rules (numbered §4.1 to §4.9), facet kinds, the contract between core and UI, and the list of decided questions.
+- [Design](https://joadan.github.io/Linq2Dashboard/docs/design.md): how it is built, the data structures, the calculation pipeline, measured numbers, and section 9 on the Blazor components and their parameters.
+
+## Source
+
+- [Repository](https://github.com/joadan/Linq2Dashboard): MIT licence.
+- [Core library](https://github.com/joadan/Linq2Dashboard/tree/master/src/Linq2Dashboard): public types are in the `Linq2Dashboard` namespace; DashboardBuilder.cs is the fluent API.
+- [Blazor components](https://github.com/joadan/Linq2Dashboard/tree/master/src/Linq2Dashboard.Blazor): namespace `Linq2Dashboard.Blazor`; each component is an X.razor file with an X.razor.cs partial class holding its parameters.
+- [Sample application](https://github.com/joadan/Linq2Dashboard/tree/master/samples/Linq2Dashboard.Sample): a Blazor Server app over 200 000 generated rows, the reference for host wiring.
+- [Tests](https://github.com/joadan/Linq2Dashboard/tree/master/tests/Linq2Dashboard.Tests): every behavioural rule in the concept has a named test.
+
+## Packages
+
+- [Linq2Dashboard on NuGet](https://www.nuget.org/packages/Linq2Dashboard/)
+- [Linq2Dashboard.Blazor on NuGet](https://www.nuget.org/packages/Linq2Dashboard.Blazor/)
