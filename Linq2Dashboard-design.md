@@ -50,6 +50,7 @@ var dashboard = Dashboard.Create(orders, b =>
     b.Count("orders");
     b.Sum("revenue", x => x.Amount);
     b.Average("average", x => x.Amount).Title("Average order");
+    b.Distinct("customers", x => x.Customer);                  // different non-null values; optional comparer
 
     b.OrderByDescending(x => x.OrderDate)                      // application-defined sort (§C8)
      .ThenBy(x => x.Id);
@@ -60,7 +61,7 @@ var dashboard = Dashboard.Create(orders, b =>
 
 - `Dashboard.Create` enumerates the source exactly once, applies fixed filters, and builds every column and index. After it returns, the dashboard is immutable and thread-safe.
 - Every builder method validates eagerly. Duplicate keys, a non-member selector without an explicit key, or a range facet over a non-numeric property throw at `Create`, not at first use. The builder and every facet builder refuse further configuration once the dashboard is built.
-- Metrics are builder methods (`Count`, `Sum`, `Average`, `Min`, `Max`) rather than a separate `Metric` factory, because C# cannot infer `T` for `Metric.Sum(x => x.Amount)` outside the builder.
+- Metrics are builder methods (`Count`, `Sum`, `Average`, `Min`, `Max`, `Distinct`) rather than a separate `Metric` factory, because C# cannot infer `T` for `Metric.Sum(x => x.Amount)` outside the builder. `Distinct` takes any equatable property and an optional `IEqualityComparer<TProp>`, with the value facet default (case-insensitive strings) when none is given.
 - Range and metric selectors accept any numeric property, nullable or not; the conversion to `double` is compiled into the selector. Date selectors accept `DateTime`, `DateTimeOffset`, `DateOnly` and their nullable forms; anything else is rejected at `Create`.
 - `Buckets(100, 500, 1000)` names cut points, not edges: it yields "below 100", "100 to 500", "500 to 1000" and "1000 and above", so every value lands in a bucket.
 - All facet builders return a typed builder so kind-specific options are discoverable; the shape above is the whole configuration surface for the first version.
@@ -297,6 +298,15 @@ double[]  values       NaN where null
 
 Count needs no column. Sum, average, min and max read their column over the matching set, skipping NaN (§C4.4).
 
+**Distinct column** (distinct-count metrics, added 2026-09-14):
+
+```text
+int[]     codes        one per row; 0 = null, 1..V = distinct value index + 1, first-seen order
+int       distinctCount V
+```
+
+The same dictionary encoding as a value column, with the same default comparer, but the dictionary itself is dropped after the build: the metric only ever asks whether two rows hold the same value, never which value. Four bytes per row. A distinct metric over a property that is also a value facet builds its own column rather than sharing the facet's; sharing would need selector-expression equality and saves 4 bytes per row, so it waits for a case that needs it.
+
 **Sort order**:
 
 ```text
@@ -389,6 +399,8 @@ Buckets are counted through `bucketCodes` exactly like value facets. Each `Bucke
 One pass over `M.Rows()` per metric column, accumulating sum, count-of-values, min and max in a single loop when several metrics share a column. Count is `M.Count`. A metric with zero contributing values reports `null` (§C4.4).
 
 **Share of the total (§C4.4, added 2026-09-14).** `MetricColumn` already keeps the aggregate over every row from the build, so the share costs one division per metric: `M.Count / N` for count, `Sum(M) / Total.Sum` for sum. Average, min and max get `null`, as does a sum without contributing rows and any share whose total is zero. `MetricIndex.Present(matching)` produces the whole `MetricState`, so the value and its share cannot disagree.
+
+**Distinct (§C4.4, added 2026-09-14).** One pass over `M.Rows()` reading the distinct column's code per row and marking it in a bit set of V bits; the count of newly marked bits is the answer, and the full dataset answers with V without a scan. The share is that count over V. With no non-null value in the matching rows both are `null`. At a million rows this is the same sequential scan as facet counting, so it sits inside the per-click budget; the bit set is 12.5 KB for a 100 000-value customer column and is allocated per calculation.
 
 ### 4.7 Result page
 
@@ -589,6 +601,7 @@ Intel Xeon W-2223 (4 cores), .NET 10, BenchmarkDotNet short job, 1 000 000 rows.
 | Range facet | 11.6 MB |
 | Date facet | 11.6 MB |
 | Metric column | 7.6 MB |
+| Distinct column (codes only) | 3.8 MB |
 | Sort order | 3.8 MB |
 | Full dashboard, 8 facets, 3 metrics, sort | 78 MB |
 
@@ -677,3 +690,4 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 - **Range bounds are `double`.** The precision trade for `decimal` properties is accepted; range values are used only for filtering and bucketing, never for metrics. See §2.2, §3.3.
 - **The dashboard is stateless.** `Calculate(selections)` is the only entry point; the UI owns the current `Selections`. See §2.3, §7.
 - **Share of the total is a field on `MetricState`, not a metric kind.** Every state carries `Share`; the tile shows it on request. Decided 2026-09-14. See §2.2, §4.6, §9.5.
+- **Distinct count has its own code column and does not share a facet's.** Exact bit-set counting over dictionary codes, dictionary discarded after build. Decided 2026-09-14. See §3.3, §4.6.

@@ -114,6 +114,22 @@ public sealed class DashboardBuilder<T>
     public MetricBuilder<T> Max<TProp>(string key, Expression<Func<T, TProp>> selector) =>
         AddMetric(key, Aggregation.Max, NumericConversion.ToNullableDouble(selector, nameof(selector)));
 
+    /// <summary>
+    /// Number of distinct non-null values of <paramref name="selector"/> among the matching rows
+    /// (concept §4.4). Equality follows the value facet rules: strings ignore case unless
+    /// <paramref name="comparer"/> is given.
+    /// </summary>
+    public MetricBuilder<T> Distinct<TProp>(string key, Expression<Func<T, TProp>> selector, IEqualityComparer<TProp>? comparer = null)
+    {
+        ArgumentNullException.ThrowIfNull(selector);
+        Func<T, TProp> read = selector.Compile();
+        return AddMetric(new MetricDefinition<T>(key, items => DistinctColumn.Build(items.Length, (int row, out TProp value) =>
+        {
+            value = read(items[row]);
+            return value is not null;
+        }, comparer)));
+    }
+
     /// <summary>Primary result order (concept §8). Call once; add keys with <see cref="ThenBy{TKey}"/>.</summary>
     public DashboardBuilder<T> OrderBy<TKey>(Expression<Func<T, TKey>> keySelector, IComparer<TKey>? comparer = null) =>
         AddSortKey(keySelector, descending: false, comparer, primary: true);
@@ -211,16 +227,18 @@ public sealed class DashboardBuilder<T>
         return new ValueFacetBuilder<T, TProp>(definition, EnsureMutable);
     }
 
-    private MetricBuilder<T> AddMetric(string key, Aggregation aggregation, Func<T, double?>? selector)
+    private MetricBuilder<T> AddMetric(string key, Aggregation aggregation, Func<T, double?>? selector) =>
+        AddMetric(new MetricDefinition<T>(key, aggregation, selector));
+
+    private MetricBuilder<T> AddMetric(MetricDefinition<T> definition)
     {
-        ValidateKey(key);
+        ValidateKey(definition.Key);
         EnsureMutable();
-        if (metrics.Any(m => m.Key == key))
+        if (metrics.Any(m => m.Key == definition.Key))
         {
-            throw new ArgumentException($"A metric with key '{key}' is already defined. Keys are case-sensitive and must be unique.", nameof(key));
+            throw new ArgumentException($"A metric with key '{definition.Key}' is already defined. Keys are case-sensitive and must be unique.", "key");
         }
 
-        var definition = new MetricDefinition<T>(key, aggregation, selector);
         metrics.Add(definition);
         return new MetricBuilder<T>(definition, EnsureMutable);
     }

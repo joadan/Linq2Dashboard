@@ -2,17 +2,31 @@ using Linq2Dashboard.Indexing;
 
 namespace Linq2Dashboard.Metrics;
 
-/// <summary>A metric as configured by the builder. Count has no selector; the others read a nullable double.</summary>
+/// <summary>
+/// A metric as configured by the builder. Count has no selector; sum, average, min and max read a
+/// nullable double; distinct encodes its values into a <see cref="DistinctColumn"/>.
+/// </summary>
 internal sealed class MetricDefinition<T>
 {
     private readonly Func<T, double?>? selector;
+    private readonly Func<T[], DistinctColumn>? buildDistinct;
 
+    /// <summary>A count (no selector) or a numeric aggregation over <paramref name="selector"/>.</summary>
     public MetricDefinition(string key, Aggregation aggregation, Func<T, double?>? selector)
     {
         Key = key;
         Title = key;
         Aggregation = aggregation;
         this.selector = selector;
+    }
+
+    /// <summary>A distinct count over the column <paramref name="buildDistinct"/> encodes at build.</summary>
+    public MetricDefinition(string key, Func<T[], DistinctColumn> buildDistinct)
+    {
+        Key = key;
+        Title = key;
+        Aggregation = Aggregation.Distinct;
+        this.buildDistinct = buildDistinct;
     }
 
     public string Key { get; }
@@ -25,9 +39,14 @@ internal sealed class MetricDefinition<T>
 
     public MetricIndex Build(T[] items)
     {
+        if (buildDistinct is not null)
+        {
+            return new MetricIndex(Key, Title, Aggregation, null, buildDistinct(items), items.Length);
+        }
+
         if (selector is null)
         {
-            return new MetricIndex(Key, Title, Aggregation, null, items.Length);
+            return new MetricIndex(Key, Title, Aggregation, null, null, items.Length);
         }
 
         var column = MetricColumn.Build(items.Length, (int row, out double value) =>
@@ -37,19 +56,20 @@ internal sealed class MetricDefinition<T>
             return read.HasValue;
         });
 
-        return new MetricIndex(Key, Title, Aggregation, column, items.Length);
+        return new MetricIndex(Key, Title, Aggregation, column, null, items.Length);
     }
 }
 
-/// <summary>Built metric: its aggregation and, unless it is a count, its column.</summary>
+/// <summary>Built metric: its aggregation and, unless it is a count, the column it reads.</summary>
 internal sealed class MetricIndex
 {
-    public MetricIndex(string key, string title, Aggregation aggregation, MetricColumn? column, int rowCount)
+    public MetricIndex(string key, string title, Aggregation aggregation, MetricColumn? column, DistinctColumn? distinct, int rowCount)
     {
         Key = key;
         Title = title;
         Aggregation = aggregation;
         Column = column;
+        Distinct = distinct;
         RowCount = rowCount;
     }
 
@@ -59,8 +79,11 @@ internal sealed class MetricIndex
 
     public Aggregation Aggregation { get; }
 
-    /// <summary>Null for <see cref="Linq2Dashboard.Aggregation.Count"/>.</summary>
+    /// <summary>The numeric column of sum, average, min and max; null for count and distinct.</summary>
     public MetricColumn? Column { get; }
+
+    /// <summary>The code column of a distinct count; null for every other aggregation.</summary>
+    public DistinctColumn? Distinct { get; }
 
     public int RowCount { get; }
 
@@ -68,12 +91,20 @@ internal sealed class MetricIndex
 
     /// <summary>
     /// The metric's state over <paramref name="matching"/>: its value, null when no row contributed,
-    /// and for count and sum the value's share of the total over every row after fixed filters
-    /// (concept §4.4, design §4.6).
+    /// and for count, sum and distinct the value's share of the total over every row after fixed
+    /// filters (concept §4.4, design §4.6).
     /// </summary>
     public MetricState Present(RowSet matching)
     {
         ArgumentNullException.ThrowIfNull(matching);
+        if (Distinct is not null)
+        {
+            int distinct = Distinct.CountIn(matching);
+            return distinct == 0
+                ? new MetricState(Key, Title, Aggregation, null, null)
+                : new MetricState(Key, Title, Aggregation, distinct, ShareOf(distinct, Distinct.DistinctCount));
+        }
+
         if (Column is null)
         {
             return new MetricState(Key, Title, Aggregation, matching.Count, ShareOf(matching.Count, RowCount));

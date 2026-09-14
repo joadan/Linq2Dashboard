@@ -359,7 +359,47 @@ public class CalculateTests
         Assert.Null(cancelling.Metric("net").Share);
     }
 
+    [Fact]
+    public void Distinct_counts_different_non_null_values_among_the_matching_rows()
+    {
+        var dashboard = Build(b =>
+        {
+            b.Distinct("countries", x => x.Country);
+            b.Distinct("statuses", x => x.Status);
+        });
+
+        var all = dashboard.Calculate();
+        Assert.Equal(3, all.Metric("countries").Value); // SE, NO, DK; "se" is SE and null is skipped
+        Assert.Equal(1.0, all.Metric("countries").Share);
+        Assert.Equal(3, all.Metric("statuses").Value);
+
+        var se = dashboard.Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));
+        Assert.Equal(1, se.Metric("countries").Value); // metrics follow every selection, the facet's own included
+        Assert.Equal(1 / 3.0, se.Metric("countries").Share);
+        Assert.Equal(2, se.Metric("statuses").Value); // Open, Closed
+        Assert.Equal(2 / 3.0, se.Metric("statuses").Share);
+
+        var noDiscounts = dashboard.Calculate(Selections.Empty.With("Discount", RangeSelection.OnlyNull));
+        Assert.Equal(2, noDiscounts.Metric("countries").Value); // NO, DK; the null country does not count
+
+        var none = dashboard.Calculate(Selections.Empty.With("Country", ValueSelection.Of("FI")));
+        Assert.Null(none.Metric("countries").Value);
+        Assert.Null(none.Metric("countries").Share);
+    }
+
+    [Fact]
+    public void Distinct_takes_a_comparer_and_reports_no_value_over_only_nulls()
+    {
+        var caseSensitive = Build(b => b.Distinct("spellings", x => x.Country, StringComparer.Ordinal)).Calculate();
+        Assert.Equal(4, caseSensitive.Metric("spellings").Value); // SE, NO, DK, se
+
+        var untagged = Dashboard.Create([new Tagged(1, null), new Tagged(2, null)], b => b.Distinct("tags", x => x.Tag)).Calculate();
+        Assert.Equal(new MetricState("tags", "tags", Aggregation.Distinct, null, null), untagged.Metric("tags"));
+    }
+
     private sealed record Signed(int Id, decimal Amount);
+
+    private sealed record Tagged(int Id, string? Tag);
 
     [Fact]
     public void Pages_follow_the_application_order()

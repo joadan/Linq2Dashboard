@@ -15,6 +15,7 @@ public class MetricTests : BunitContext
             b.Count("orders").Title("Orders");
             b.Sum("revenue", x => x.Amount).Title("Revenue");
             b.Average("avgDiscount", x => x.Discount).Title("Average discount");
+            b.Distinct("countries", x => x.Country).Title("Countries");
         });
 
     private IRenderedComponent<DashboardView<Order>> RenderWith<TComponent>(Action<ComponentParameterCollectionBuilder<TComponent>> configure, Selections? selections = null)
@@ -83,6 +84,20 @@ public class MetricTests : BunitContext
         });
 
         Assert.Empty(cut.FindAll(".l2d-metric-share"));
+    }
+
+    [Fact]
+    public void A_distinct_count_renders_as_a_whole_number_with_its_share()
+    {
+        var cut = RenderWith<Metric<Order>>(m =>
+        {
+            m.Add(x => x.Key, "countries");
+            m.Add(x => x.ShowShare, true);
+        }, Selections.Empty.With("Country", ValueSelection.Of("SE", "NO")));
+
+        Assert.Equal("Countries", cut.Find(".l2d-metric-title").TextContent);
+        Assert.Equal("2", cut.Find(".l2d-metric-value").TextContent); // of SE, NO, DK
+        Assert.Equal("66.7 %", cut.Find(".l2d-metric-share").TextContent);
     }
 
     [Fact]

@@ -18,7 +18,7 @@ public partial class Metric<T>
 
     /// <summary>
     /// Shows the metric's share of its total under the value, as a percentage (concept §4.4). Only
-    /// count and sum metrics have a share; for the others nothing is added.
+    /// count, sum and distinct metrics have a share; for the others nothing is added.
     /// </summary>
     [Parameter]
     public bool ShowShare { get; set; }

@@ -74,6 +74,7 @@ public static class SampleOrders
             b.Count("orders").Title("Orders");
             b.Sum("revenue", x => x.Amount).Title("Revenue");
             b.Average("average", x => x.Amount).Title("Average order");
+            b.Distinct("customers", x => x.Customer).Title("Customers");
             b.OrderByDescending(x => x.OrderDate);
         });
 

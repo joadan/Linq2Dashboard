@@ -274,6 +274,7 @@ public class DashboardBuilderTests
             b.Average("avgDiscount", x => x.Discount);
             b.Min("minQty", x => x.Quantity);
             b.Max("maxId", x => x.Id);
+            b.Distinct("countries", x => x.Country);
         });
 
         Assert.Equal(
@@ -283,12 +284,26 @@ public class DashboardBuilderTests
                 new MetricInfo("avgDiscount", "avgDiscount", Aggregation.Average),
                 new MetricInfo("minQty", "minQty", Aggregation.Min),
                 new MetricInfo("maxId", "maxId", Aggregation.Max),
+                new MetricInfo("countries", "countries", Aggregation.Distinct),
             ],
             dashboard.Metrics);
 
         Assert.Null(dashboard.MetricIndex("orders").Column);
         Assert.Equal(5424.5, dashboard.MetricIndex("revenue").Column!.Total.Sum);
         Assert.Equal(3, dashboard.MetricIndex("avgDiscount").Column!.NullCount);
+        Assert.Null(dashboard.MetricIndex("countries").Column);
+        Assert.Equal(3, dashboard.MetricIndex("countries").Distinct!.DistinctCount);
+    }
+
+    [Fact]
+    public void Distinct_validates_like_every_other_metric()
+    {
+        Assert.Throws<ArgumentNullException>(() => Create(b => b.Distinct<string?>("countries", null!)));
+        Assert.Throws<ArgumentException>(() => Create(b =>
+        {
+            b.Count("countries");
+            b.Distinct("countries", x => x.Country);
+        }));
     }
 
     [Fact]

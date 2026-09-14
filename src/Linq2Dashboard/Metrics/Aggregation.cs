@@ -14,4 +14,7 @@ public enum Aggregation
     Min,
 
     Max,
+
+    /// <summary>Number of distinct non-null values among the matching rows. Equality follows the value facet rules: strings ignore case unless a comparer is given.</summary>
+    Distinct,
 }
