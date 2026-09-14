@@ -38,11 +38,12 @@ public abstract class FacetState
 public sealed class ValueFacetState : FacetState
 {
     private readonly Func<string, int, IReadOnlyList<FacetValue>> search;
+    private readonly Func<object?, string?> labelOf;
 
     internal ValueFacetState(
         string key, string title, FacetKind kind, Selection? selection, int contextCount,
         IReadOnlyList<FacetValue> values, FacetCount? other, int distinctCount, bool isSearchable,
-        Func<string, int, IReadOnlyList<FacetValue>> search)
+        Func<string, int, IReadOnlyList<FacetValue>> search, Func<object?, string?> labelOf)
         : base(key, title, kind, selection, contextCount)
     {
         Values = values;
@@ -50,6 +51,7 @@ public sealed class ValueFacetState : FacetState
         DistinctCount = distinctCount;
         IsSearchable = isSearchable;
         this.search = search;
+        this.labelOf = labelOf;
     }
 
     /// <summary>
@@ -79,6 +81,14 @@ public sealed class ValueFacetState : FacetState
         ArgumentOutOfRangeException.ThrowIfLessThan(max, 1);
         return search(text, max);
     }
+
+    /// <summary>
+    /// The application-defined label of a value (concept §5), whether or not it is presented, so a
+    /// selected value can be named from the selection alone. Null when the facet defines no labels,
+    /// for the null value, and for a value that does not occur; the UI then formats the value.
+    /// Accepts the same boxed forms as <see cref="ValueSelection"/> does.
+    /// </summary>
+    public string? LabelOf(object? value) => labelOf(value);
 }
 
 /// <summary>State of a numeric range facet.</summary>
@@ -141,9 +151,10 @@ public sealed class DateFacetState : FacetState
 
 /// <summary>
 /// One value under a value facet (concept §4.3). <see cref="Value"/> is the facet's real value,
-/// boxed, or null for the null value; the UI formats it.
+/// boxed, or null for the null value; the UI formats it. <see cref="Label"/> is the application's
+/// label for the value when the facet defines one (concept §5), otherwise null.
 /// </summary>
-public sealed record FacetValue(object? Value, int TotalCount, int FilteredCount, bool Selected)
+public sealed record FacetValue(object? Value, int TotalCount, int FilteredCount, bool Selected, string? Label = null)
 {
     public bool IsNull => Value is null;
 }

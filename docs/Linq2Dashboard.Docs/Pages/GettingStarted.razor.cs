@@ -13,7 +13,9 @@ public partial class GettingStarted
 
             b.ValueFacet(x => x.Country);
             b.ValueFacet(x => x.Status).Title("Order status");
-            b.ValueFacet(x => x.Customer).Top(20).Searchable();
+            b.ValueFacet("Customer", x => x.CustomerId)            // count and select by id ...
+             .Label(x => x.CustomerName)                           // ... show and search by name
+             .Top(20).Searchable();
             b.BooleanFacet(x => x.IsActive);
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);   // below 100, 100-500, 500-1000, 1000 and above
             b.DateFacet(x => x.OrderDate)
@@ -24,7 +26,7 @@ public partial class GettingStarted
             b.Count("orders");
             b.Sum("revenue", x => x.Amount);
             b.Average("average", x => x.Amount);
-            b.Distinct("customers", x => x.Customer);
+            b.Distinct("customers", x => x.CustomerId);
             b.Calculated("perCustomer", m => m["revenue"] / m["customers"]);
 
             b.OrderByDescending(x => x.OrderDate);

@@ -57,6 +57,20 @@ public sealed class ValueFacetBuilder<T, TProp>
     }
 
     /// <summary>
+    /// A label per value, read from the row (concept §5). The value stays the identity: counting,
+    /// selections and JSON use it, while the label is what the UI shows and what
+    /// <see cref="ValueFacetState.Search"/> matches. Evaluated once per distinct value, on the first
+    /// row that introduces it. A null label means the UI formats the value as usual.
+    /// </summary>
+    public ValueFacetBuilder<T, TProp> Label(Func<T, string?> label)
+    {
+        ArgumentNullException.ThrowIfNull(label);
+        ensureMutable();
+        definition.Label = label;
+        return this;
+    }
+
+    /// <summary>
     /// Value equality for this facet. Defaults to ordinal ignore-case for strings and default
     /// equality otherwise (design §3.3).
     /// </summary>

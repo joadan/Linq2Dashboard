@@ -516,6 +516,67 @@ public class CalculateTests
     }
 
     [Fact]
+    public void Labels_come_from_the_first_row_that_introduces_the_value()
+    {
+        // Country "SE" is introduced by row 0 (Stockholm); row 5 spells it "se" and lives in Malmö, but the first row wins (concept §5).
+        var dashboard = Build(b => b.ValueFacet("city", x => x.Country).Label(x => x.Address?.City));
+        var facet = Values(dashboard.Calculate(), "city");
+
+        Assert.Equal([("SE", "Stockholm"), ("NO", "Oslo"), (null, null), ("DK", "Copenhagen")], facet.Values.Select(v => (v.Value, v.Label)));
+        Assert.Equal("Stockholm", facet.LabelOf("SE"));
+        Assert.Equal("Stockholm", facet.LabelOf("se")); // the facet's comparer applies
+        Assert.Null(facet.LabelOf(null));
+        Assert.Null(facet.LabelOf("XX")); // a value that does not occur
+    }
+
+    [Fact]
+    public void Search_matches_the_label_when_one_is_defined()
+    {
+        var dashboard = Build(b => b.ValueFacet("city", x => x.Country).Label(x => x.Address?.City).Searchable());
+        var facet = Values(dashboard.Calculate(), "city");
+
+        Assert.Equal([("SE", 3, 3, false)], Flatten(facet.Search("stock")));
+        Assert.Equal(["Stockholm"], facet.Search("stock").Select(v => v.Label));
+        Assert.Empty(facet.Search("SE")); // the value's own text is no longer what search sees
+    }
+
+    [Fact]
+    public void A_null_label_falls_back_to_the_value()
+    {
+        // Rows 2 and 6 (ids 3 and 7) have no address, so their labels are null and search sees the id.
+        var dashboard = Build(b => b.ValueFacet("id", x => x.Id).Label(x => x.Address?.City));
+        var facet = Values(dashboard.Calculate(), "id");
+
+        Assert.Null(facet.Values.Single(v => Equals(v.Value, 3)).Label);
+        Assert.Equal("Oslo", facet.Values.Single(v => Equals(v.Value, 2)).Label);
+        Assert.Null(facet.LabelOf(3));
+        Assert.Equal("Oslo", facet.LabelOf(2L)); // the same conversions as a selection value
+        Assert.Equal([3], facet.Search("3").Select(v => v.Value));
+        Assert.Equal([2], facet.Search("oslo").Select(v => v.Value));
+    }
+
+    [Fact]
+    public void Without_a_label_selector_there_are_no_labels()
+    {
+        var facet = Values(Shared.Calculate(), "Country");
+
+        Assert.All(facet.Values, v => Assert.Null(v.Label));
+        Assert.Null(facet.LabelOf("SE"));
+    }
+
+    [Fact]
+    public void Selections_and_json_use_the_value_not_the_label()
+    {
+        var dashboard = Build(b => b.ValueFacet("city", x => x.Country).Label(x => x.Address?.City));
+        var selections = Selections.Empty.With("city", ValueSelection.Of("SE"));
+
+        var state = dashboard.Calculate(selections);
+        Assert.Equal(3, state.MatchingCount);
+        Assert.Contains("\"SE\"", dashboard.Serializer.ToJson(selections));
+        Assert.DoesNotContain("Stockholm", dashboard.Serializer.ToJson(selections));
+    }
+
+    [Fact]
     public void Unknown_keys_in_selections_are_rejected()
     {
         var error = Assert.Throws<ArgumentException>(() => Shared.Calculate(Selections.Empty.With("Nope", ValueSelection.Of(1))));

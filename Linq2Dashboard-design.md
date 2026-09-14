@@ -32,7 +32,8 @@ var dashboard = Dashboard.Create(orders, b =>
 
     b.ValueFacet("status", x => x.Status);                     // explicit key (§C7)
 
-    b.ValueFacet(x => x.CustomerName)
+    b.ValueFacet("customer", x => x.CustomerId)                // counts and selects by id ...
+     .Label(x => $"{x.CustomerName} ({x.City})")               // ... shows and searches by label (§C5)
      .Top(20)
      .RankBy(RankMode.TotalCount)                              // §C6
      .Searchable();
@@ -170,6 +171,7 @@ sealed class ValueFacetState : FacetState
     int DistinctCount { get; }                  // all values, including those not presented
     bool IsSearchable { get; }
     IReadOnlyList<FacetValue> Search(string text, int max = 20);   // §C4.5, UI operation
+    string? LabelOf(object? value);             // the builder's label for a value, presented or not; null when none (§C5)
 }
 
 sealed class RangeFacetState : FacetState
@@ -187,7 +189,7 @@ sealed class DateFacetState : FacetState
     FacetValue Null { get; }
 }
 
-sealed record FacetValue(object? Value, int TotalCount, int FilteredCount, bool Selected);
+sealed record FacetValue(object? Value, int TotalCount, int FilteredCount, bool Selected, string? Label = null);   // Label only under a facet with a label selector (§C5)
 sealed record FacetCount(int TotalCount, int FilteredCount);                       // "Other"
 sealed record RangeBucket(double From, double To, int TotalCount, int FilteredCount, bool Selected)
     { RangeSelection ToSelection(); }                                                // [From, To), last bucket closed
@@ -199,7 +201,7 @@ readonly struct MetricValues { double? this[string key]; double? Value(string ke
 sealed record ResultPage<T>(IReadOnlyList<T> Items, int PageIndex, int PageSize, int MatchingCount);
 ```
 
-`Value` is `object?` on purpose. The UI formats it; the core does not know about cultures or labels, which is also why buckets carry bounds rather than label strings. Boolean facets reuse `ValueFacetState`. `FacetKind` has `Value`, `Boolean`, `Range` and `Date` in the first version.
+`Value` is `object?` on purpose. The UI formats it; the core does not know about cultures, which is also why buckets carry bounds rather than label strings. The one string the core carries is the application's own label for a value facet's value (§C5), supplied by the builder's `Label` selector: it is data read from the rows, not formatting, and it is on `FacetValue.Label` for presented values and behind `LabelOf` for any value, so the chip for a selected value can be named from the selection alone. The default formatter shows it when present and formats the value otherwise. Boolean facets reuse `ValueFacetState`. `FacetKind` has `Value`, `Boolean`, `Range` and `Date` in the first version.
 
 A bucket is `Selected` when the current interval fully covers it, so a wide interval lights up several buckets and a partial one lights up none. A preset is `Selected` when the selection is that preset or an absolute interval exactly equal to the preset's interval (clicking the March bar lights "This month"); coverage would light every preset inside a wide selection, which reads wrong. `ToSelection()` on a bucket gives exactly the selection a click should produce, so the UI never constructs interval bounds itself.
 
@@ -263,7 +265,8 @@ Every facet and every metric is materialised into a column at build. Selectors a
 ```text
 int[]     codes        one per row; 0 = null, 1..V = dictionary index + 1
 TValue[]  dictionary   distinct non-null values, in first-seen order
-string[]  labels       Format(dictionary[i]), built lazily for searchable facets
+string?[] labels       the builder's Label selector on the first row per value, built once at Create; absent without a selector
+string[]  searchLabels labels[i] ?? invariant text of dictionary[i], built lazily on the first Search
 int[]     totalCounts  per code, computed once
 ```
 
@@ -698,3 +701,4 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 - **Share of the total is a field on `MetricState`, not a metric kind.** Every state carries `Share`; the tile shows it on request. Decided 2026-09-14. See §2.2, §4.6, §9.5.
 - **Distinct count has its own code column and does not share a facet's.** Exact bit-set counting over dictionary codes, dictionary discarded after build. Decided 2026-09-14. See §3.3, §4.6.
 - **Calculated metrics take a delegate over keyed values, not an expression or a fixed ratio shape.** Keys are checked by a dry run at definition; definition order is the dependency order. Decided 2026-09-14. See §2.1, §4.6.
+- **Value labels are a row selector on the builder, evaluated once per distinct value at `Create`.** Not a value selector (the row form covers it, and reaches denormalised columns directly), not async (the dashboard reads its data once, synchronously; lookups happen before `Create`), and not a formatter concern (the label is data and must drive search). Decided 2026-09-14. See §2.1, §2.4, §3.3.

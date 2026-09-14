@@ -11,7 +11,10 @@ public interface IDashboardFormatter
     /// <summary>Label for the null facet value (concept §4.8).</summary>
     string NullLabel { get; }
 
-    /// <summary>A facet value as text. <paramref name="value"/> is the boxed value from <see cref="FacetValue.Value"/>, or null.</summary>
+    /// <summary>
+    /// A facet value as text. <paramref name="value"/> is the boxed value from <see cref="FacetValue.Value"/>, or null.
+    /// Implementations should honour <see cref="ValueFacetState.LabelOf"/> when it returns a label (concept §5), as the default does.
+    /// </summary>
     string FormatValue(FacetState facet, object? value);
 
     /// <summary>A total or filtered count.</summary>

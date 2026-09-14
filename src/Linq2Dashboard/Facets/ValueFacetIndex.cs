@@ -8,20 +8,45 @@ namespace Linq2Dashboard.Facets;
 /// <summary>Built value or boolean facet: the dictionary-encoded column plus presentation options.</summary>
 internal sealed class ValueFacetIndex<TValue> : FacetIndex
 {
-    private readonly Lazy<string[]> labels;
+    private readonly Lazy<string[]> searchLabels;
     private readonly ValueFormatter<TValue>? formatter;
+    private readonly string?[]? labels;
 
     public ValueFacetIndex(
         string key, string title, FacetKind kind, ValueColumn<TValue> column,
-        int? top, RankMode rankMode, bool searchable, ValueFormatter<TValue>? formatter)
+        int? top, RankMode rankMode, bool searchable, ValueFormatter<TValue>? formatter, string?[]? labels = null)
         : base(key, title, kind, column.RowCount)
     {
+        if (labels is not null && labels.Length != column.DistinctCount)
+        {
+            throw new ArgumentException("One label per distinct value is required.", nameof(labels));
+        }
+
         Column = column;
         Top = top;
         RankMode = rankMode;
         Searchable = searchable;
         this.formatter = formatter;
-        labels = new Lazy<string[]>(BuildLabels, LazyThreadSafetyMode.ExecutionAndPublication);
+        this.labels = labels;
+        searchLabels = new Lazy<string[]>(BuildSearchLabels, LazyThreadSafetyMode.ExecutionAndPublication);
+    }
+
+    /// <summary>Whether the builder defined a label selector for this facet.</summary>
+    public bool HasLabels => labels is not null;
+
+    /// <summary>
+    /// The application-defined label of a value (concept §5), or null when the facet has no label
+    /// selector, the value is null, the value does not occur, or the selector returned null for it.
+    /// Accepts the same boxed forms as a selection does.
+    /// </summary>
+    public string? LabelOf(object? value)
+    {
+        if (labels is null || value is null)
+        {
+            return null;
+        }
+
+        return Column.TryGetCode(ConvertValue(value), out int code) ? labels[code - 1] : null;
     }
 
     public ValueColumn<TValue> Column { get; }
@@ -112,7 +137,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         return new ValueFacetState(
             Key, Title, Kind, selection, context.Count,
             facetValues, other, valueCount, Searchable,
-            (text, max) => Search(text, max, counts, selected));
+            (text, max) => Search(text, max, counts, selected), LabelOf);
     }
 
     /// <summary>Design §2.5: <c>{ "values": [ ... ] }</c>, null written as JSON null.</summary>
@@ -203,7 +228,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     /// <summary>Design §4.4 search: values whose label contains the text, ranked, limited. Never the null value.</summary>
     private IReadOnlyList<FacetValue> Search(string text, int max, int[] counts, HashSet<int> selected)
     {
-        string[] all = labels.Value;
+        string[] all = searchLabels.Value;
         var heap = new PriorityQueue<int, RankKey>(WorstFirst);
         for (int code = 1; code <= Column.DistinctCount; code++)
         {
@@ -224,7 +249,8 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     }
 
     private FacetValue ToFacetValue(int code, int[] counts, HashSet<int> selected) =>
-        new(code == 0 ? null : Column.ValueOf(code), Column.TotalCounts[code], counts[code], selected.Contains(code));
+        new(code == 0 ? null : Column.ValueOf(code), Column.TotalCounts[code], counts[code], selected.Contains(code),
+            code == 0 || labels is null ? null : labels[code - 1]);
 
     private HashSet<int> SelectedCodes(ValueSelection values)
     {
@@ -272,12 +298,13 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
             : new RankKey(filtered, total, order);
     }
 
-    private string[] BuildLabels()
+    /// <summary>What search matches: the application's label when one is defined for the value, otherwise the value's invariant text (design §3.3).</summary>
+    private string[] BuildSearchLabels()
     {
         var result = new string[Column.DistinctCount];
         for (int code = 1; code <= Column.DistinctCount; code++)
         {
-            result[code - 1] = Convert.ToString(Column.ValueOf(code), CultureInfo.InvariantCulture) ?? string.Empty;
+            result[code - 1] = labels?[code - 1] ?? Convert.ToString(Column.ValueOf(code), CultureInfo.InvariantCulture) ?? string.Empty;
         }
 
         return result;

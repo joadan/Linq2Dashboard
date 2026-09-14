@@ -13,6 +13,7 @@ public class ActiveSelectionsTests : BunitContext
         {
             b.ValueFacet(x => x.Country);
             b.ValueFacet(x => x.Status).Title("Order status");
+            b.ValueFacet("city", x => x.Country).Label(x => x.Address?.City);
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
             b.DateFacet(x => x.OrderDate).Title("Ordered").TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
             b.UseTimeProvider(new FixedTimeProvider(TestData.Instant("2026-03-15T10:00:00Z")));
@@ -190,5 +191,13 @@ public class ActiveSelectionsTests : BunitContext
 
         Assert.Empty(cut.FindAll(".l2d-chip-facet"));
         Assert.Equal("SE", Label(Chips(cut).Single()));
+    }
+
+    [Fact]
+    public void Chips_show_the_facets_label_for_a_value()
+    {
+        var cut = RenderChips(Selections.Empty.With("city", ValueSelection.Of("se", "DK")));
+
+        Assert.Equal(["Stockholm", "Copenhagen"], Labels(Chips(cut).Single()));
     }
 }

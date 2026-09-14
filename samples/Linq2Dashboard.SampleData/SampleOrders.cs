@@ -10,6 +10,9 @@ public sealed class SampleOrder
 
     public string Category { get; init; } = "";
 
+    public int? CustomerId { get; init; }
+
+    /// <summary>The customer's name, denormalised onto the order; the facet counts by <see cref="CustomerId"/> and labels with this.</summary>
     public string? Customer { get; init; }
 
     public bool? IsActive { get; init; }
@@ -37,13 +40,15 @@ public static class SampleOrders
         var orders = new SampleOrder[count];
         for (int i = 0; i < count; i++)
         {
+            int? customer = random.Next(100) < 3 ? null : Skewed(random, Customers.Length);
             orders[i] = new SampleOrder
             {
                 Id = i + 1,
                 Country = Countries[Skewed(random, Countries.Length)],
                 Status = Statuses[Skewed(random, Statuses.Length)],
                 Category = Categories[Skewed(random, Categories.Length)],
-                Customer = random.Next(100) < 3 ? null : Customers[Skewed(random, Customers.Length)],
+                CustomerId = customer is int c ? c + 1 : null,
+                Customer = customer is int n ? Customers[n] : null,
                 IsActive = random.Next(100) < 2 ? null : random.Next(100) < 80,
                 Amount = random.Next(100) < 5 ? null : Math.Round((decimal)(Math.Exp(Gaussian(random) * 1.2) * 150), 2),
                 OrderDate = random.Next(100) < 2 ? null : RangeStart.AddMinutes(random.Next(RangeMinutes)),
@@ -63,7 +68,7 @@ public static class SampleOrders
             b.ValueFacet(x => x.Country);
             b.ValueFacet(x => x.Status);
             b.ValueFacet(x => x.Category).Top(10);
-            b.ValueFacet(x => x.Customer).Top(10).Searchable();
+            b.ValueFacet("Customer", x => x.CustomerId).Label(x => x.Customer).Top(10).Searchable();
             b.BooleanFacet(x => x.IsActive).Title("Active");
             b.RangeFacet(x => x.Amount).Buckets(50, 100, 200, 500, 1000, 2000);
             b.DateFacet(x => x.OrderDate)

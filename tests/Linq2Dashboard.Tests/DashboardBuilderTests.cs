@@ -374,7 +374,22 @@ public class DashboardBuilderTests
         Assert.Throws<InvalidOperationException>(() => captured!.ValueFacet(x => x.Status));
         Assert.Throws<InvalidOperationException>(() => captured!.Where(_ => true));
         Assert.Throws<InvalidOperationException>(() => facet!.Top(5));
+        Assert.Throws<InvalidOperationException>(() => facet!.Label(x => x.Status));
         Assert.Throws<InvalidOperationException>(() => metric!.Title("x"));
+    }
+
+    [Fact]
+    public void Label_selector_is_required_and_runs_once_per_distinct_value()
+    {
+        Assert.Throws<ArgumentNullException>(() => Create(b => b.ValueFacet(x => x.Country).Label(null!)));
+
+        int calls = 0;
+        var dashboard = Create(b => b.ValueFacet(x => x.Country).Label(x => { calls++; return x.Address?.City; }));
+
+        var index = Assert.IsType<ValueFacetIndex<string?>>(dashboard.FacetIndex("Country"));
+        Assert.True(index.HasLabels);
+        Assert.Equal(index.Column.DistinctCount, calls); // never for null rows or repeated values
+        Assert.False(Assert.IsType<ValueFacetIndex<string>>(Create(b => b.ValueFacet(x => x.Status)).FacetIndex("Status")).HasLabels);
     }
 
     [Fact]

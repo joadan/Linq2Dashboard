@@ -21,9 +21,11 @@ public class DefaultDashboardFormatter : IDashboardFormatter
 
     public virtual string NullLabel => "(none)";
 
+    /// <summary>An application-defined label (concept §5) wins; otherwise the value is formatted by type in the formatter's culture.</summary>
     public virtual string FormatValue(FacetState facet, object? value) => value switch
     {
         null => NullLabel,
+        _ when facet is ValueFacetState values && values.LabelOf(value) is string label => label,
         bool b => b ? "Yes" : "No",
         DateTimeOffset dto => dto.ToString("g", Culture),
         DateTime dt => dt.ToString("g", Culture),

@@ -189,6 +189,7 @@ The property has a discrete set of values: country, status, category, brand, cus
 - Values: each distinct value, with counts.
 - Selection: a set of values (multi-select).
 - Each row has exactly one value (or null) in a value facet. Collection-valued properties such as tags are not supported by value facets in the first version. See *Later* in §8.
+- Label: optionally, a text per value read from the row, for facets whose value is an identity rather than a name. A Customer facet counts and selects by customer id, so a renamed customer keeps its saved selections, but shows "Acme (Malmö)". The label is read once per distinct value, from the first row that has it, and is what search (§4.5) matches. A value without a label is shown by the UI as the value itself. The null value never has a label; how it is shown stays with the UI (§4.8).
 - Concerns: high cardinality. A Customer facet with 100 000 values must not show 100 000 rows. See *Top N* and *Search* below.
 
 ### Boolean facet
@@ -366,5 +367,6 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **Every metric carries its share of the total.** A fraction of the same aggregation over all rows after fixed filters, on the state itself rather than as a separate metric kind. Defined for count, sum and distinct count; "no value" for the other aggregations, for a metric without a value and for a zero total. Added 2026-09-14. See §4.4.
 - **Distinct count is a metric aggregation.** Different non-null values among the matching rows, with value facet equality (case-insensitive strings by default). Exact, never approximate; per-facet-value breakdowns stay with grouping. Added 2026-09-14. See §4.4.
 - **Calculated metrics are formulas over earlier metrics.** Null in, "no value" out; a non-finite result is "no value"; no share. Only metrics defined before the formula are visible, so cycles cannot be expressed. Added 2026-09-14. See §4.4.
+- **A value facet can carry a label per value, read from the row.** The value stays the identity for counting, selections and JSON; the label is what is shown and searched. First row wins, null means "show the value". Async lookups happen in the application before the dashboard is created. Added 2026-09-14. See §5.
 - **Range buckets are fixed at initialisation.** Either application-defined or derived once from the dataset, never from the current selections. See §5.
 - **"Other" is measured against the facet's own counting context.** Not against the matching rows. See §6.

@@ -25,6 +25,8 @@ internal sealed class ValueFacetDefinition<T, TProp> : FacetDefinition<T>
 
     public ValueFormatter<TProp>? Formatter { get; set; }
 
+    public Func<T, string?>? Label { get; set; }
+
     public override FacetIndex Build(T[] items, TimeProvider timeProvider)
     {
         var column = ValueColumn<TProp>.Build(items.Length, (int row, out TProp value) =>
@@ -33,6 +35,37 @@ internal sealed class ValueFacetDefinition<T, TProp> : FacetDefinition<T>
             return value is not null;
         }, Comparer);
 
-        return new ValueFacetIndex<TProp>(Key, Title, Kind, column, Top, RankMode, Searchable, Formatter);
+        return new ValueFacetIndex<TProp>(Key, Title, Kind, column, Top, RankMode, Searchable, Formatter, BuildLabels(items, column));
+    }
+
+    /// <summary>
+    /// One label per distinct value, read from the first row that introduces the value (concept §5),
+    /// the same rule that fixes the presented spelling (design §3.3). Null when no label is defined.
+    /// </summary>
+    private string?[]? BuildLabels(T[] items, ValueColumn<TProp> column)
+    {
+        if (Label is null)
+        {
+            return null;
+        }
+
+        var labels = new string?[column.DistinctCount];
+        var seen = new bool[column.DistinctCount];
+        int remaining = labels.Length;
+        ReadOnlySpan<int> codes = column.Codes;
+        for (int row = 0; row < codes.Length && remaining > 0; row++)
+        {
+            int index = codes[row] - 1;
+            if (index < 0 || seen[index])
+            {
+                continue;
+            }
+
+            seen[index] = true;
+            labels[index] = Label(items[row]);
+            remaining--;
+        }
+
+        return labels;
     }
 }

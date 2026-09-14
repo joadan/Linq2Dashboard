@@ -14,6 +14,7 @@ public class ValueFacetTests : BunitContext
             b.ValueFacet(x => x.Country);
             b.ValueFacet(x => x.Status).Title("Order status").Searchable();
             b.ValueFacet("top", x => x.Country).Top(2);
+            b.ValueFacet("city", x => x.Country).Label(x => x.Address?.City).Searchable();
             b.BooleanFacet(x => x.IsActive);
             b.RangeFacet(x => x.Amount);
         });
@@ -205,5 +206,22 @@ public class ValueFacetTests : BunitContext
 
         var unknown = Assert.ThrowsAny<Exception>(() => RenderFacet("Nope"));
         Assert.Contains("Nope", unknown.Message);
+    }
+
+    [Fact]
+    public void Labels_are_shown_instead_of_values_and_searched()
+    {
+        Selections? raised = null;
+        var cut = RenderFacet("city", onChanged: s => raised = s);
+
+        // Labels from the first row per country (concept §5); the null value keeps the formatter's label.
+        Assert.Equal(["Stockholm", "Oslo", "(none)", "Copenhagen"], Items(cut).Select(Label));
+
+        cut.Find(".l2d-facet-search").Input("oslo");
+        Assert.Equal(["Oslo"], Items(cut).Select(Label));
+
+        // The click still toggles the value, not the label.
+        Items(cut).Single().QuerySelector("button")!.Click();
+        Assert.Equal(Selections.Empty.With("city", ValueSelection.Of("NO")), raised);
     }
 }
