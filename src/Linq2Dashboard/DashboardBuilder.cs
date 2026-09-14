@@ -106,6 +106,13 @@ public sealed class DashboardBuilder<T>
     /// on several threads when parallel counting is enabled. The key is always explicit because
     /// there is no selector to derive one from.
     /// </summary>
+    /// <remarks>
+    /// This is the one potentially expensive operation in the library (design §8): every other facet
+    /// counts through a column lookup, but each new text calls <paramref name="predicate"/> once per
+    /// row in the dataset. Only a new text pays; the matching rows are cached by the text afterwards.
+    /// Keep the predicate cheap, and call <see cref="EnableParallelCounting(bool)"/> for large
+    /// datasets so the scan runs on several cores.
+    /// </remarks>
     public TextFacetBuilder<T> TextFacet(string key, Func<T, string, bool> predicate)
     {
         ValidateKey(key);
@@ -197,7 +204,9 @@ public sealed class DashboardBuilder<T>
     /// <summary>
     /// Count facets on separate threads during <see cref="Dashboard{T}.Calculate(Selections)"/>
     /// (design §4.3). Off by default: it shortens one calculation but occupies several cores per
-    /// click, which can hurt a busy server.
+    /// click, which can hurt a busy server. The same switch spreads a text facet's predicate scan
+    /// over the cores, which is where it matters most, since that scan is the one cost the library
+    /// does not own.
     /// </summary>
     public DashboardBuilder<T> EnableParallelCounting(bool enabled = true)
     {

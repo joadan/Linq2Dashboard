@@ -18,6 +18,14 @@ dotnet add package Linq2Dashboard.Blazor --prerelease</code></pre>
 
 <pre><code>@BuilderExample</code></pre>
 
+<p>
+    One thing to know before adding a <code>TextFacet</code>: it is the one potentially expensive operation. Every other facet
+    counts through a column lookup, but a new text calls your function once per row in the dataset, so the cost is set by your
+    function and the row count. Two case-insensitive <code>Contains</code> over a million rows take about 80 ms, or 20 ms with
+    <code>EnableParallelCounting()</code> on four cores. Only a new text pays; the result is cached by the text afterwards, and the
+    Blazor input waits for the user to pause before applying it. Keep the function cheap, or precompute what it reads.
+</p>
+
 <h2>2. Calculate a state</h2>
 
 <p>The UI owns the selections. The dashboard is a pure function of them: same selections, same state.</p>

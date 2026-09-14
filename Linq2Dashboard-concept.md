@@ -230,7 +230,7 @@ Free text the user types, matched against each row by a function the application
 - Matching: the function decides. Which properties take part, case sensitivity and whether every word must match are the application's choice, made once in the function. The core passes the text as typed after trimming and never interprets it.
 - It is a facet so that everything key-addressed works unchanged: it joins the AND across facets (§4.1), its own text is excluded from nothing since it counts nothing, it appears in the state and among the active selections, and it serialises with the others (§7). Several text facets in one dashboard are allowed, each with its own key and function.
 - The function must be pure and safe to call from several threads at once; the core may evaluate it in parallel. Cost is one call per row in the dataset for each distinct text, so the UI should wait for the user to pause before sending a text.
-- Concerns: a text facet is the only facet whose matching is not a column lookup, so a large dataset pays for the function on every new text. A precomputed text column is a possible later addition behind the same selection; the function stays the primitive.
+- Concerns: a text facet is the only facet whose matching is not a column lookup, so it is the one potentially expensive operation in the library. A large dataset pays for the function on every new text, at a cost set by the function and the row count rather than by the library; an application with a heavy function or many rows should enable parallel counting or precompute what the function reads. A precomputed text column is a possible later addition behind the same selection; the function stays the primitive.
 
 ### Custom facet
 

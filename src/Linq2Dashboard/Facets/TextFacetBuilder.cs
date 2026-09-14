@@ -2,7 +2,7 @@ using Linq2Dashboard.Facets;
 
 namespace Linq2Dashboard;
 
-/// <summary>Fluent configuration of a text facet (design §2.1). The matching semantics live in the function, so the title is the only option.</summary>
+/// <summary>Fluent configuration of a text facet (design §2.1). The matching semantics live in the function, so the title is the only option. Each new text runs the function over every row, so see the remarks on <see cref="DashboardBuilder{T}.TextFacet"/> before choosing one.</summary>
 public sealed class TextFacetBuilder<T>
 {
     private readonly TextFacetDefinition<T> definition;
