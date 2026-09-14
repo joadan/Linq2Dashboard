@@ -1,0 +1,47 @@
+/* Sizes and the tile colour come from the demo page: --demo-metric-* and --demo-tile-color are set on the
+   metrics grid and on each tile by key, and inherit into this content. */
+.demo-tile-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    min-width: 0;
+}
+
+.demo-tile-title {
+    font-size: var(--l2d-small-size, 0.8125rem);
+    color: var(--l2d-muted, #71717a);
+}
+
+.demo-tile-value {
+    font-size: var(--demo-metric-size, 1.375rem);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.2;
+    min-width: 0;
+    overflow-wrap: anywhere;
+}
+
+.demo-tile-empty {
+    color: var(--l2d-muted, #71717a);
+}
+
+.demo-tile-share {
+    font-size: var(--l2d-small-size, 0.8125rem);
+    color: var(--l2d-muted, #71717a);
+    font-variant-numeric: tabular-nums;
+}
+
+.demo-tile-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: stretch;
+    width: var(--demo-metric-icon-panel, 4.5rem);
+    color: var(--demo-tile-color, var(--l2d-accent, #2563eb));
+    background: color-mix(in srgb, var(--demo-tile-color, var(--l2d-accent, #2563eb)) 14%, transparent);
+}
+
+.demo-tile-icon ::deep svg {
+    width: var(--demo-metric-icon-glyph, 2.25rem);
+    height: var(--demo-metric-icon-glyph, 2.25rem);
+}

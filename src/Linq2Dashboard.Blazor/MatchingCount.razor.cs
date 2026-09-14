@@ -16,10 +16,22 @@ public partial class MatchingCount<T>
     [Parameter]
     public bool ShowShare { get; set; }
 
-    /// <summary>An icon shown beside the title and count, typically an inline SVG or an icon-font element (design §9.5).</summary>
+    /// <summary>
+    /// Replaces the title and count inside the tile with the template's markup. The tile element and its
+    /// classes stay. The context carries the formatted pieces; its <c>Metric</c> is null since the count is
+    /// not a metric in the core (design §9.5).
+    /// </summary>
     [Parameter]
-    public RenderFragment? Icon { get; set; }
+    public RenderFragment<MetricTileContent>? MetricTemplate { get; set; }
 
-    private string? ShareText =>
-        ShowShare && State.TotalCount > 0 ? Formatter.FormatShare((double)State.MatchingCount / State.TotalCount) : null;
+    private MetricTileContent Content
+    {
+        get
+        {
+            string? share = ShowShare && State.TotalCount > 0 ? Formatter.FormatShare((double)State.MatchingCount / State.TotalCount) : null;
+            return new MetricTileContent(Title, Formatter.FormatCount(State.MatchingCount), share, IsEmpty: false, Metric: null);
+        }
+    }
+
+    private RenderFragment? Template => MetricTemplate is null ? null : MetricTemplate(Content);
 }

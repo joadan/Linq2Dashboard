@@ -52,19 +52,19 @@ else
                 <ActiveSelections T="SampleOrder" />
                 <div class="demo-metrics">
                     <MatchingCount T="SampleOrder" Title="Orders matching" ShowShare="true">
-                        <Icon><DemoIcon Name="cart" /></Icon>
+                        <MetricTemplate Context="tile"><DemoTile Content="tile" Icon="cart" /></MetricTemplate>
                     </MatchingCount>
                     <Metric T="SampleOrder" Key="revenue" ShowShare="true">
-                        <Icon><DemoIcon Name="banknote" /></Icon>
+                        <MetricTemplate Context="tile"><DemoTile Content="tile" Icon="banknote" /></MetricTemplate>
                     </Metric>
                     <Metric T="SampleOrder" Key="average">
-                        <Icon><DemoIcon Name="receipt" /></Icon>
+                        <MetricTemplate Context="tile"><DemoTile Content="tile" Icon="receipt" /></MetricTemplate>
                     </Metric>
                     <Metric T="SampleOrder" Key="customers" ShowShare="true">
-                        <Icon><DemoIcon Name="users" /></Icon>
+                        <MetricTemplate Context="tile"><DemoTile Content="tile" Icon="users" /></MetricTemplate>
                     </Metric>
                     <Metric T="SampleOrder" Key="perCustomer">
-                        <Icon><DemoIcon Name="trend" /></Icon>
+                        <MetricTemplate Context="tile"><DemoTile Content="tile" Icon="trend" /></MetricTemplate>
                     </Metric>
                 </div>
                 @* The page's own chart, drawn from the state that StateChanged delivers. Nothing in the library knows it exists. *@

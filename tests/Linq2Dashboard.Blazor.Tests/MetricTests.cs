@@ -139,10 +139,10 @@ public class MetricTests : BunitContext
         var cut = RenderWith<Metric<Order>>(m =>
         {
             m.Add(x => x.Key, "revenue");
-            m.Add(x => x.MetricTemplate, metric => $"<b class='custom'>{metric.Key}={metric.Value?.ToString(CultureInfo.InvariantCulture)}</b>");
+            m.Add(x => x.MetricTemplate, tile => $"<b class='custom'>{tile.Metric!.Key}={tile.Value}</b>");
         });
 
-        Assert.Equal("revenue=5424.5", cut.Find(".l2d-metric .custom").TextContent);
+        Assert.Equal("revenue=5,424.50", cut.Find(".l2d-metric .custom").TextContent);
         Assert.Empty(cut.FindAll(".l2d-metric-title"));
     }
 
@@ -183,27 +183,65 @@ public class MetricTests : BunitContext
     }
 
     [Fact]
-    public void An_icon_renders_in_its_own_slot_and_marks_the_tile()
+    public void A_template_receives_the_formatted_pieces_and_the_state()
     {
-        var plain = RenderWith<Metric<Order>>(m => m.Add(x => x.Key, "revenue"));
-        Assert.Empty(plain.FindAll(".l2d-metric-icon"));
-        Assert.DoesNotContain("l2d-metric-with-icon", plain.Find(".l2d-metric").ClassName);
-
-        var withIcon = RenderWith<Metric<Order>>(m =>
+        MetricTileContent? seen = null;
+        RenderWith<Metric<Order>>(m =>
         {
             m.Add(x => x.Key, "revenue");
-            m.Add(x => x.Icon, "<svg class=\"coin\"></svg>");
-        });
+            m.Add(x => x.ShowShare, true);
+            m.Add(x => x.MetricTemplate, tile => { seen = tile; return ""; });
+        }, Selections.Empty.With("Country", ValueSelection.Of("SE")));
 
-        var tile = withIcon.Find(".l2d-metric");
-        Assert.Contains("l2d-metric-with-icon", tile.ClassName);
-        Assert.NotNull(tile.QuerySelector(".l2d-metric-icon svg.coin"));
-        Assert.Equal("true", tile.QuerySelector(".l2d-metric-icon")!.GetAttribute("aria-hidden"));
-        Assert.Equal("5,424.50", tile.QuerySelector(".l2d-metric-value")!.TextContent); // the icon adds no text
-
-        var matching = RenderWith<MatchingCount<Order>>(m => m.Add(x => x.Icon, "<svg class=\"cart\"></svg>"));
-        Assert.NotNull(matching.Find(".l2d-metric-icon svg.cart"));
+        Assert.NotNull(seen);
+        Assert.Equal("Revenue", seen.Title);
+        var formatter = new DefaultDashboardFormatter(CultureInfo.InvariantCulture);
+        Assert.Equal(formatter.FormatMetric(seen.Metric!), seen.Value);
+        Assert.Equal(formatter.FormatShare(seen.Metric!.Share!.Value), seen.Share);
+        Assert.False(seen.IsEmpty);
+        Assert.Equal(Aggregation.Sum, seen.Metric.Aggregation);
     }
+
+    [Fact]
+    public void A_template_sees_the_empty_value_and_no_share_when_there_is_none()
+    {
+        MetricTileContent? seen = null;
+        RenderWith<Metric<Order>>(m =>
+        {
+            m.Add(x => x.Key, "avgDiscount");
+            m.Add(x => x.ShowShare, true);
+            m.Add(x => x.Title, "Discount");
+            m.Add(x => x.MetricTemplate, tile => { seen = tile; return ""; });
+        }, Selections.Empty.With("Discount", RangeSelection.OnlyNull));
+
+        Assert.NotNull(seen);
+        Assert.Equal("Discount", seen.Title);
+        Assert.Equal("–", seen.Value);
+        Assert.Null(seen.Share);
+        Assert.True(seen.IsEmpty);
+    }
+
+    [Fact]
+    public void Matching_count_takes_a_template_with_the_formatted_count_and_no_metric()
+    {
+        MetricTileContent? seen = null;
+        var cut = RenderWith<MatchingCount<Order>>(m =>
+        {
+            m.Add(x => x.Title, "Rows");
+            m.Add(x => x.ShowShare, true);
+            m.Add(x => x.MetricTemplate, tile => { seen = tile; return $"<i class='custom'>{tile.Value}</i>"; });
+        }, Selections.Empty.With("Country", ValueSelection.Of("NO")));
+
+        Assert.NotNull(seen);
+        Assert.Equal("Rows", seen.Title);
+        Assert.Equal("2", seen.Value);
+        Assert.Equal("25.0 %", seen.Share);
+        Assert.False(seen.IsEmpty);
+        Assert.Null(seen.Metric);
+        Assert.Equal("2", cut.Find(".l2d-metric-matching .custom").TextContent);
+        Assert.Empty(cut.FindAll(".l2d-metric-title"));
+    }
+
 
     [Fact]
     public void An_unknown_key_fails_clearly()

@@ -9,39 +9,6 @@
     background: var(--l2d-metric-background, transparent);
 }
 
-/* With an icon the tile becomes a two-column grid: text on the left, the icon in the top-right corner. */
-.l2d-metric-with-icon {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    grid-template-rows: auto auto auto;
-    column-gap: 0.75rem;
-    align-items: start;
-}
-
-.l2d-metric-with-icon > :not(.l2d-metric-icon) {
-    grid-column: 1;
-}
-
-.l2d-metric-icon {
-    grid-column: 2;
-    grid-row: 1 / span 3;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: var(--l2d-metric-icon-size, 2.25rem);
-    height: var(--l2d-metric-icon-size, 2.25rem);
-    border-radius: var(--l2d-radius, 0.25rem);
-    color: var(--l2d-metric-icon-color, var(--l2d-accent, #2563eb));
-    background: var(--l2d-metric-icon-background, var(--l2d-selected-background, rgba(37, 99, 235, 0.12)));
-    flex: none;
-}
-
-.l2d-metric-icon ::deep svg,
-.l2d-metric-icon ::deep img {
-    width: 55%;
-    height: 55%;
-}
-
 .l2d-metric-title {
     font-size: var(--l2d-small-size, 0.8125rem);
     color: var(--l2d-muted, #71717a);

@@ -144,10 +144,11 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 | `DateFacet` | Presets with counts, one bar per period. | `Key`, `Layout`, `ShowPresets` |
 | `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `DebounceMilliseconds`, `Placeholder`, `ShowContextCount` |
 | `ActiveSelections` | One removable chip per selection, clear all. | `ShowFacetTitle`, `GroupValues` |
-| `Metric` | One tile by key; a dash when there is no value. | `Key`, `Title`, `ShowShare`, `Icon`, `MetricTemplate` |
-| `MatchingCount` | A tile with the matching row count. | `Title`, `ShowShare`, `Icon` |
+| `Metric` | One tile by key; a dash when there is no value. | `Key`, `Title`, `ShowShare`, `MetricTemplate` |
+| `MatchingCount` | A tile with the matching row count. | `Title`, `ShowShare`, `MetricTemplate` |
 | `Results` | Matching rows through your template, paged or virtualised. | `RowTemplate`, `HeaderTemplate`, `EmptyTemplate`, `Layout`, `PageSize`, `Virtualize` |
 
+- **Tile templates.** `MetricTemplate` on `Metric` and `MatchingCount` receives a `MetricTileContent`: the formatted `Title`, `Value` and `Share` (null when not shown), `IsEmpty`, and the raw `Metric` state (null for the matching count). Compose these with your own markup; the tile element and its classes stay.
 - **Formatting** goes through one `IDashboardFormatter` cascaded from `DashboardView`. Derive from `DefaultDashboardFormatter` to change culture, number formats, the null label or preset names. Pass a fixed culture in tests.
 - **Styling** is plain CSS. Every `--l2d-*` custom property is declared on `.l2d-dashboard`; override them on that element or an ancestor. Every component takes `Class` and passes unknown attributes to its root element. State classes `l2d-selected`, `l2d-zero`, `l2d-null`, `l2d-collapsed` and `l2d-metric-empty` are stable hooks.
 - **Callbacks.** `SelectionsChanged` fires on every click, for bookmarking. `StateChanged` hands the host each new `DashboardState<T>`, the initial one included, for a chart of its own.

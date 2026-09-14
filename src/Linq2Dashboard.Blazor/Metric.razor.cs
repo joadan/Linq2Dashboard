@@ -23,17 +23,24 @@ public partial class Metric<T>
     [Parameter]
     public bool ShowShare { get; set; }
 
-    /// <summary>An icon shown beside the title and value, typically an inline SVG or an icon-font element (design §9.5).</summary>
+    /// <summary>
+    /// Replaces the title and value inside the tile with the template's markup. The tile element and its
+    /// classes stay. The context carries the formatted pieces and the raw state (design §9.5).
+    /// </summary>
     [Parameter]
-    public RenderFragment? Icon { get; set; }
-
-    /// <summary>Replaces the title and value inside the tile. The tile element and its classes stay.</summary>
-    [Parameter]
-    public RenderFragment<MetricState>? MetricTemplate { get; set; }
+    public RenderFragment<MetricTileContent>? MetricTemplate { get; set; }
 
     private MetricState Current => State.Metric(Key);
 
-    private string? ShareText => ShowShare && Current.Share is double share ? Formatter.FormatShare(share) : null;
+    private MetricTileContent Content
+    {
+        get
+        {
+            MetricState current = Current;
+            string? share = ShowShare && current.Share is double value ? Formatter.FormatShare(value) : null;
+            return new MetricTileContent(Title ?? current.Title, Formatter.FormatMetric(current), share, !current.HasValue, current);
+        }
+    }
 
-    private RenderFragment? Template => MetricTemplate is null ? null : MetricTemplate(Current);
+    private RenderFragment? Template => MetricTemplate is null ? null : MetricTemplate(Content);
 }

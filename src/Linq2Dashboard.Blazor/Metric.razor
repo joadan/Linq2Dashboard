@@ -1,4 +1,4 @@
 @typeparam T
 @inherits DashboardComponentBase<T>
 
-<MetricTile Class="@Class" AdditionalAttributes="AdditionalAttributes" Key="@Key" Title="@(Title ?? Current.Title)" Value="@Formatter.FormatMetric(Current)" Share="@ShareText" IsEmpty="@(!Current.HasValue)" Icon="Icon" ChildContent="Template" />
+<MetricTile Class="@Class" AdditionalAttributes="AdditionalAttributes" Key="@Key" Title="@Content.Title" Value="@Content.Value" Share="@Content.Share" IsEmpty="@Content.IsEmpty" ChildContent="Template" />
