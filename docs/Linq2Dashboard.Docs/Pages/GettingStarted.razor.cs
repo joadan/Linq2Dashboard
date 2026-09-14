@@ -22,6 +22,8 @@ public partial class GettingStarted
              .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
              .Granularity(DateGranularity.Month)
              .Presets(DatePreset.Last30Days, DatePreset.ThisYear);
+            b.TextFacet("search", (x, text) =>                    // free text; your function decides what matches
+                x.CustomerName.Contains(text, StringComparison.OrdinalIgnoreCase));
 
             b.Count("orders");
             b.Sum("revenue", x => x.Amount);
@@ -61,6 +63,7 @@ public partial class GettingStarted
 
         <DashboardView T="Order" Dashboard="Dashboard" @bind-Selections="selections">
             <aside>
+                <TextFacet  T="Order" Key="search" />
                 <ValueFacet T="Order" Key="Country" />
                 <ValueFacet T="Order" Key="Customer" />
                 <RangeFacet T="Order" Key="Amount" ShowSlider="true" />

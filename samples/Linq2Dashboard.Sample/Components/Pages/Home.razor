@@ -9,6 +9,7 @@
 <DashboardView T="SampleOrder" Dashboard="Dashboard" @bind-Selections="selections">
     <div class="sample-layout">
         <aside class="sample-facets">
+            <TextFacet T="SampleOrder" Key="search" Placeholder="Customer or category" />
             <ValueFacet T="SampleOrder" Key="Country">
             <ValueTemplate>
                     @context.Value  @context.FilteredCount (@context.TotalCount)

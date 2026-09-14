@@ -76,6 +76,10 @@ public static class SampleOrders
              .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
              .Granularity(DateGranularity.Month)
              .Presets(DatePreset.Last30Days, DatePreset.ThisYear);
+            b.TextFacet("search", (x, text) =>
+                (x.Customer?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false)
+                || x.Category.Contains(text, StringComparison.OrdinalIgnoreCase))
+             .Title("Search");
             b.Count("orders").Title("Orders");
             b.Sum("revenue", x => x.Amount).Title("Revenue");
             b.Average("average", x => x.Amount).Title("Average order");

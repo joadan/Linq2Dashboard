@@ -1,0 +1,25 @@
+@typeparam T
+@inherits DashboardComponentBase<T>
+
+<section @attributes="AdditionalAttributes" class="@RootClass($"l2d-facet l2d-text-facet{(collapsed ? " l2d-collapsed" : "")}")" data-key="@Key">
+    @if (HeaderTemplate is not null)
+    {
+        @HeaderTemplate(Facet)
+    }
+    else
+    {
+        <FacetHeader Title="@Facet.Title" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="ClearAsync"
+                     Collapsible="Collapsible" Collapsed="collapsed" OnToggle="ToggleCollapsed" />
+    }
+
+    @if (!collapsed)
+    {
+        <input type="search" class="l2d-text-input" placeholder="@Placeholder" aria-label="@Facet.Title" value="@text"
+               @oninput="OnInput" @onkeydown="OnKeyDown" />
+
+        @if (ShowContextCount)
+        {
+            <p class="l2d-text-context">@string.Format(System.Globalization.CultureInfo.InvariantCulture, ContextText, Formatter.FormatCount(Facet.ContextCount))</p>
+        }
+    }
+</section>

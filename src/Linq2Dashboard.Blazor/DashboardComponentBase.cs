@@ -53,7 +53,13 @@ public abstract class DashboardComponentBase<T> : ComponentBase, IDisposable
             Context.StateChanged -= OnStateChanged;
         }
 
+        Disposing();
         GC.SuppressFinalize(this);
+    }
+
+    /// <summary>Called once when the component is disposed, after it stopped listening to the context. Override to release component-local resources such as a timer.</summary>
+    protected virtual void Disposing()
+    {
     }
 
     /// <summary>Called on the renderer's thread when the state changed, before re-rendering. Override to reset component-local UI state such as a page index.</summary>

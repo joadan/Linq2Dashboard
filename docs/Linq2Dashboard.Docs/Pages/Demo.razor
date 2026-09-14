@@ -36,6 +36,7 @@ else
     <DashboardView T="SampleOrder" @ref="view" Dashboard="dashboard" Formatter="DemoFormatter.Instance" Selections="selections" SelectionsChanged="OnSelectionsChanged" StateChanged="OnStateChanged">
         <div class="demo-layout">
             <aside class="demo-facets">
+                <TextFacet T="SampleOrder" Key="search" Placeholder="Customer or category" />
                 <ValueFacet T="SampleOrder" Key="Country" />
                 <ValueFacet T="SampleOrder" Key="Status" />
                 <ValueFacet T="SampleOrder" Key="Category" />

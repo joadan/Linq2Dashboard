@@ -82,6 +82,7 @@ Selections restored = dashboard.Serializer.FromJson(bookmark);
 ```razor
 <DashboardView T="Order" Dashboard="Dashboard" @bind-Selections="selections">
     <aside>
+        <TextFacet  T="Order" Key="search" />             @* free text, applied after a pause *@
         <ValueFacet T="Order" Key="Country" />
         <ValueFacet T="Order" Key="Customer" />           @* searchable, with an "Other" row *@
         <RangeFacet T="Order" Key="Amount" />             @* histogram; bars keep their shape *@

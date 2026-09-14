@@ -32,11 +32,14 @@ public partial class ActiveSelections<T>
     [Parameter]
     public string RemoveText { get; set; } = "Remove";
 
-    /// <summary>The bucket's or preset's own label when the interval is exactly that, otherwise the formatter's interval text.</summary>
-    private string IntervalLabel(FacetState facet)
+    /// <summary>The bucket's or preset's own label when the interval is exactly that, otherwise the formatter's interval text; a text facet's text as typed.</summary>
+    private string SelectionLabel(FacetState facet)
     {
         switch (facet)
         {
+            case TextFacetState when facet.Selection is TextSelection text:
+                return text.Text;
+
             case RangeFacetState range when facet.Selection is RangeSelection selection:
                 if (selection.OnlyNulls)
                 {

@@ -1,0 +1,22 @@
+.l2d-text-facet {
+    display: flex;
+    flex-direction: column;
+    gap: var(--l2d-gap, 0.375rem);
+}
+
+.l2d-text-input {
+    font: inherit;
+    font-size: var(--l2d-small-size, 0.8125rem);
+    padding: 0.25rem 0.5rem;
+    border: 1px solid var(--l2d-border, #d4d4d8);
+    border-radius: var(--l2d-radius, 0.25rem);
+    background: var(--l2d-input-background, transparent);
+    color: inherit;
+}
+
+.l2d-text-context {
+    margin: 0;
+    font-size: var(--l2d-small-size, 0.8125rem);
+    color: var(--l2d-muted, #71717a);
+    font-variant-numeric: tabular-nums;
+}

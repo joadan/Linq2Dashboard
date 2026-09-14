@@ -66,13 +66,13 @@ else
                         break;
 
                     default:
-                        @* Range and date facets hold one interval; removing the chip clears the facet. *@
+                        @* Range and date facets hold one interval and a text facet one text; removing the chip clears the facet. *@
                         <li class="l2d-chip" data-key="@facet.Key">
                             @if (ShowFacetTitle)
                             {
                                 <span class="l2d-chip-facet">@facet.Title</span>
                             }
-                            <span class="l2d-chip-label">@IntervalLabel(facet)</span>
+                            <span class="l2d-chip-label">@SelectionLabel(facet)</span>
                             <button type="button" class="l2d-chip-remove" aria-label="@RemoveText @facet.Title" title="@RemoveText"
                                     @onclick="() => Context.ClearAsync(facet.Key)">×</button>
                         </li>
