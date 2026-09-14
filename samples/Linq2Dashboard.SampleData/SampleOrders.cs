@@ -24,19 +24,22 @@ public sealed class SampleOrder
     public int Quantity { get; init; }
 }
 
-/// <summary>Deterministic sample data: a smaller cousin of the benchmark generator, with nulls sprinkled in.</summary>
+/// <summary>
+/// Deterministic sample data: a smaller cousin of the benchmark generator, with nulls sprinkled in.
+/// Order dates cover the two years up to today, so the relative presets ("Last 30 days", "This year") always have rows.
+/// </summary>
 public static class SampleOrders
 {
     private static readonly string[] Countries = ["Sweden", "Norway", "Denmark", "Finland", "Germany", "Netherlands", "Poland", "France", "Spain", "Italy", "United Kingdom", "Ireland"];
     private static readonly string[] Statuses = ["Open", "Pending", "Shipped", "Closed", "Cancelled"];
     private static readonly string[] Categories = Enumerable.Range(1, 40).Select(i => $"Category {i:00}").ToArray();
     private static readonly string[] Customers = Enumerable.Range(1, 5_000).Select(i => $"Customer {i:0000}").ToArray();
-    private static readonly DateTime RangeStart = new(2024, 1, 1);
     private const int RangeMinutes = 2 * 365 * 24 * 60;
 
     public static SampleOrder[] Generate(int count, int seed = 42)
     {
         var random = new Random(seed);
+        DateTime rangeStart = DateTime.UtcNow.Date.AddDays(1).AddMinutes(-RangeMinutes);
         var orders = new SampleOrder[count];
         for (int i = 0; i < count; i++)
         {
@@ -51,7 +54,7 @@ public static class SampleOrders
                 Customer = customer is int n ? Customers[n] : null,
                 IsActive = random.Next(100) < 2 ? null : random.Next(100) < 80,
                 Amount = random.Next(100) < 5 ? null : Math.Round((decimal)(Math.Exp(Gaussian(random) * 1.2) * 150), 2),
-                OrderDate = random.Next(100) < 2 ? null : RangeStart.AddMinutes(random.Next(RangeMinutes)),
+                OrderDate = random.Next(100) < 2 ? null : rangeStart.AddMinutes(random.Next(RangeMinutes)),
                 Quantity = 1 + Skewed(random, 20),
             };
         }
