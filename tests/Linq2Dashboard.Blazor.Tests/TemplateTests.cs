@@ -100,14 +100,4 @@ public class TemplateTests : BunitContext
         Assert.Equal("Clear", header.QuerySelector(".l2d-facet-clear")!.TextContent);
     }
 
-    [Fact]
-    public void Metric_template_replaces_title_and_value_inside_each_tile()
-    {
-        var cut = RenderWith<Metrics<Order>>(m =>
-            m.Add(x => x.MetricTemplate, metric => $"<span class='custom-metric'>{metric.Key}:{metric.Value?.ToString(CultureInfo.InvariantCulture)}</span>"));
-
-        Assert.Equal(["orders:8", "revenue:5424.5"], cut.FindAll(".custom-metric").Select(m => m.TextContent));
-        Assert.Equal(2, cut.FindAll(".l2d-metric").Count);
-        Assert.Empty(cut.FindAll(".l2d-metric-title"));
-    }
 }

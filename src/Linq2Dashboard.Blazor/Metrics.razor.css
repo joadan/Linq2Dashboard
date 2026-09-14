@@ -1,5 +1,0 @@
-.l2d-metrics {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(var(--l2d-metric-min-width, 9rem), 1fr));
-    gap: var(--l2d-gap, 0.375rem);
-}

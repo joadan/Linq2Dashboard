@@ -83,7 +83,8 @@ Selections restored = dashboard.Serializer.FromJson(bookmark);
         <DateFacet  T="Order" Key="OrderDate" />          @* presets and periods *@
     </aside>
     <main>
-        <Metrics T="Order" IncludeMatchingCount="true" />
+        <MatchingCount T="Order" />
+        <Metric T="Order" Key="revenue" />
         <ActiveSelections T="Order" />
         <Results T="Order" Layout="ResultsLayout.Table" PageSize="25">
             <HeaderTemplate><tr><th>Id</th><th>Country</th><th>Amount</th></tr></HeaderTemplate>

@@ -25,7 +25,12 @@
            
             <ActiveSelections T="SampleOrder" />
 
-            <Metrics T="SampleOrder" IncludeMatchingCount="true" />
+            <div class="sample-metrics">
+                <MatchingCount T="SampleOrder" />
+                <Metric T="SampleOrder" Key="orders" />
+                <Metric T="SampleOrder" Key="revenue" />
+                <Metric T="SampleOrder" Key="average" />
+            </div>
                         
             <Results T="SampleOrder" Layout="ResultsLayout.Table" Virtualize="true" ItemSize="33">
                 <HeaderTemplate>

@@ -44,10 +44,20 @@ dotnet add package Linq2Dashboard.Blazor --prerelease</code></pre>
         <tr><td><code>ActiveSelections</code></td><td>One removable chip per selected value or interval, clear all.</td><td><code>ShowFacetTitle</code></td></tr>
         <tr><td><code>Metric</code></td><td>One metric tile by key, placed where you want it; a dash when no row contributed.</td><td><code>Title</code>, <code>MetricTemplate</code></td></tr>
         <tr><td><code>MatchingCount</code></td><td>A tile with the number of matching rows.</td><td><code>Title</code></td></tr>
-        <tr><td><code>Metrics</code></td><td>Every metric as a grid of tiles.</td><td><code>Keys</code>, <code>IncludeMatchingCount</code>, <code>MetricTemplate</code></td></tr>
         <tr><td><code>Results</code></td><td>Matching rows through your row template, paged or virtualised.</td><td><code>Layout</code>, <code>PageSize</code>, <code>Virtualize</code></td></tr>
     </tbody>
 </table>
+
+<p>
+    Metric tiles are placed one by one, so each page decides which metrics it shows, in what order and where.
+    For a responsive row of tiles, wrap them in a grid:
+</p>
+
+<pre><code>.metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(var(--l2d-metric-min-width, 9rem), 1fr));
+    gap: var(--l2d-gap, 0.375rem);
+}</code></pre>
 
 <h2>Formatting and styling</h2>
 
