@@ -97,7 +97,9 @@ public class TemplateTests : BunitContext
         var header = cut.Find(".l2d-facet-header");
         Assert.Equal("Amount", header.QuerySelector(".l2d-facet-title")!.TextContent);
         Assert.Equal("0 – 2,500", header.QuerySelector(".l2d-facet-bounds")!.TextContent);
-        Assert.Equal("Clear", header.QuerySelector(".l2d-facet-clear")!.TextContent);
+        var clear = header.QuerySelector(".l2d-facet-clear")!;
+        Assert.Equal("×", clear.TextContent);
+        Assert.Equal("Clear", clear.GetAttribute("aria-label"));
     }
 
 }

@@ -12,7 +12,7 @@ public partial class DateFacet<T>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
 
-    /// <summary>Replaces the default header (title and clear link). Receives the facet state. Collapsing is then controlled only through <see cref="Collapsed"/>.</summary>
+    /// <summary>Replaces the default header (title and clear button). Receives the facet state. Collapsing is then controlled only through <see cref="Collapsed"/>.</summary>
     [Parameter]
     public RenderFragment<DateFacetState>? HeaderTemplate { get; set; }
 
@@ -44,7 +44,7 @@ public partial class DateFacet<T>
     [Parameter]
     public bool ShowTotals { get; set; } = true;
 
-    /// <summary>Text of the clear link in the header.</summary>
+    /// <summary>Accessible label and tooltip of the header's clear button, which shows an ×.</summary>
     [Parameter]
     public string ClearText { get; set; } = "Clear";
 

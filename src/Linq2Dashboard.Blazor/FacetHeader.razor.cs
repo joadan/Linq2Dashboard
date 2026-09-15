@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Components;
 namespace Linq2Dashboard.Blazor;
 
 /// <summary>
-/// The header shared by every facet component: title, optional extra content, a clear link and a collapse toggle (design §9).
+/// The header shared by every facet component: title, optional extra content, an × that clears the facet and a collapse toggle (design §9).
 /// A rendering detail of the facet components, not part of the supported API: it is public only because Razor
 /// components cannot be internal, is hidden from IntelliSense, and may change without notice.
 /// </summary>
@@ -15,19 +15,19 @@ public partial class FacetHeader
     [Parameter, EditorRequired]
     public string Title { get; set; } = string.Empty;
 
-    /// <summary>Extra content between the title and the clear link, such as a range facet's bounds.</summary>
+    /// <summary>Extra content between the title and the clear button, such as a range facet's bounds.</summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
-    /// <summary>Show the clear link; the facets set it when they have a selection.</summary>
+    /// <summary>Show the clear button; the facets set it when they have a selection.</summary>
     [Parameter]
     public bool ShowClear { get; set; }
 
-    /// <summary>Text of the clear link.</summary>
+    /// <summary>Accessible label and tooltip of the clear button, which shows an ×.</summary>
     [Parameter]
     public string ClearText { get; set; } = "Clear";
 
-    /// <summary>Raised when the clear link is clicked.</summary>
+    /// <summary>Raised when the clear button is clicked.</summary>
     [Parameter]
     public EventCallback OnClear { get; set; }
 

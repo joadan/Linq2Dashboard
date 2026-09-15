@@ -51,15 +51,24 @@
 
 .l2d-facet-clear {
     flex: none;
+    align-self: center;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.25rem;
+    height: 1.25rem;
     border: none;
+    border-radius: 50%;
     background: none;
     padding: 0;
     font: inherit;
-    font-size: var(--l2d-small-size, 0.8125rem);
-    color: var(--l2d-accent, #2563eb);
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--l2d-muted, #71717a);
     cursor: pointer;
 }
 
 .l2d-facet-clear:hover {
-    text-decoration: underline;
+    background: var(--l2d-hover, rgba(0, 0, 0, 0.08));
+    color: inherit;
 }

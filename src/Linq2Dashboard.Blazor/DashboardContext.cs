@@ -63,7 +63,7 @@ public sealed class DashboardContext<T>
     /// <summary>The click on a bucket or preset, or a slider change: replace the facet's selection.</summary>
     public Task SelectAsync(string key, Selection selection) => ApplyAsync(Selections.With(key, selection));
 
-    /// <summary>Removes one facet's selection: a header's clear link or a chip.</summary>
+    /// <summary>Removes one facet's selection: a header's clear button or a chip.</summary>
     public Task ClearAsync(string key) => ApplyAsync(Selections.Clear(key));
 
     /// <summary>Removes every selection.</summary>

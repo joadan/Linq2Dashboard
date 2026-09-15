@@ -110,15 +110,24 @@
 }
 
 .l2d-active-clear-all {
-    border: none;
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.5rem;
+    height: 1.5rem;
+    border: 1px solid var(--l2d-border, #d4d4d8);
+    border-radius: 50%;
     background: none;
-    padding: 0.125rem 0.375rem;
+    padding: 0;
     font: inherit;
-    font-size: var(--l2d-small-size, 0.8125rem);
-    color: var(--l2d-accent, #2563eb);
+    font-size: 1rem;
+    line-height: 1;
+    color: var(--l2d-muted, #71717a);
     cursor: pointer;
 }
 
 .l2d-active-clear-all:hover {
-    text-decoration: underline;
+    background: var(--l2d-hover, rgba(0, 0, 0, 0.08));
+    color: inherit;
 }

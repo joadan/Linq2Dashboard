@@ -1,4 +1,4 @@
-@* The default header of every facet component: title (a toggle when collapsible), optional extra content, clear link when selected. *@
+@* The default header of every facet component: title (a toggle when collapsible), optional extra content, an × that clears the facet when selected. *@
 
 <header class="l2d-facet-header @(Collapsible ? "l2d-collapsible" : null) @(Collapsed ? "l2d-collapsed" : null)">
     @if (Collapsible)
@@ -15,6 +15,6 @@
     @ChildContent
     @if (ShowClear)
     {
-        <button type="button" class="l2d-facet-clear" @onclick="OnClear">@ClearText</button>
+        <button type="button" class="l2d-facet-clear" aria-label="@ClearText" title="@ClearText" @onclick="OnClear">×</button>
     }
 </header>

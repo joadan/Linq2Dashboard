@@ -19,7 +19,7 @@ public partial class TextFacet<T>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
 
-    /// <summary>Replaces the default header (title and clear link). Receives the facet state. Collapsing is then controlled only through <see cref="Collapsed"/>.</summary>
+    /// <summary>Replaces the default header (title and clear button). Receives the facet state. Collapsing is then controlled only through <see cref="Collapsed"/>.</summary>
     [Parameter]
     public RenderFragment<TextFacetState>? HeaderTemplate { get; set; }
 
@@ -54,7 +54,7 @@ public partial class TextFacet<T>
     [Parameter]
     public string Placeholder { get; set; } = "Type to filter";
 
-    /// <summary>Text of the clear link in the header.</summary>
+    /// <summary>Accessible label and tooltip of the header's clear button, which shows an ×.</summary>
     [Parameter]
     public string ClearText { get; set; } = "Clear";
 
