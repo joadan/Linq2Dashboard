@@ -70,6 +70,7 @@ The engine is a function: **(dataset, selections) → state**. The UI is a loop:
 | **Facet value** | One entry shown under a facet: a value, a bucket, or a range. Carries a total count and a filtered count. |
 | **Selection** | What the user has chosen within one facet. Dynamic. Small and serialisable. |
 | **Fixed filter** | A predicate the application applies before the user sees anything. Defines the dataset. Never shown, never removable by the user. |
+| **Scoped dashboard** | A dashboard narrowed to the rows passing a predicate, sharing the parent's definitions and indexes. Behaves like the parent with one more fixed filter. |
 | **Matching rows** | The rows in the dataset that satisfy every current selection. |
 | **Metric** | A named summary number over the matching rows. |
 | **Result page** | A slice of the matching rows, in a chosen order, for display. |
@@ -177,6 +178,17 @@ A dashboard is created from a collection once. After that, the data cannot be ad
 - New data means a new dashboard. Selections are serialisable (§7), so an application that wants "same view, fresh data" creates a new dashboard and applies the saved selections to it.
 
 This keeps the engine a pure function of (dataset, selections) and means total counts are computed once and never invalidated.
+
+### 4.10 A dashboard can be scoped to a subset of its dataset
+
+The same definitions are often wanted over several subsets of the data: one tab per region, one page per customer, one dashboard per tenant. A dashboard can therefore be narrowed to a **scoped dashboard**: a new dashboard over the rows of its dataset that pass a predicate, sharing the parent's definitions and indexes.
+
+- A scoped dashboard behaves exactly like a dashboard built with the predicate as one more fixed filter (§3). Its dataset is the subset, so total counts, the matching total, "Other" (§6) and every metric's share of the total (§4.4) are measured against the subset. A value that no row in the subset has is not part of the dataset and does not appear, just as it would not after a fixed filter; the zero-count rule of §4.3 concerns filtered counts and is unchanged.
+- It is created from an existing dashboard, not from the source, and costs a fraction of a build: one pass over the rows for the predicate and one count per facet. Definitions, columns, indexes and the result order are shared, never copied.
+- Range and date buckets come from the parent. A dashboard built from the subset would derive its buckets from the subset alone; a scoped dashboard keeps the parent's so that the same UI has the same axes in every scope. This is the one observable difference from a rebuild.
+- A scoped dashboard is as immutable as its parent (§4.9), holds no selection state and accepts the same selections. The facet keys are the same, so a saved selection applies to every scope.
+- Scopes compose: a scoped dashboard can be scoped again.
+- The scope is not a selection. It never appears among the active selections or in serialised selections, and the user cannot remove it.
 
 ---
 
@@ -332,6 +344,7 @@ Because facets are identified by string keys and selections are serialisable, a 
 - Top N with "Other" and pinned selected values.
 - Search within a value facet.
 - Text facets: a user-typed text matched by an application function. Added 2026-09-14; see §5.
+- Scoped dashboards: the same definitions over a subset of the dataset, without a rebuild. Added 2026-09-15; see §4.10.
 - Metrics: count, sum, average, min, max.
 - Result paging with application-defined sorting.
 - Immutable state snapshot with a UI-friendly facet model.
@@ -371,6 +384,7 @@ Decisions still to be made, roughly in order of how much they shape everything e
 
 - **Null is a value.** Always exposed, always selectable, never dropped. See §4.8.
 - **Data is fixed at initialisation.** No add, remove, replace or refresh. New data means a new dashboard. See §4.9.
+- **A dashboard can be scoped to a subset without a rebuild.** A scoped dashboard shares the parent's definitions and indexes and behaves exactly like one built over the subset with a fixed filter, except that range and date buckets come from the parent. The scope is not a selection. Decided 2026-09-15. See §4.10.
 - **Multi-valued properties are a later concern.** In the first version every row has exactly one value or null per facet. See §5 and §8.
 - **OR within a facet, AND across facets is the only combination mode.** Exclusion is a later addition. See §4.1 and §8.
 - **Top N ranking supports both modes.** Per facet, by filtered count (default) or by total count. See §6.
