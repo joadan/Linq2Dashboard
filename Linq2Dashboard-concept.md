@@ -189,6 +189,7 @@ The same definitions are often wanted over several subsets of the data: one tab 
 - A scoped dashboard is as immutable as its parent (§4.9), holds no selection state and accepts the same selections. The facet keys are the same, so a saved selection applies to every scope.
 - Scopes compose: a scoped dashboard can be scoped again.
 - The scope is not a selection. It never appears among the active selections or in serialised selections, and the user cannot remove it.
+- A scope can also be given as selections, in the facets' own terms: the rows the selections match become the scope, with the facets' matching rules (case-insensitive strings, null as a value, half-open intervals). This is how "make this view my dashboard" works: the current selections become the scope of a new dashboard, which starts with nothing selected. Three consequences follow from the scope not being a selection. The scoped facets show only the values in scope, without the own-facet exclusion of §4.2, since the scope is part of "everything", not a choice. A selection inside the scope on the same facet narrows further: Sweden inside a Nordic scope gives Sweden, Germany gives nothing. A relative date preset is resolved when the scope is made and stays fixed, as a fixed filter would.
 
 ---
 
@@ -385,6 +386,7 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **Null is a value.** Always exposed, always selectable, never dropped. See §4.8.
 - **Data is fixed at initialisation.** No add, remove, replace or refresh. New data means a new dashboard. See §4.9.
 - **A dashboard can be scoped to a subset without a rebuild.** A scoped dashboard shares the parent's definitions and indexes and behaves exactly like one built over the subset with a fixed filter, except that buckets and range bounds come from the parent. The scope is not a selection. Decided 2026-09-15. See §4.10.
+- **A scope can be given as selections as well as a predicate.** The facets resolve the rows, so semantics are theirs and nothing scans the row objects; the scoped dashboard starts with nothing selected, shows only the values in scope without own-facet exclusion, and freezes relative date presets at the moment of scoping. Decided 2026-09-15. See §4.10.
 - **Multi-valued properties are a later concern.** In the first version every row has exactly one value or null per facet. See §5 and §8.
 - **OR within a facet, AND across facets is the only combination mode.** Exclusion is a later addition. See §4.1 and §8.
 - **Top N ranking supports both modes.** Per facet, by filtered count (default) or by total count. See §6.
