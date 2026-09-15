@@ -148,7 +148,7 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 | Component | Renders | Notable parameters |
 |---|---|---|
 | `DashboardView` | Owns selections and state, cascades them. | `Dashboard`, `@bind-Selections`, `StateChanged`, `Formatter` |
-| `ValueFacet` | Values with counts, the null value, "Other", search. | `Key`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate` |
+| `ValueFacet` | Values with counts, the null value, "Other", search. | `Key`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate` |
 | `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Layout`, `ShowSlider`, `ShowBounds` |
 | `DateFacet` | Presets with counts, one bar per period. | `Key`, `Layout`, `ShowPresets` |
 | `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `DebounceMilliseconds`, `Placeholder`, `ShowContextCount` |
@@ -172,6 +172,7 @@ These are decisions from the concept, not options.
 - **Two counts per value.** `TotalCount` over the dataset, `FilteredCount` under the other facets' selections. Filtered counts always sum to the facet's `ContextCount`.
 - **Null is a value.** It is listed, counted and selectable. Never drop it.
 - **Zero-count values stay in the state.** Hiding them is the UI's choice (`HideZeroCounts`).
+- **Ranking picks the values, the UI orders them.** `RankBy` in the builder decides which values Top N presents; `Sort` on `ValueFacet` decides the order on screen: by rank (default), label or value, optionally reversed. Null stays last.
 - **Buckets are fixed at build.** Only their counts change. A bucket click selects exactly its interval.
 - **Searching within a facet is not a selection.** It narrows the list shown, nothing else.
 - **Metrics skip null.** Averages divide by rows that have a value. Distinct counts non-null values.

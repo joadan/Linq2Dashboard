@@ -224,4 +224,77 @@ public class ValueFacetTests : BunitContext
         Items(cut).Single().QuerySelector("button")!.Click();
         Assert.Equal(Selections.Empty.With("city", ValueSelection.Of("NO")), raised);
     }
+
+    [Fact]
+    public void Sort_by_label_orders_alphabetically_with_null_last()
+    {
+        // Rank order is SE, NO, (none), DK; the UI reorders what the core presented (concept §6).
+        var cut = RenderFacet("Country", configure: f => f.Add(x => x.Sort, FacetSort.Label));
+
+        Assert.Equal(["DK", "NO", "SE", "(none)"], Items(cut).Select(Label));
+    }
+
+    [Fact]
+    public void Sort_by_label_descending_keeps_null_last()
+    {
+        var cut = RenderFacet("Country", configure: f =>
+        {
+            f.Add(x => x.Sort, FacetSort.Label);
+            f.Add(x => x.SortDescending, true);
+        });
+
+        Assert.Equal(["SE", "NO", "DK", "(none)"], Items(cut).Select(Label));
+    }
+
+    [Fact]
+    public void Sort_by_label_uses_the_shown_label_not_the_value()
+    {
+        // Values are country codes, labels are cities: Copenhagen (DK), Oslo (NO), Stockholm (SE).
+        var cut = RenderFacet("city", configure: f => f.Add(x => x.Sort, FacetSort.Label));
+
+        Assert.Equal(["Copenhagen", "Oslo", "Stockholm", "(none)"], Items(cut).Select(Label));
+    }
+
+    [Fact]
+    public void Sort_by_value_uses_the_values_own_order_with_null_last()
+    {
+        // Same keys as "Country" but labelled by city: value order is DK, NO, SE regardless of label.
+        var cut = RenderFacet("city", configure: f => f.Add(x => x.Sort, FacetSort.Value));
+
+        Assert.Equal(["Copenhagen", "Oslo", "Stockholm", "(none)"], Items(cut).Select(Label));
+
+        var descending = RenderFacet("Country", configure: f =>
+        {
+            f.Add(x => x.Sort, FacetSort.Value);
+            f.Add(x => x.SortDescending, true);
+        });
+        Assert.Equal(["SE", "NO", "DK", "(none)"], Items(descending).Select(Label));
+    }
+
+    [Fact]
+    public void Rank_descending_reverses_the_core_order()
+    {
+        var cut = RenderFacet("Country", configure: f => f.Add(x => x.SortDescending, true));
+
+        Assert.Equal(["DK", "(none)", "NO", "SE"], Items(cut).Select(Label));
+    }
+
+    [Fact]
+    public void Sorting_applies_to_the_top_n_only_and_Other_stays_last()
+    {
+        // Top(2) by filtered count presents SE (3) and NO (2, ahead of null on the tiebreak); the core decides that, the UI only orders the two.
+        var cut = RenderFacet("top", configure: f => f.Add(x => x.Sort, FacetSort.Label));
+
+        Assert.Equal(["NO", "SE"], Items(cut).Select(Label));
+        Assert.Equal("l2d-facet-other", cut.FindAll("ul.l2d-facet-values > li").Last().ClassName);
+    }
+
+    [Fact]
+    public void Sorting_applies_to_search_results()
+    {
+        var cut = RenderFacet("city", configure: f => f.Add(x => x.Sort, FacetSort.Label));
+
+        cut.Find(".l2d-facet-search").Input("o");
+        Assert.Equal(["Copenhagen", "Oslo", "Stockholm"], Items(cut).Select(Label));
+    }
 }

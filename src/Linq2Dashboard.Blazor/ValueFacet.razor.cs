@@ -37,6 +37,14 @@ public partial class ValueFacet<T>
     [Parameter]
     public bool HideZeroCounts { get; set; }
 
+    /// <summary>Order of the values on screen (concept §6). Default is the core's rank order, by count. The core still decides which values Top N presents; this only orders them.</summary>
+    [Parameter]
+    public FacetSort Sort { get; set; } = FacetSort.Rank;
+
+    /// <summary>Reverse the order chosen by <see cref="Sort"/>. For <see cref="FacetSort.Rank"/> that puts the smallest counts first. Null stays last for label and value sorts.</summary>
+    [Parameter]
+    public bool SortDescending { get; set; }
+
     /// <summary>Show the total in parentheses after the filtered count, "filtered (total)". On by default; turn off to show the filtered count alone.</summary>
     [Parameter]
     public bool ShowTotals { get; set; } = true;
@@ -71,8 +79,41 @@ public partial class ValueFacet<T>
         get
         {
             IEnumerable<FacetValue> values = IsSearching ? Facet.Search(searchText, SearchLimit) : Facet.Values;
-            return HideZeroCounts ? values.Where(v => v.FilteredCount > 0 || v.Selected) : values;
+            if (HideZeroCounts)
+            {
+                values = values.Where(v => v.FilteredCount > 0 || v.Selected);
+            }
+
+            return Sorted(values);
         }
+    }
+
+    /// <summary>Applies <see cref="Sort"/> and <see cref="SortDescending"/>. Label and value sorts keep null last in both directions; ties keep the rank order.</summary>
+    private IEnumerable<FacetValue> Sorted(IEnumerable<FacetValue> values)
+    {
+        if (Sort == FacetSort.Rank)
+        {
+            return SortDescending ? values.Reverse() : values;
+        }
+
+        var list = values.ToList();
+        IComparer<FacetValue> comparer = Comparer<FacetValue>.Create(Sort == FacetSort.Value ? CompareValues : CompareLabels);
+        IEnumerable<FacetValue> nonNull = list.Where(v => !v.IsNull);
+        IEnumerable<FacetValue> ordered = SortDescending ? nonNull.OrderByDescending(v => v, comparer) : nonNull.OrderBy(v => v, comparer);
+        return ordered.Concat(list.Where(v => v.IsNull));
+    }
+
+    private int CompareLabels(FacetValue a, FacetValue b) =>
+        StringComparer.CurrentCultureIgnoreCase.Compare(Formatter.FormatValue(Facet, a.Value), Formatter.FormatValue(Facet, b.Value));
+
+    private int CompareValues(FacetValue a, FacetValue b)
+    {
+        if (a.Value is not IComparable left)
+        {
+            throw new InvalidOperationException($"Facet '{Key}' cannot be sorted by value: {a.Value?.GetType().Name} does not implement IComparable. Use FacetSort.Label instead.");
+        }
+
+        return left.CompareTo(b.Value);
     }
 
     /// <inheritdoc />

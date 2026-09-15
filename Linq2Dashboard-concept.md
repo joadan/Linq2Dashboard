@@ -277,6 +277,7 @@ Other           87 421
 
   Filtered count is the default. Total count suits facets where users expect a familiar, fixed order, such as a short list of well-known customers or regions.
 - Ranking mode is part of the facet definition (§4.9), not of the selection. The UI does not change it at runtime.
+- Ranking decides *which* values are presented. The order they appear in on screen is the UI's choice: the rank order by default, or alphabetically by label, or by the value itself, in either direction. Reordering never changes the set of presented values or the "Other" remainder, and null stays last.
 
 ### Search within a facet
 
@@ -390,6 +391,7 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **Multi-valued properties are a later concern.** In the first version every row has exactly one value or null per facet. See §5 and §8.
 - **OR within a facet, AND across facets is the only combination mode.** Exclusion is a later addition. See §4.1 and §8.
 - **Top N ranking supports both modes.** Per facet, by filtered count (default) or by total count. See §6.
+- **Ranking picks the values; the UI orders them.** Rank mode stays in the definition because it needs every value's count. The display order of the presented values is a UI choice: rank, label or value, either direction, null last. Decided 2026-09-15. See §6.
 - **Facet keys: derived by default, explicit when given.** Unique, case-sensitive, fixed at initialisation. See §7.
 - **Metrics are over all matching rows only.** Per-facet-value metrics belong to grouping, later. See §4.4 and §8.
 - **Zero-count values stay in the state.** The core always includes them; hiding or greying them out is a UI choice. See §4.3.
