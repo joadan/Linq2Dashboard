@@ -51,6 +51,9 @@ internal sealed class DateColumn
     /// <summary>Total count per bucket code, index 0 being null.</summary>
     public ReadOnlySpan<int> TotalCounts => totalCounts;
 
+    /// <summary>The same totals as an array, for a facet index to keep without copying. Never written after build.</summary>
+    internal int[] TotalCountsArray => totalCounts;
+
     /// <summary>Start of bucket <paramref name="index"/> (0-based) as a local date-time in the facet zone.</summary>
     public DateTime BucketStart(int index)
     {

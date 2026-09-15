@@ -108,13 +108,13 @@ public sealed class RangeFacetState : FacetState
         Null = @null;
     }
 
-    /// <summary>Smallest value in the dataset; NaN when there is none. Fixed (concept §5).</summary>
+    /// <summary>Smallest value in the dataset; NaN when there is none. Fixed (concept §5), and the parent's in a scoped dashboard (concept §4.10).</summary>
     public double Min { get; }
 
-    /// <summary>Largest value in the dataset; NaN when there is none. Fixed (concept §5).</summary>
+    /// <summary>Largest value in the dataset; NaN when there is none. Fixed (concept §5), and the parent's in a scoped dashboard (concept §4.10).</summary>
     public double Max { get; }
 
-    /// <summary>Buckets in ascending order, fixed at initialisation. Only the counts change (concept §5).</summary>
+    /// <summary>Buckets in ascending order, fixed at initialisation and shared by every scope. Only the counts change (concept §5, §4.10).</summary>
     public IReadOnlyList<RangeBucket> Buckets { get; }
 
     /// <summary>The null value, sitting beside the buckets (concept §4.8). Its <c>Value</c> is null.</summary>
@@ -143,7 +143,7 @@ public sealed class DateFacetState : FacetState
     /// <summary>The zone periods and presets are computed in (concept §5).</summary>
     public TimeZoneInfo TimeZone { get; }
 
-    /// <summary>One bucket per calendar period present in the dataset, chronological.</summary>
+    /// <summary>One bucket per calendar period present in the dataset, chronological. A scoped dashboard keeps the parent's periods (concept §4.10).</summary>
     public IReadOnlyList<DateBucket> Buckets { get; }
 
     /// <summary>Configured presets, each resolved to its interval as of this calculation and counted.</summary>

@@ -6,7 +6,19 @@
 
 <h1>Orders</h1>
 
-<DashboardView T="SampleOrder" Dashboard="Dashboard" @bind-Selections="selections">
+<label class="sample-scope">
+    Scope
+    <select @bind="scope">
+        <option value="">All countries</option>
+        @foreach (string country in countries)
+        {
+            <option value="@country">@country</option>
+        }
+    </select>
+    <span class="sample-scope-note">The same dashboard over a subset of the rows, through <code>Dashboard.Where</code>. Totals follow the scope; selections carry over.</span>
+</label>
+
+<DashboardView T="SampleOrder" Dashboard="Scoped" @bind-Selections="selections">
     <div class="sample-layout">
         <aside class="sample-facets">
             <TextFacet T="SampleOrder" Key="search" Placeholder="Customer or category" />

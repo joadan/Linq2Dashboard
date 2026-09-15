@@ -80,8 +80,15 @@ internal sealed class MetricDefinition<T>
 internal sealed class MetricIndex
 {
     private readonly Func<MetricValues, double?>? formula;
+    private readonly MetricAggregate total;
+    private readonly int distinctTotal;
 
     public MetricIndex(string key, string title, Aggregation aggregation, MetricColumn? column, DistinctColumn? distinct, Func<MetricValues, double?>? formula, int rowCount)
+        : this(key, title, aggregation, column, distinct, formula, rowCount, column?.Total ?? MetricAggregate.Empty, distinct?.DistinctCount ?? 0)
+    {
+    }
+
+    private MetricIndex(string key, string title, Aggregation aggregation, MetricColumn? column, DistinctColumn? distinct, Func<MetricValues, double?>? formula, int rowCount, MetricAggregate total, int distinctTotal)
     {
         Key = key;
         Title = title;
@@ -90,6 +97,8 @@ internal sealed class MetricIndex
         Distinct = distinct;
         this.formula = formula;
         RowCount = rowCount;
+        this.total = total;
+        this.distinctTotal = distinctTotal;
     }
 
     public string Key { get; }
@@ -104,9 +113,19 @@ internal sealed class MetricIndex
     /// <summary>The code column of a distinct count; null for every other aggregation.</summary>
     public DistinctColumn? Distinct { get; }
 
+    /// <summary>Rows the share is measured against: the dataset, or the scope for an index made by <see cref="Scope"/> (concept §4.10).</summary>
     public int RowCount { get; }
 
     public MetricInfo Info => new(Key, Title, Aggregation);
+
+    /// <summary>
+    /// This metric with its totals over the rows in <paramref name="scope"/> (concept §4.10): one
+    /// aggregation pass for a numeric column, one distinct count for a distinct column, nothing else.
+    /// </summary>
+    public MetricIndex Scope(RowSet scope) => new(
+        Key, Title, Aggregation, Column, Distinct, formula, scope.Count,
+        Column?.Aggregate(scope) ?? MetricAggregate.Empty,
+        Distinct?.CountIn(scope) ?? 0);
 
     /// <summary>
     /// The metric's state over <paramref name="matching"/>: its value, null when no row contributed,
@@ -128,7 +147,7 @@ internal sealed class MetricIndex
             int distinct = Distinct.CountIn(matching);
             return distinct == 0
                 ? new MetricState(Key, Title, Aggregation, null, null)
-                : new MetricState(Key, Title, Aggregation, distinct, ShareOf(distinct, Distinct.DistinctCount));
+                : new MetricState(Key, Title, Aggregation, distinct, ShareOf(distinct, distinctTotal));
         }
 
         if (Column is null)
@@ -139,7 +158,7 @@ internal sealed class MetricIndex
         MetricAggregate aggregate = Column.Aggregate(matching);
         return Aggregation switch
         {
-            Aggregation.Sum => new MetricState(Key, Title, Aggregation, aggregate.SumOrNull, aggregate.IsEmpty ? null : ShareOf(aggregate.Sum, Column.Total.Sum)),
+            Aggregation.Sum => new MetricState(Key, Title, Aggregation, aggregate.SumOrNull, aggregate.IsEmpty ? null : ShareOf(aggregate.Sum, total.Sum)),
             Aggregation.Average => new MetricState(Key, Title, Aggregation, aggregate.Average, null),
             Aggregation.Min => new MetricState(Key, Title, Aggregation, aggregate.MinOrNull, null),
             Aggregation.Max => new MetricState(Key, Title, Aggregation, aggregate.MaxOrNull, null),

@@ -63,6 +63,9 @@ internal sealed class ValueColumn<TValue>
     /// <summary>Total count per code, index 0 being null. Computed once at build (concept §4.3).</summary>
     public ReadOnlySpan<int> TotalCounts => totalCounts;
 
+    /// <summary>The same totals as an array, for a facet index to keep without copying. Never written after build.</summary>
+    internal int[] TotalCountsArray => totalCounts;
+
     public int CodeAt(int row) => codes[row];
 
     /// <summary>The value behind a non-null code (1..V). The first-seen spelling under the comparer.</summary>

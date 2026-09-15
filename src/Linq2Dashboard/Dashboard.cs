@@ -39,10 +39,30 @@ public sealed class Dashboard<T>
     private readonly Dictionary<string, int> facetPositions;
     private readonly MetricIndex[] metrics;
     private readonly Dictionary<string, MetricIndex> metricsByKey;
-    private readonly LruCache<(string Key, Selection Selection), RowSet> rowSets = new(RowSetCacheCapacity);
+    private readonly LruCache<(string Key, Selection Selection), RowSet> rowSets;
     private readonly LruCache<Selections, DashboardState<T>> states = new(StateCacheCapacity);
 
     internal Dashboard(T[] items, FacetIndex[] facets, MetricIndex[] metrics, int[]? sortedRows, TimeProvider timeProvider, bool parallelCounting)
+        : this(items, facets, metrics, sortedRows, timeProvider, parallelCounting, RowSet.Full(items.Length), new LruCache<(string Key, Selection Selection), RowSet>(RowSetCacheCapacity), new SelectionSerializer(facets))
+    {
+    }
+
+    /// <summary>The scoped dashboard of concept §4.10: the parent's rows, columns, indexes and order, with <paramref name="scope"/> as the dataset.</summary>
+    private Dashboard(Dashboard<T> parent, RowSet scope)
+        : this(
+            parent.items,
+            parent.facets.Select(f => f.Scope(scope)).ToArray(),
+            parent.metrics.Select(m => m.Scope(scope)).ToArray(),
+            parent.SortedRows, parent.TimeProvider, parent.ParallelCounting, scope,
+            // Selections mean the same in every scope, and the rows a selection matches do not depend on the scope,
+            // so the row-set cache and the serializer are shared with the parent (design §5).
+            parent.rowSets, parent.Serializer)
+    {
+    }
+
+    private Dashboard(
+        T[] items, FacetIndex[] facets, MetricIndex[] metrics, int[]? sortedRows, TimeProvider timeProvider, bool parallelCounting,
+        RowSet all, LruCache<(string Key, Selection Selection), RowSet> rowSets, SelectionSerializer serializer)
     {
         this.items = items;
         this.facets = facets;
@@ -53,17 +73,41 @@ public sealed class Dashboard<T>
         SortedRows = sortedRows;
         TimeProvider = timeProvider;
         ParallelCounting = parallelCounting;
-        All = RowSet.Full(items.Length);
+        All = all;
+        this.rowSets = rowSets;
         Facets = facets.Select(f => f.Info).ToArray();
         Metrics = metrics.Select(m => m.Info).ToArray();
-        Serializer = new SelectionSerializer(facets);
+        Serializer = serializer;
     }
 
-    /// <summary>Writes and reads <see cref="Selections"/> as JSON for storage and bookmarks (design §2.5).</summary>
+    /// <summary>Writes and reads <see cref="Selections"/> as JSON for storage and bookmarks (design §2.5). The same for a dashboard and every scope of it.</summary>
     public SelectionSerializer Serializer { get; }
 
-    /// <summary>Rows in the dataset, after fixed filters (concept §4.3).</summary>
-    public int TotalCount => items.Length;
+    /// <summary>Rows in the dataset: after fixed filters, and inside the scope for a scoped dashboard (concept §4.3, §4.10).</summary>
+    public int TotalCount => All.Count;
+
+    /// <summary>
+    /// A dashboard over the rows of this one that pass <paramref name="predicate"/> (concept §4.10). It
+    /// shares this dashboard's definitions, columns, indexes and result order and behaves exactly like
+    /// one built with <paramref name="predicate"/> as one more fixed filter, except that range and date
+    /// buckets and range bounds stay this dashboard's. Costs one pass over the rows plus one count per facet and metric,
+    /// not a build. The scope is not a selection: it is invisible to the UI and to serialised selections.
+    /// Scopes compose, so a scoped dashboard can be scoped again. This dashboard is unchanged.
+    /// </summary>
+    public Dashboard<T> Where(Func<T, bool> predicate)
+    {
+        ArgumentNullException.ThrowIfNull(predicate);
+        var builder = new RowSetBuilder(items.Length);
+        foreach (int row in All)
+        {
+            if (predicate(items[row]))
+            {
+                builder.Set(row);
+            }
+        }
+
+        return new Dashboard<T>(this, builder.Build());
+    }
 
     /// <summary>The facets in definition order.</summary>
     public IReadOnlyList<FacetInfo> Facets { get; }
@@ -114,7 +158,7 @@ public sealed class Dashboard<T>
     /// <summary>Row ids in the application-defined order, or null for identity order.</summary>
     internal int[]? SortedRows { get; }
 
-    /// <summary>Every row in the dataset.</summary>
+    /// <summary>Every row in the dataset: all rows for a dashboard from the builder, the scope for a scoped one (concept §4.10). The calculation starts from this set (design §4.2).</summary>
     internal RowSet All { get; }
 
     internal FacetIndex FacetIndex(string key) =>

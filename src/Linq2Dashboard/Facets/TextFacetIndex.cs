@@ -60,6 +60,9 @@ internal sealed class TextFacetIndex<T> : FacetIndex
         return RowSet.FromOwnedWords(words, RowCount);
     }
 
+    /// <summary>A text facet has no totals, so the same index serves every scope (concept §4.10); the pipeline intersects its rows with the scope.</summary>
+    public override FacetIndex Scope(RowSet scope) => this;
+
     /// <summary>Nothing to count: the state carries the text and the context size (design §2.4).</summary>
     public override FacetState Present(RowSet context, Selection? selection)
     {

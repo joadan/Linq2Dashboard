@@ -23,6 +23,7 @@ internal abstract class FacetIndex
 
     public FacetKind Kind { get; }
 
+    /// <summary>Rows in the dataset this index counts against: every row for an index built by the builder, the scope for one made by <see cref="Scope"/> (concept §4.10).</summary>
     public int RowCount { get; }
 
     public FacetInfo Info => new(Key, Title, Kind);
@@ -36,6 +37,12 @@ internal abstract class FacetIndex
     /// used only for the selected flags (design §4.3–4.5).
     /// </summary>
     public abstract FacetState Present(RowSet context, Selection? selection);
+
+    /// <summary>
+    /// This facet over the rows in <paramref name="scope"/> (concept §4.10): the same columns and
+    /// buckets, totals recounted over the scope. One count per facet; nothing else is copied.
+    /// </summary>
+    public abstract FacetIndex Scope(RowSet scope);
 
     /// <summary>Writes a selection of this facet's kind as its JSON shape (design §2.5).</summary>
     public abstract JsonObject Serialize(Selection selection);

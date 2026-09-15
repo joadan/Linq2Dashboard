@@ -11,24 +11,36 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     private readonly Lazy<string[]> searchLabels;
     private readonly ValueFormatter<TValue>? formatter;
     private readonly string?[]? labels;
+    private readonly int[] totals;
+    private readonly int valueCount;
 
     public ValueFacetIndex(
         string key, string title, FacetKind kind, ValueColumn<TValue> column,
         int? top, RankMode rankMode, bool searchable, ValueFormatter<TValue>? formatter, string?[]? labels = null)
-        : base(key, title, kind, column.RowCount)
+        : this(key, title, kind, column, column.TotalCountsArray, column.RowCount, top, rankMode, searchable, formatter, Validate(column, labels), null)
     {
-        if (labels is not null && labels.Length != column.DistinctCount)
-        {
-            throw new ArgumentException("One label per distinct value is required.", nameof(labels));
-        }
+    }
 
+    private ValueFacetIndex(
+        string key, string title, FacetKind kind, ValueColumn<TValue> column, int[] totals, int rowCount,
+        int? top, RankMode rankMode, bool searchable, ValueFormatter<TValue>? formatter, string?[]? labels, Lazy<string[]>? searchLabels)
+        : base(key, title, kind, rowCount)
+    {
         Column = column;
+        this.totals = totals;
         Top = top;
         RankMode = rankMode;
         Searchable = searchable;
         this.formatter = formatter;
         this.labels = labels;
-        searchLabels = new Lazy<string[]>(BuildSearchLabels, LazyThreadSafetyMode.ExecutionAndPublication);
+        this.searchLabels = searchLabels ?? new Lazy<string[]>(BuildSearchLabels, LazyThreadSafetyMode.ExecutionAndPublication);
+        foreach (int total in totals)
+        {
+            if (total > 0)
+            {
+                valueCount++;
+            }
+        }
     }
 
     /// <summary>Whether the builder defined a label selector for this facet.</summary>
@@ -57,8 +69,8 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
 
     public bool Searchable { get; }
 
-    /// <summary>Number of facet values: distinct non-null values plus one when the dataset has nulls (concept §4.8).</summary>
-    public int ValueCount => Column.DistinctCount + (Column.HasNulls ? 1 : 0);
+    /// <summary>Number of facet values: distinct non-null values in the dataset plus one when it has nulls (concept §4.8). In a scope, only values some row in the scope has (concept §4.10).</summary>
+    public int ValueCount => valueCount;
 
     /// <summary>
     /// Rows having any of the selected values (concept §4.1). A null entry selects the null rows.
@@ -67,6 +79,14 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     /// </summary>
     public override RowSet RowsMatching(Selection selection) =>
         Column.RowsWithCodes(SelectedCodes(Expect<ValueSelection>(selection)).ToArray());
+
+    /// <inheritdoc />
+    public override FacetIndex Scope(RowSet scope)
+    {
+        var scoped = new int[Column.DistinctCount + 1];
+        Column.CountInto(scope, scoped);
+        return new ValueFacetIndex<TValue>(Key, Title, Kind, Column, scoped, scope.Count, Top, RankMode, Searchable, formatter, labels, searchLabels);
+    }
 
     /// <summary>Design §4.3 and §4.4: count, rank, pin selected values, fill to Top N, compute Other.</summary>
     public override FacetState Present(RowSet context, Selection? selection)
@@ -81,12 +101,12 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         int valueCount = ValueCount;
         if (Top is int top && valueCount > top)
         {
-            presented = selected.Where(code => Column.TotalCounts[code] > 0).ToList();
+            presented = selected.Where(code => totals[code] > 0).ToList();
             int remaining = Math.Max(0, top - presented.Count);
             var heap = new PriorityQueue<int, RankKey>(WorstFirst);
             for (int code = 0; code <= Column.DistinctCount; code++)
             {
-                if (Column.TotalCounts[code] == 0 || selected.Contains(code))
+                if (totals[code] == 0 || selected.Contains(code))
                 {
                     continue;
                 }
@@ -107,7 +127,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
                 int presentedFiltered = 0;
                 foreach (int code in presented)
                 {
-                    presentedTotal += Column.TotalCounts[code];
+                    presentedTotal += totals[code];
                     presentedFiltered += counts[code];
                 }
 
@@ -119,7 +139,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
             presented = new List<int>(valueCount);
             for (int code = 0; code <= Column.DistinctCount; code++)
             {
-                if (Column.TotalCounts[code] > 0)
+                if (totals[code] > 0)
                 {
                     presented.Add(code);
                 }
@@ -232,7 +252,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         var heap = new PriorityQueue<int, RankKey>(WorstFirst);
         for (int code = 1; code <= Column.DistinctCount; code++)
         {
-            if (all[code - 1].Contains(text, StringComparison.OrdinalIgnoreCase))
+            if (totals[code] > 0 && all[code - 1].Contains(text, StringComparison.OrdinalIgnoreCase))
             {
                 Offer(heap, code, RankOf(code, counts), max);
             }
@@ -249,7 +269,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     }
 
     private FacetValue ToFacetValue(int code, int[] counts, HashSet<int> selected) =>
-        new(code == 0 ? null : Column.ValueOf(code), Column.TotalCounts[code], counts[code], selected.Contains(code),
+        new(code == 0 ? null : Column.ValueOf(code), totals[code], counts[code], selected.Contains(code),
             code == 0 || labels is null ? null : labels[code - 1]);
 
     private HashSet<int> SelectedCodes(ValueSelection values)
@@ -291,7 +311,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     private RankKey RankOf(int code, int[] counts)
     {
         int filtered = counts[code];
-        int total = Column.TotalCounts[code];
+        int total = totals[code];
         int order = code == 0 ? int.MaxValue : code;
         return RankMode == RankMode.TotalCount
             ? new RankKey(total, filtered, order)
@@ -392,6 +412,16 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         }
 
         return null;
+    }
+
+    private static string?[]? Validate(ValueColumn<TValue> column, string?[]? labels)
+    {
+        if (labels is not null && labels.Length != column.DistinctCount)
+        {
+            throw new ArgumentException("One label per distinct value is required.", nameof(labels));
+        }
+
+        return labels;
     }
 
     private readonly record struct RankKey(int Primary, int Secondary, int Order);

@@ -7,12 +7,22 @@ namespace Linq2Dashboard.Facets;
 /// <summary>Built date facet. Presets resolve against the dashboard's <see cref="TimeProvider"/> at each call (concept §5).</summary>
 internal sealed class DateFacetIndex : FacetIndex
 {
+    private readonly int[] totals;
+    private readonly RowSet? scope;
+
     public DateFacetIndex(string key, string title, DateColumn column, IReadOnlyList<DatePreset> presets, TimeProvider timeProvider)
-        : base(key, title, FacetKind.Date, column.RowCount)
+        : this(key, title, column, presets, timeProvider, column.TotalCountsArray, null)
+    {
+    }
+
+    private DateFacetIndex(string key, string title, DateColumn column, IReadOnlyList<DatePreset> presets, TimeProvider timeProvider, int[] totals, RowSet? scope)
+        : base(key, title, FacetKind.Date, scope?.Count ?? column.RowCount)
     {
         Column = column;
         Presets = presets;
         TimeProvider = timeProvider;
+        this.totals = totals;
+        this.scope = scope;
     }
 
     public DateColumn Column { get; }
@@ -48,7 +58,7 @@ internal sealed class DateFacetIndex : FacetIndex
         {
             (DateTimeOffset from, DateTimeOffset to) = Column.BucketInterval(i);
             bool selected = hasInterval && Covers(selectedFrom, selectedTo, from, to);
-            buckets[i] = new DateBucket(from, to, Column.BucketStart(i), Column.TotalCounts[i + 1], counts[i + 1], selected);
+            buckets[i] = new DateBucket(from, to, Column.BucketStart(i), totals[i + 1], counts[i + 1], selected);
         }
 
         var presets = new PresetState[Presets.Count];
@@ -57,14 +67,23 @@ internal sealed class DateFacetIndex : FacetIndex
             DatePreset preset = Presets[i];
             (DateTimeOffset from, DateTimeOffset to) = ResolvePreset(preset);
             RowSet rows = Column.RowsInInterval(from, to);
+            int total = scope is null ? rows.Count : rows.And(scope).Count;
             // Selected when the selection is this preset, or an absolute interval that is exactly the preset's interval
             // (a click on the March bar lights "This month"). Coverage would light every preset inside a wide selection.
             bool selected = date?.Preset == preset || (hasInterval && date?.Preset is null && selectedFrom == from && selectedTo == to);
-            presets[i] = new PresetState(preset, from, to, rows.Count, rows.And(context).Count, selected);
+            presets[i] = new PresetState(preset, from, to, total, rows.And(context).Count, selected);
         }
 
-        var nullValue = new FacetValue(null, Column.TotalCounts[0], counts[0], date is { IncludeNull: true });
+        var nullValue = new FacetValue(null, totals[0], counts[0], date is { IncludeNull: true });
         return new DateFacetState(Key, Title, selection, context.Count, Column.Granularity, Column.Zone, buckets, presets, nullValue);
+    }
+
+    /// <inheritdoc />
+    public override FacetIndex Scope(RowSet scope)
+    {
+        var scoped = new int[Column.BucketCount + 1];
+        Column.CountInto(scope, scoped);
+        return new DateFacetIndex(Key, Title, Column, Presets, TimeProvider, scoped, scope);
     }
 
     /// <summary>Design §2.5: <c>from</c>/<c>to</c> as ISO 8601 instants, or <c>preset</c> in camelCase; <c>{ "onlyNull": true }</c> for the null rows alone.</summary>

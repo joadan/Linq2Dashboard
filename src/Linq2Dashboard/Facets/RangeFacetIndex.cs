@@ -7,10 +7,18 @@ namespace Linq2Dashboard.Facets;
 /// <summary>Built numeric range facet.</summary>
 internal sealed class RangeFacetIndex : FacetIndex
 {
+    private readonly int[] totals;
+
     public RangeFacetIndex(string key, string title, RangeColumn column)
-        : base(key, title, FacetKind.Range, column.RowCount)
+        : this(key, title, column, column.TotalCountsArray, column.RowCount)
+    {
+    }
+
+    private RangeFacetIndex(string key, string title, RangeColumn column, int[] totals, int rowCount)
+        : base(key, title, FacetKind.Range, rowCount)
     {
         Column = column;
+        this.totals = totals;
     }
 
     public RangeColumn Column { get; }
@@ -39,11 +47,19 @@ internal sealed class RangeFacetIndex : FacetIndex
             (double from, double to) = Column.Bucket(i);
             bool last = i == buckets.Length - 1;
             bool selected = range is { OnlyNulls: false } && Covers(range, from, to, last);
-            buckets[i] = new RangeBucket(from, to, Column.TotalCounts[i + 1], counts[i + 1], selected);
+            buckets[i] = new RangeBucket(from, to, totals[i + 1], counts[i + 1], selected);
         }
 
-        var nullValue = new FacetValue(null, Column.TotalCounts[0], counts[0], range is { IncludeNull: true });
+        var nullValue = new FacetValue(null, totals[0], counts[0], range is { IncludeNull: true });
         return new RangeFacetState(Key, Title, selection, context.Count, Column.Min, Column.Max, buckets, nullValue);
+    }
+
+    /// <inheritdoc />
+    public override FacetIndex Scope(RowSet scope)
+    {
+        var scoped = new int[Column.BucketCount + 1];
+        Column.CountInto(scope, scoped);
+        return new RangeFacetIndex(Key, Title, Column, scoped, scope.Count);
     }
 
     /// <summary>Design §2.5: bounds and flags, defaults omitted; <c>{ "onlyNull": true }</c> for the null rows alone.</summary>

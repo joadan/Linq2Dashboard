@@ -48,6 +48,9 @@ internal sealed class RangeColumn
     /// <summary>Total count per bucket code, index 0 being null.</summary>
     public ReadOnlySpan<int> TotalCounts => totalCounts;
 
+    /// <summary>The same totals as an array, for a facet index to keep without copying. Never written after build.</summary>
+    internal int[] TotalCountsArray => totalCounts;
+
     /// <summary>
     /// Bounds of bucket <paramref name="index"/> (0-based). The bucket covers <c>[From, To)</c>,
     /// except that the last bucket also includes <c>To</c>. Bounds may be infinite.

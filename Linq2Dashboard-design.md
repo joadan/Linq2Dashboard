@@ -74,6 +74,17 @@ var dashboard = Dashboard.Create(orders, b =>
 - `TextFacet` (§C5, added 2026-09-14) always takes an explicit key, since there is no selector to derive one from, and a `Func<T, string, bool>` that must be pure and thread-safe. The builder offers `Title` only; matching semantics live in the function.
 - All facet builders return a typed builder so kind-specific options are discoverable; the shape above is the whole configuration surface for the first version.
 
+Scoping a dashboard (§C4.10, added 2026-09-15):
+
+```csharp
+Dashboard<Order> nordic = dashboard.Where(x => x.Region == "Nordic");   // a scoped dashboard
+Dashboard<Order> open = nordic.Where(x => x.Status == "Open");           // scopes compose
+```
+
+- `Where` on a built dashboard returns a new `Dashboard<T>` over the rows that pass the predicate. It behaves exactly like a dashboard built with the predicate as one more fixed filter: `TotalCount`, every total count, "Other" and every metric share are measured against the subset, and a value no row in the subset has is not listed. The one difference is that range and date buckets, and a range facet's `Min` and `Max`, are the parent's.
+- It costs one predicate call per row plus one count per facet and one aggregation per metric (§4.3, §4.6), not a build: rows, columns, indexes, the sort order, the serializer and the selection row-set cache are shared with the parent (§5). Measured in §8.
+- The parent is unchanged. Both are immutable and thread-safe, take the same `Selections`, and share one `Serializer`, so a bookmark applies to any scope. A host that switches between scopes keeps the scoped dashboards it has made; each has its own state cache.
+
 ### 2.2 Selections
 
 `Selections` is an immutable, non-generic map from facet key to a selection. It is the only thing the UI sends back.
@@ -253,7 +264,7 @@ Selections restored = dashboard.Serializer.FromJson(json);
 source  --Where(fixed filters)-->  T[] _items      row id = array index, 0..N-1
 ```
 
-Rows that fail a fixed filter are dropped at build time, so ids are dense over the dataset and every count in the system is relative to the dataset (§C4.3). The dashboard keeps `_items` for paging and export only. Nothing else touches the objects after build.
+Rows that fail a fixed filter are dropped at build time, so ids are dense over the dataset and every count in the system is relative to the dataset (§C4.3). A scoped dashboard (§C4.10) keeps the same array and ids and carries a `RowSet` naming the rows in scope; its counts are relative to that set. The dashboard keeps `_items` for paging and export only. Nothing else touches the objects after build.
 
 ### 3.2 Row sets
 
@@ -367,7 +378,7 @@ Each `R_f` is cached by `(facetKey, selection)` (§5). The scans are `O(N)` with
 Let the facets with selections be `R_1 … R_k`.
 
 ```text
-M    = R_1 AND R_2 AND … AND R_k            (the full dataset set if k = 0)
+M    = A AND R_1 AND R_2 AND … AND R_k      (A is the dashboard's row set: every row, or the scope for a scoped dashboard, §C4.10)
 
 C_f  = AND of all R_g with g ≠ f            for a facet f with a selection
 C_f  = M                                    for a facet f without a selection
@@ -376,10 +387,12 @@ C_f  = M                                    for a facet f without a selection
 Computing every `C_f` naively costs `O(k²)` ANDs. Instead:
 
 ```text
-prefix[i] = R_1 AND … AND R_{i-1}
-suffix[i] = R_{i+1} AND … AND R_k
+prefix[i] = A AND R_1 AND … AND R_{i-1}
+suffix[i] = R_{i+1} AND … AND R_k AND A
 C_i       = prefix[i] AND suffix[i]
 ```
+
+`A` is a full set for a dashboard from the builder, so the ANDs with it are free; for a scoped dashboard it is the scope, and every context and the matching set stay inside it without any other change to the pipeline.
 
 That is `3k` ANDs in total, each 15 625 words at 1 M rows. For ten selected facets this is under a millisecond.
 
@@ -395,7 +408,7 @@ foreach (int row in C_f.Rows())
 
 One sequential pass over the rows in context. Cost is proportional to `|C_f|`, not to `V`.
 
-`counts[0]` is the null value's filtered count (§C4.8). Total counts come from the column and are never recomputed.
+`counts[0]` is the null value's filtered count (§C4.8). Total counts come from the column and are never recomputed. A scoped index (§C4.10) carries its own totals array, counted once over the scope with this same loop when `Where` is called, and presents against it; the column is shared with the parent. A value facet also counts how many codes have a non-zero total, which is the scope's value count, and skips codes with a zero total when presenting and searching, so a value absent from the scope is never listed.
 
 Facets are independent at this stage and may be counted in parallel. Parallelism is a builder option, off by default until benchmarks say otherwise.
 
@@ -418,7 +431,7 @@ Buckets are counted through `bucketCodes` exactly like value facets. Each `Bucke
 
 One pass over `M.Rows()` per metric column, accumulating sum, count-of-values, min and max in a single loop when several metrics share a column. Count is `M.Count`. A metric with zero contributing values reports `null` (§C4.4).
 
-**Share of the total (§C4.4, added 2026-09-14).** `MetricColumn` already keeps the aggregate over every row from the build, so the share costs one division per metric: `M.Count / N` for count, `Sum(M) / Total.Sum` for sum. Average, min and max get `null`, as does a sum without contributing rows and any share whose total is zero. `MetricIndex.Present(matching)` produces the whole `MetricState`, so the value and its share cannot disagree.
+**Share of the total (§C4.4, added 2026-09-14).** `MetricColumn` already keeps the aggregate over every row from the build, so the share costs one division per metric: `M.Count / N` for count, `Sum(M) / Total.Sum` for sum. Average, min and max get `null`, as does a sum without contributing rows and any share whose total is zero. `MetricIndex.Present(matching)` produces the whole `MetricState`, so the value and its share cannot disagree. A scoped metric index (§C4.10) holds the aggregate, row count and distinct count over the scope, computed once by `Where` with the same passes a calculation makes, so shares in a scope are against the scope.
 
 **Distinct (§C4.4, added 2026-09-14).** One pass over `M.Rows()` reading the distinct column's code per row and marking it in a bit set of V bits; the count of newly marked bits is the answer, and the full dataset answers with V without a scan. The share is that count over V. With no non-null value in the matching rows both are `null`. At a million rows this is the same sequential scan as facet counting, so it sits inside the per-click budget; the bit set is 12.5 KB for a 100 000-value customer column and is allocated per calculation.
 
@@ -455,9 +468,9 @@ Roughly 20 to 30 ms single-threaded, before any parallel gains. This is the numb
 
 ## 5. Caching and concurrency
 
-- **Immutable after build:** `_items`, all columns, all indexes, total counts, `sortedRows`. No locks needed to read.
-- **Selection row-set cache:** `(facetKey, Selection) → RowSet`, bounded LRU, default 256 entries, inside the dashboard. Selections are records with value equality, so they are their own cache keys. Toggling a value in one facet re-uses every other facet's cached set.
-- **State cache:** `Selections → DashboardState<T>`, bounded LRU, default 8 entries. Covers back/forward and "undo last click" for free.
+- **Immutable after build:** `_items`, all columns, all indexes, total counts, `sortedRows`. No locks needed to read. A scoped dashboard (§C4.10) is built the same way from its parent and is as immutable.
+- **Selection row-set cache:** `(facetKey, Selection) → RowSet`, bounded LRU, default 256 entries, inside the dashboard. Selections are records with value equality, so they are their own cache keys. Toggling a value in one facet re-uses every other facet's cached set. A scoped dashboard shares this cache with its parent, since the rows a selection matches do not depend on the scope; only the AND with the scope is per dashboard.
+- **State cache:** `Selections → DashboardState<T>`, bounded LRU, default 8 entries. Covers back/forward and "undo last click" for free. Per dashboard: a scope has its own, so switching between kept scopes returns cached states.
 - Both caches are safe for concurrent readers and writers. A miss computed twice is harmless because results are immutable and equal.
 - **States are immutable** and hold their own arrays. Rendering one state while the next is calculated is safe. A state keeps a reference to the dashboard for `GetPage` and `Search`; it never mutates it.
 - **Scratch memory** during `Calculate` comes from `ArrayPool<T>` and is returned before the state is published. Arrays that the state keeps (`counts` for searchable facets, `M`) are allocated for it.
@@ -605,6 +618,7 @@ Intel Xeon W-2223 (4 cores), .NET 10, BenchmarkDotNet short job, 1 000 000 rows.
 | `Create` without sort order | 563 ms | | |
 | `Create`, date facet only | 189 ms | | |
 | `Create`, customer facet only (100 000 values) | 157 ms | | |
+| `Where`, scoped dashboard over about 80 % of the rows (added 2026-09-15) | 28 ms | | 526 KB allocated |
 | `Calculate`, no selection | 3.6 ms | 2.3 ms | < 50 ms ✓ |
 | `Calculate`, 1 facet, warm | 9.3 ms | 5.4 ms | ✓ |
 | `Calculate`, 3 facets, warm | 9.4 ms | 4.9 ms | ✓ |
@@ -630,6 +644,7 @@ Intel Xeon W-2223 (4 cores), .NET 10, BenchmarkDotNet short job, 1 000 000 rows.
 
 Every target is met with margin, so per-value bitmaps stay out (§3.4). What the numbers say about where time goes:
 
+- **A scope costs about 3 % of a build and under 1 % of its memory** (added 2026-09-15): 28 ms and 526 KB against 1 040 ms and 78 MB. One predicate call per row, one counting pass per facet, one aggregation per metric; the row set is 125 KB and the rest is count arrays. A host can afford a scope per tenant, per user or per tab.
 - **The sort order is half of the build.** 480 ms of the 1 040 ms is `Array.Sort` over a million row ids through a delegate comparison. A key-specialised sort (materialise the key into a primitive array and sort indices by it) would likely halve that. Not needed for the target; first candidate if build time matters.
 - **The date facet is the next build cost** at about 190 ms, from one time zone conversion per row. Caching the offset per calendar day would remove most of it.
 - **Selection scans cost about 3 ms each**, three times the estimate, because the value scan sets bits one at a time through a range-checked builder. A word-at-a-time scan would bring it to the estimate. Only cold calculations pay this.
@@ -723,3 +738,4 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 - **Calculated metrics take a delegate over keyed values, not an expression or a fixed ratio shape.** Keys are checked by a dry run at definition; definition order is the dependency order. Decided 2026-09-14. See §2.1, §4.6.
 - **Value labels are a row selector on the builder, evaluated once per distinct value at `Create`.** Not a value selector (the row form covers it, and reaches denormalised columns directly), not async (the dashboard reads its data once, synchronously; lookups happen before `Create`), and not a formatter concern (the label is data and must drive search). Decided 2026-09-14. See §2.1, §2.4, §3.3.
 - **Metric tiles have no decoration parameters; a different look goes through `MetricTemplate`, which receives the formatted pieces.** A tile has no behaviour, so its default is a placeholder and the template is the real path. Decided 2026-09-14. See §9.5.
+- **A scope is a `Dashboard<T>` made from another, not a `Calculate` argument.** `Where` on a built dashboard returns a new dashboard sharing rows, columns, indexes, sort order, serializer and selection row-set cache, with a `RowSet` as its "all rows" and per-facet and per-metric totals counted once over it. The pipeline is unchanged: the scope simply replaces the full set at the start of the prefix and suffix products. Chosen over a scope parameter on `Calculate` because every caller, the state cache and the Blazor context would otherwise carry a second axis of state; the Blazor package needed no change. Decided 2026-09-15. See §2.1, §3.1, §4.2, §4.3, §4.6, §5.

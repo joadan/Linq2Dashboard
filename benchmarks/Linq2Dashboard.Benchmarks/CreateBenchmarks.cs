@@ -7,12 +7,17 @@ namespace Linq2Dashboard.Benchmarks;
 public class CreateBenchmarks
 {
     private BenchmarkOrder[] orders = [];
+    private Dashboard<BenchmarkOrder> dashboard = null!;
 
     [Params(1_000_000)]
     public int Rows { get; set; }
 
     [GlobalSetup]
-    public void Setup() => orders = OrderGenerator.Generate(Rows);
+    public void Setup()
+    {
+        orders = OrderGenerator.Generate(Rows);
+        dashboard = DashboardFactory.Build(orders);
+    }
 
     [Benchmark]
     public Dashboard<BenchmarkOrder> Create() => DashboardFactory.Build(orders);
@@ -39,6 +44,10 @@ public class CreateBenchmarks
     [Benchmark]
     public Dashboard<BenchmarkOrder> Create_DateFacetOnly() =>
         Dashboard.Create(orders, b => b.DateFacet(x => x.OrderDate).TimeZone(DashboardFactory.Stockholm));
+
+    /// <summary>A scoped dashboard over about four fifths of the rows (concept §4.10): one predicate pass plus one count per facet and metric, against a full Create.</summary>
+    [Benchmark]
+    public Dashboard<BenchmarkOrder> Where() => dashboard.Where(x => x.IsActive == true);
 
     /// <summary>Only the 100k-value customer facet.</summary>
     [Benchmark]
