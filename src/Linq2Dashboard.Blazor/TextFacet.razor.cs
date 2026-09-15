@@ -46,14 +46,6 @@ public partial class TextFacet<T>
     [Parameter]
     public int DebounceMilliseconds { get; set; } = 300;
 
-    /// <summary>Show how many rows the text is matched among: the facet's context count (concept §4.2). Default true.</summary>
-    [Parameter]
-    public bool ShowContextCount { get; set; } = true;
-
-    /// <summary>Format of the context line; <c>{0}</c> is the formatted count.</summary>
-    [Parameter]
-    public string ContextText { get; set; } = "Among {0} rows";
-
     /// <summary>Placeholder of the input.</summary>
     [Parameter]
     public string Placeholder { get; set; } = "Type to filter";

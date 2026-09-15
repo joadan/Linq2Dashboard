@@ -54,7 +54,7 @@ public class TextFacetTests : BunitContext
     private static Selections Text(string text) => Selections.Empty.With("search", new TextSelection(text));
 
     [Fact]
-    public void Renders_name_input_and_the_context_count()
+    public void Renders_name_and_input()
     {
         var cut = RenderFacet();
 
@@ -62,7 +62,6 @@ public class TextFacetTests : BunitContext
         Assert.Equal("Type to filter", Input(cut).GetAttribute("placeholder"));
         Assert.Equal("Find", Input(cut).GetAttribute("aria-label"));
         Assert.Equal("", Input(cut).GetAttribute("value") ?? "");
-        Assert.Equal("Among 8 rows", cut.Find(".l2d-text-context").TextContent);
         Assert.Equal("search", cut.Find(".l2d-text-facet").GetAttribute("data-key"));
         Assert.Empty(cut.FindAll(".l2d-facet-clear"));
     }
@@ -77,15 +76,6 @@ public class TextFacetTests : BunitContext
 
         Assert.Equal(Text("open"), raised);
         Assert.Single(cut.FindAll(".l2d-facet-clear"));
-        Assert.Equal("open", Input(cut).GetAttribute("value"));
-    }
-
-    [Fact]
-    public void The_context_count_follows_the_other_facets_not_its_own_text()
-    {
-        var cut = RenderFacet(Text("open").Toggle("Country", "SE"));
-
-        Assert.Equal("Among 3 rows", cut.Find(".l2d-text-context").TextContent);
         Assert.Equal("open", Input(cut).GetAttribute("value"));
     }
 
@@ -185,18 +175,11 @@ public class TextFacetTests : BunitContext
     }
 
     [Fact]
-    public void Texts_and_the_context_line_are_configurable()
+    public void The_placeholder_is_configurable()
     {
-        var cut = RenderFacet(configure: f =>
-        {
-            f.Add(x => x.Placeholder, "Sök");
-            f.Add(x => x.ContextText, "{0} rader");
-        });
-        Assert.Equal("Sök", Input(cut).GetAttribute("placeholder"));
-        Assert.Equal("8 rader", cut.Find(".l2d-text-context").TextContent);
+        var cut = RenderFacet(configure: f => f.Add(x => x.Placeholder, "Sök"));
 
-        var hidden = RenderFacet(configure: f => f.Add(x => x.ShowContextCount, false));
-        Assert.Empty(hidden.FindAll(".l2d-text-context"));
+        Assert.Equal("Sök", Input(cut).GetAttribute("placeholder"));
     }
 
     [Fact]

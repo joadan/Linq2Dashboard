@@ -16,10 +16,5 @@
     {
         <input type="search" class="l2d-text-input" placeholder="@Placeholder" aria-label="@HeaderName" value="@text"
                @oninput="OnInput" @onkeydown="OnKeyDown" />
-
-        @if (ShowContextCount)
-        {
-            <p class="l2d-text-context">@string.Format(System.Globalization.CultureInfo.InvariantCulture, ContextText, Formatter.FormatCount(Facet.ContextCount))</p>
-        }
     }
 </section>

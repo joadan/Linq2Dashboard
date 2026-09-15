@@ -151,7 +151,7 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 | `ValueFacet` | Values with counts, the null value, "Other", search. | `Key`, `Name`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate` |
 | `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Name`, `Layout`, `ShowSlider`, `ShowBounds` |
 | `DateFacet` | Presets with counts, one bar per period. | `Key`, `Name`, `Layout`, `ShowPresets` |
-| `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`, `DebounceMilliseconds`, `Placeholder`, `ShowContextCount` |
+| `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`, `DebounceMilliseconds`, `Placeholder` |
 | `ActiveSelections` | One removable chip per selection, clear all. | `ShowFacetName`, `GroupValues` |
 | `Metric` | One tile by key; a dash when there is no value. | `Key`, `Name`, `ShowShare`, `MetricTemplate` |
 | `MatchingCount` | A tile with the matching row count. | `Name`, `ShowShare`, `MetricTemplate` |

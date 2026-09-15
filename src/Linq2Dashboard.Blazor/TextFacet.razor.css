@@ -13,10 +13,3 @@
     background: var(--l2d-input-background, transparent);
     color: inherit;
 }
-
-.l2d-text-context {
-    margin: 0;
-    font-size: var(--l2d-small-size, 0.8125rem);
-    color: var(--l2d-muted, #71717a);
-    font-variant-numeric: tabular-nums;
-}
