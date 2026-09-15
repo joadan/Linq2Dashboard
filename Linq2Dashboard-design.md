@@ -79,11 +79,13 @@ Scoping a dashboard (§C4.10, added 2026-09-15):
 ```csharp
 Dashboard<Order> nordic = dashboard.Where(x => x.Region == "Nordic");   // a scoped dashboard
 Dashboard<Order> open = nordic.Where(x => x.Status == "Open");           // scopes compose
+Dashboard<Order> view = dashboard.Where(selections);                      // the same, in the facets' own terms
 ```
 
 - `Where` on a built dashboard returns a new `Dashboard<T>` over the rows that pass the predicate. It behaves exactly like a dashboard built with the predicate as one more fixed filter: `TotalCount`, every total count, "Other" and every metric share are measured against the subset, and a value no row in the subset has is not listed. The one difference is that range and date buckets, and a range facet's `Min` and `Max`, are the parent's.
 - It costs one predicate call per row plus one count per facet and one aggregation per metric (§4.3, §4.6), not a build: rows, columns, indexes, the sort order, the serializer and the selection row-set cache are shared with the parent (§5). Measured in §8.
 - The parent is unchanged. Both are immutable and thread-safe, take the same `Selections`, and share one `Serializer`, so a bookmark applies to any scope. A host that switches between scopes keeps the scoped dashboards it has made; each has its own state cache.
+- `Where(Selections)` (added 2026-09-15) resolves each selection through its facet index and the shared row-set cache (§4.1, §5), ANDs the sets with the current scope and builds the same scoped dashboard. No predicate runs and no row object is read, so a scope the user has just clicked costs only the counts. The facets' matching rules apply, a relative date preset is resolved once, now, and an unknown key throws as in `Calculate`. The scoped dashboard starts from `Selections.Empty`; because the scope is part of "all rows" rather than a selection, a scoped facet lists only the values in scope and gets no own-facet exclusion.
 
 ### 2.2 Selections
 
@@ -371,7 +373,7 @@ For each facet `f` with a non-empty selection, produce `R_f`:
 - Date: resolve preset to `[from, to)` ticks if needed; scan `ticks`. OR in `nulls` if `IncludeNull`.
 - Text (§C5): scan `_items` and set a bit where the application's function returns true for `(items[row], text)`. The only scan that touches row objects and runs application code, so it is the one scan whose cost the library does not control. When parallel counting is enabled it is split across cores over word-aligned chunks of 64 rows, which the contract (pure, thread-safe) allows; otherwise it runs serially like the other scans, so the option keeps its meaning of "this dashboard may use several cores per click". The result is cached like any other row set, so retyping a text or removing and re-adding it costs nothing.
 
-Each `R_f` is cached by `(facetKey, selection)` (§5). The scans are `O(N)` with sequential access, roughly 1 ms per million rows.
+Each `R_f` is cached by `(facetKey, selection)` (§5). The scans are `O(N)` with sequential access, roughly 1 ms per million rows. `Where(Selections)` (§C4.10) produces its scope from the same `R_f` sets through the same cache, so scoping by selections adds no scan of its own.
 
 ### 4.2 Matching set and per-facet contexts
 
@@ -739,3 +741,4 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 - **Value labels are a row selector on the builder, evaluated once per distinct value at `Create`.** Not a value selector (the row form covers it, and reaches denormalised columns directly), not async (the dashboard reads its data once, synchronously; lookups happen before `Create`), and not a formatter concern (the label is data and must drive search). Decided 2026-09-14. See §2.1, §2.4, §3.3.
 - **Metric tiles have no decoration parameters; a different look goes through `MetricTemplate`, which receives the formatted pieces.** A tile has no behaviour, so its default is a placeholder and the template is the real path. Decided 2026-09-14. See §9.5.
 - **A scope is a `Dashboard<T>` made from another, not a `Calculate` argument.** `Where` on a built dashboard returns a new dashboard sharing rows, columns, indexes, sort order, serializer and selection row-set cache, with a `RowSet` as its "all rows" and per-facet and per-metric totals counted once over it. The pipeline is unchanged: the scope simply replaces the full set at the start of the prefix and suffix products. Chosen over a scope parameter on `Calculate` because every caller, the state cache and the Blazor context would otherwise carry a second axis of state; the Blazor package needed no change. Decided 2026-09-15. See §2.1, §3.1, §4.2, §4.3, §4.6, §5.
+- **A scope from selections goes through the facet indexes and the row-set cache, not through a predicate.** `Where(Selections)` ANDs the selections' row sets with the current scope and reuses the scoped constructor, about twenty lines; presets freeze because the row set is taken now. Decided 2026-09-15. See §2.1, §4.1.

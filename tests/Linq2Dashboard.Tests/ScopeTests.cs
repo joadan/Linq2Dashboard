@@ -321,8 +321,86 @@ public class ScopeTests
     }
 
     [Fact]
+    public void A_scope_given_as_selections_equals_the_predicate_form()
+    {
+        (Selections Scope, Func<Order, bool> Predicate)[] forms =
+        [
+            (Selections.Empty.With("Country", ValueSelection.Of("se")), x => string.Equals(x.Country, "SE", StringComparison.OrdinalIgnoreCase)),
+            (Selections.Empty.With("Country", ValueSelection.Of(null, "DK")), x => x.Country is null or "DK"),
+            (Selections.Empty.With("Amount", new RangeSelection(100, 1000)), x => x.Amount is >= 100 and <= 1000),
+            (Selections.Empty.With("Discount", RangeSelection.OnlyNull), x => x.Discount is null),
+            (Selections.Empty.With("OrderDate", DateSelection.Relative(DatePreset.ThisMonth)), x => x.OrderDate.Month == 3),
+            (Selections.Empty.With("search", new TextSelection("open")).With("IsActive", ValueSelection.Of(true)), x => x.Status.Contains("open", StringComparison.OrdinalIgnoreCase) && x.IsActive),
+            (Selections.Empty, _ => true),
+        ];
+
+        foreach ((Selections scope, Func<Order, bool> predicate) in forms)
+        {
+            Dashboard<Order> bySelections = Parent.Where(scope);
+            Dashboard<Order> byPredicate = Parent.Where(predicate);
+            Assert.Equal(byPredicate.TotalCount, bySelections.TotalCount);
+            foreach (Selections selections in SelectionSets)
+            {
+                Assert.Equal(Snapshot(byPredicate.Calculate(selections)), Snapshot(bySelections.Calculate(selections)));
+            }
+        }
+    }
+
+    [Fact]
+    public void A_scope_from_selections_starts_with_nothing_selected_and_shows_only_the_values_in_scope()
+    {
+        var state = Parent.Where(Selections.Empty.With("Country", ValueSelection.Of("SE"))).Calculate();
+
+        Assert.True(state.Selections.IsEmpty);
+        Assert.Equal(3, state.TotalCount);
+        var country = Values(state, "Country");
+        Assert.False(country.HasSelection);
+        Assert.Equal([("SE", 3, 3, false)], country.Values.Select(v => (v.Value, v.TotalCount, v.FilteredCount, v.Selected)));
+        Assert.Equal(1, country.DistinctCount);
+    }
+
+    [Fact]
+    public void A_selection_on_a_scoped_facet_narrows_further()
+    {
+        var nordic = Parent.Where(Selections.Empty.With("Country", ValueSelection.Of("SE", "NO")));
+
+        Assert.Equal(5, nordic.TotalCount);
+        Assert.Equal(3, nordic.Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE"))).MatchingCount);
+
+        var outside = nordic.Calculate(Selections.Empty.With("Country", ValueSelection.Of("DK")));
+        Assert.Equal(0, outside.MatchingCount);
+        Assert.DoesNotContain(Values(outside, "Country").Values, v => Equals(v.Value, "DK"));
+    }
+
+    [Fact]
+    public void A_relative_preset_is_frozen_when_the_scope_is_made()
+    {
+        var clock = new AdjustableTimeProvider(TestData.Instant("2026-03-15T10:00:00Z"));
+        var parent = Dashboard.Create(TestData.Orders(), b =>
+        {
+            b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth);
+            b.UseTimeProvider(clock);
+        });
+        var thisMonth = parent.Where(Selections.Empty.With("OrderDate", DateSelection.Relative(DatePreset.ThisMonth)));
+        Assert.Equal(3, thisMonth.TotalCount); // March: rows 3, 4 and 5
+
+        clock.Now = TestData.Instant("2026-04-20T10:00:00Z");
+        Assert.Equal(3, thisMonth.Calculate().TotalCount);
+        Assert.Equal(3, ((DateFacetState)thisMonth.Calculate().Facet("OrderDate")).Buckets.Sum(b => b.TotalCount));
+        Assert.Equal(2, ((DateFacetState)parent.Calculate().Facet("OrderDate")).Presets[0].TotalCount); // the parent follows the clock: April has rows 6 and 7
+    }
+
+    [Fact]
+    public void Where_with_selections_rejects_unknown_keys_and_null()
+    {
+        Assert.Throws<ArgumentNullException>(() => Parent.Where((Selections)null!));
+        var e = Assert.Throws<ArgumentException>(() => Parent.Where(Selections.Empty.With("Nope", ValueSelection.Of(1))));
+        Assert.Contains("Nope", e.Message);
+    }
+
+    [Fact]
     public void Where_rejects_a_null_predicate()
     {
-        Assert.Throws<ArgumentNullException>(() => Parent.Where(null!));
+        Assert.Throws<ArgumentNullException>(() => Parent.Where((Func<Order, bool>)null!));
     }
 }

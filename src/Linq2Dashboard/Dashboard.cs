@@ -109,6 +109,31 @@ public sealed class Dashboard<T>
         return new Dashboard<T>(this, builder.Build());
     }
 
+    /// <summary>
+    /// A dashboard over the rows of this one that <paramref name="selections"/> match, resolved by the
+    /// facets themselves (concept §4.10): the same rows the selections would match as a user's choice,
+    /// with the facets' rules for case, null and intervals, and no call on the row objects. The scoped
+    /// dashboard starts with nothing selected; its facets show only the values in scope, without the
+    /// own-facet exclusion a selection gets (concept §4.2); a relative date preset is resolved now and
+    /// stays fixed. An unknown facet key is an error, as in <see cref="Calculate(Selections)"/>.
+    /// </summary>
+    public Dashboard<T> Where(Selections selections)
+    {
+        ArgumentNullException.ThrowIfNull(selections);
+        RowSet scope = All;
+        foreach ((string key, Selection selection) in selections)
+        {
+            if (!facetsByKey.TryGetValue(key, out FacetIndex? facet))
+            {
+                throw new ArgumentException($"Unknown facet key '{key}'.", nameof(selections));
+            }
+
+            scope = scope.And(RowsMatching(facet, selection));
+        }
+
+        return new Dashboard<T>(this, scope);
+    }
+
     /// <summary>The facets in definition order.</summary>
     public IReadOnlyList<FacetInfo> Facets { get; }
 

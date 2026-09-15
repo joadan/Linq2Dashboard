@@ -67,3 +67,11 @@ public sealed class CountingEnumerable<T>(IEnumerable<T> inner) : IEnumerable<T>
 
     System.Collections.IEnumerator System.Collections.IEnumerable.GetEnumerator() => GetEnumerator();
 }
+
+/// <summary>A clock the test moves by hand.</summary>
+public sealed class AdjustableTimeProvider(DateTimeOffset now) : TimeProvider
+{
+    public DateTimeOffset Now { get; set; } = now;
+
+    public override DateTimeOffset GetUtcNow() => Now;
+}
