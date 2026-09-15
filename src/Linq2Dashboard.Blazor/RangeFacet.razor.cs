@@ -12,6 +12,10 @@ public partial class RangeFacet<T>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
 
+    /// <summary>Overrides the title given in the builder. The core's title is a default display name; the page may replace it, for example with a localised string (concept §7).</summary>
+    [Parameter]
+    public string? Title { get; set; }
+
     /// <summary>Replaces the default header (title, bounds and clear button). Receives the facet state. Collapsing is then controlled only through <see cref="Collapsed"/>.</summary>
     [Parameter]
     public RenderFragment<RangeFacetState>? HeaderTemplate { get; set; }
@@ -66,6 +70,8 @@ public partial class RangeFacet<T>
     /// <summary>Shown when the dataset has no value for this facet.</summary>
     [Parameter]
     public string NoValuesText { get; set; } = "No values";
+
+    private string HeaderTitle => Title ?? Facet.Title;
 
     private RangeFacetState Facet => State.Facet(Key) as RangeFacetState
         ?? throw new InvalidOperationException($"Facet '{Key}' is not a range facet; use the component for its kind.");

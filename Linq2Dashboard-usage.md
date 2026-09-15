@@ -148,15 +148,16 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 | Component | Renders | Notable parameters |
 |---|---|---|
 | `DashboardView` | Owns selections and state, cascades them. | `Dashboard`, `@bind-Selections`, `StateChanged`, `Formatter` |
-| `ValueFacet` | Values with counts, the null value, "Other", search. | `Key`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate` |
-| `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Layout`, `ShowSlider`, `ShowBounds` |
-| `DateFacet` | Presets with counts, one bar per period. | `Key`, `Layout`, `ShowPresets` |
-| `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `DebounceMilliseconds`, `Placeholder`, `ShowContextCount` |
+| `ValueFacet` | Values with counts, the null value, "Other", search. | `Key`, `Title`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate` |
+| `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Title`, `Layout`, `ShowSlider`, `ShowBounds` |
+| `DateFacet` | Presets with counts, one bar per period. | `Key`, `Title`, `Layout`, `ShowPresets` |
+| `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Title`, `DebounceMilliseconds`, `Placeholder`, `ShowContextCount` |
 | `ActiveSelections` | One removable chip per selection, clear all. | `ShowFacetTitle`, `GroupValues` |
 | `Metric` | One tile by key; a dash when there is no value. | `Key`, `Title`, `ShowShare`, `MetricTemplate` |
 | `MatchingCount` | A tile with the matching row count. | `Title`, `ShowShare`, `MetricTemplate` |
 | `Results` | Matching rows through your template, paged or virtualised. | `RowTemplate`, `HeaderTemplate`, `EmptyTemplate`, `Layout`, `PageSize`, `Virtualize` |
 
+- **Titles.** The `Title` given in the builder is the default display name and travels with the state, so plain-C# consumers, `ActiveSelections` and `StateSummary` have a name for every key. Each facet component and `Metric` take a `Title` parameter that replaces it in that component only, for example with a localised string, so one dashboard serves every language.
 - **Tile templates.** `MetricTemplate` on `Metric` and `MatchingCount` receives a `MetricTileContent`: the formatted `Title`, `Value` and `Share` (null when not shown), `IsEmpty`, and the raw `Metric` state (null for the matching count). Compose these with your own markup; the tile element and its classes stay.
 - **Formatting** goes through one `IDashboardFormatter` cascaded from `DashboardView`. Derive from `DefaultDashboardFormatter` to change culture, number formats, the null label or preset names. Pass a fixed culture in tests.
 - **Styling** is plain CSS. Every `--l2d-*` custom property is declared on `.l2d-dashboard`; override them on that element or an ancestor. Every component takes `Class` and passes unknown attributes to its root element. State classes `l2d-selected`, `l2d-zero`, `l2d-null`, `l2d-collapsed` and `l2d-metric-empty` are stable hooks.

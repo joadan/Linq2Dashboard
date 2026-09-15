@@ -13,6 +13,10 @@ public partial class ValueFacet<T>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
 
+    /// <summary>Overrides the title given in the builder. The core's title is a default display name; the page may replace it, for example with a localised string (concept §7).</summary>
+    [Parameter]
+    public string? Title { get; set; }
+
     /// <summary>Replaces the default header (title and clear button). Receives the facet state. Collapsing is then controlled only through <see cref="Collapsed"/>.</summary>
     [Parameter]
     public RenderFragment<ValueFacetState>? HeaderTemplate { get; set; }
@@ -68,6 +72,8 @@ public partial class ValueFacet<T>
     /// <summary>Shown when a search matches no value.</summary>
     [Parameter]
     public string NoMatchesText { get; set; } = "No matches";
+
+    private string HeaderTitle => Title ?? Facet.Title;
 
     private ValueFacetState Facet => State.Facet(Key) as ValueFacetState
         ?? throw new InvalidOperationException($"Facet '{Key}' is not a value or boolean facet; use the component for its kind.");

@@ -8,13 +8,13 @@
     }
     else
     {
-        <FacetHeader Title="@Facet.Title" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="ClearAsync"
+        <FacetHeader Title="@HeaderTitle" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="ClearAsync"
                      Collapsible="Collapsible" Collapsed="collapsed" OnToggle="ToggleCollapsed" />
     }
 
     @if (!collapsed)
     {
-        <input type="search" class="l2d-text-input" placeholder="@Placeholder" aria-label="@Facet.Title" value="@text"
+        <input type="search" class="l2d-text-input" placeholder="@Placeholder" aria-label="@HeaderTitle" value="@text"
                @oninput="OnInput" @onkeydown="OnKeyDown" />
 
         @if (ShowContextCount)

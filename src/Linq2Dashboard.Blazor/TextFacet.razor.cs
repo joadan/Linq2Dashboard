@@ -19,6 +19,10 @@ public partial class TextFacet<T>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
 
+    /// <summary>Overrides the title given in the builder. The core's title is a default display name; the page may replace it, for example with a localised string (concept §7).</summary>
+    [Parameter]
+    public string? Title { get; set; }
+
     /// <summary>Replaces the default header (title and clear button). Receives the facet state. Collapsing is then controlled only through <see cref="Collapsed"/>.</summary>
     [Parameter]
     public RenderFragment<TextFacetState>? HeaderTemplate { get; set; }
@@ -57,6 +61,8 @@ public partial class TextFacet<T>
     /// <summary>Accessible label and tooltip of the header's clear button, which shows an ×.</summary>
     [Parameter]
     public string ClearText { get; set; } = "Clear";
+
+    private string HeaderTitle => Title ?? Facet.Title;
 
     private TextFacetState Facet => State.Facet(Key) as TextFacetState
         ?? throw new InvalidOperationException($"Facet '{Key}' is not a text facet; use the component for its kind.");
