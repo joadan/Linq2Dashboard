@@ -16,7 +16,7 @@
         <dl class="l2d-summary-metrics">
             @foreach (MetricState metric in State.Metrics)
             {
-                <dt>@metric.Title</dt>
+                <dt>@metric.Name</dt>
                 <dd class="l2d-metric" data-key="@metric.Key">@Formatter.FormatMetric(metric)</dd>
             }
         </dl>
@@ -26,7 +26,7 @@
     {
         <section class="l2d-summary-facet" data-key="@facet.Key">
             <h4>
-                @facet.Title
+                @facet.Name
                 @if (facet.HasSelection)
                 {
                     <button type="button" class="l2d-clear" @onclick="() => Context.ClearAsync(facet.Key)">Clear</button>

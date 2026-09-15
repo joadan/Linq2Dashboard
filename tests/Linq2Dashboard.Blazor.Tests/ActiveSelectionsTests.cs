@@ -12,10 +12,10 @@ public class ActiveSelectionsTests : BunitContext
         Dashboard.Create(TestData.Orders(), b =>
         {
             b.ValueFacet(x => x.Country);
-            b.ValueFacet(x => x.Status).Title("Order status");
+            b.ValueFacet(x => x.Status).Name("Order status");
             b.ValueFacet("city", x => x.Country).Label(x => x.Address?.City);
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
-            b.DateFacet(x => x.OrderDate).Title("Ordered").TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
+            b.DateFacet(x => x.OrderDate).Name("Ordered").TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
             b.UseTimeProvider(new FixedTimeProvider(TestData.Instant("2026-03-15T10:00:00Z")));
         });
 
@@ -185,9 +185,9 @@ public class ActiveSelectionsTests : BunitContext
     }
 
     [Fact]
-    public void Facet_titles_can_be_hidden()
+    public void Facet_names_can_be_hidden()
     {
-        var cut = RenderChips(Selections.Empty.With("Country", ValueSelection.Of("SE")), configure: c => c.Add(x => x.ShowFacetTitle, false));
+        var cut = RenderChips(Selections.Empty.With("Country", ValueSelection.Of("SE")), configure: c => c.Add(x => x.ShowFacetName, false));
 
         Assert.Empty(cut.FindAll(".l2d-chip-facet"));
         Assert.Equal("SE", Label(Chips(cut).Single()));

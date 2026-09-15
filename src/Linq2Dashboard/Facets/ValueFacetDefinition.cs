@@ -35,7 +35,7 @@ internal sealed class ValueFacetDefinition<T, TProp> : FacetDefinition<T>
             return value is not null;
         }, Comparer);
 
-        return new ValueFacetIndex<TProp>(Key, Title, Kind, column, Top, RankMode, Searchable, Formatter, BuildLabels(items, column));
+        return new ValueFacetIndex<TProp>(Key, Name, Kind, column, Top, RankMode, Searchable, Formatter, BuildLabels(items, column));
     }
 
     /// <summary>

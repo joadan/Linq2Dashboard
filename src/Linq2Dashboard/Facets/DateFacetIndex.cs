@@ -10,13 +10,13 @@ internal sealed class DateFacetIndex : FacetIndex
     private readonly int[] totals;
     private readonly RowSet? scope;
 
-    public DateFacetIndex(string key, string title, DateColumn column, IReadOnlyList<DatePreset> presets, TimeProvider timeProvider)
-        : this(key, title, column, presets, timeProvider, column.TotalCountsArray, null)
+    public DateFacetIndex(string key, string name, DateColumn column, IReadOnlyList<DatePreset> presets, TimeProvider timeProvider)
+        : this(key, name, column, presets, timeProvider, column.TotalCountsArray, null)
     {
     }
 
-    private DateFacetIndex(string key, string title, DateColumn column, IReadOnlyList<DatePreset> presets, TimeProvider timeProvider, int[] totals, RowSet? scope)
-        : base(key, title, FacetKind.Date, scope?.Count ?? column.RowCount)
+    private DateFacetIndex(string key, string name, DateColumn column, IReadOnlyList<DatePreset> presets, TimeProvider timeProvider, int[] totals, RowSet? scope)
+        : base(key, name, FacetKind.Date, scope?.Count ?? column.RowCount)
     {
         Column = column;
         Presets = presets;
@@ -75,7 +75,7 @@ internal sealed class DateFacetIndex : FacetIndex
         }
 
         var nullValue = new FacetValue(null, totals[0], counts[0], date is { IncludeNull: true });
-        return new DateFacetState(Key, Title, selection, context.Count, Column.Granularity, Column.Zone, buckets, presets, nullValue);
+        return new DateFacetState(Key, Name, selection, context.Count, Column.Granularity, Column.Zone, buckets, presets, nullValue);
     }
 
     /// <inheritdoc />
@@ -83,7 +83,7 @@ internal sealed class DateFacetIndex : FacetIndex
     {
         var scoped = new int[Column.BucketCount + 1];
         Column.CountInto(scope, scoped);
-        return new DateFacetIndex(Key, Title, Column, Presets, TimeProvider, scoped, scope);
+        return new DateFacetIndex(Key, Name, Column, Presets, TimeProvider, scoped, scope);
     }
 
     /// <summary>Design §2.5: <c>from</c>/<c>to</c> as ISO 8601 instants, or <c>preset</c> in camelCase; <c>{ "onlyNull": true }</c> for the null rows alone.</summary>

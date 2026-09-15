@@ -18,11 +18,11 @@ public sealed class MetricBuilder<T>
     public string Key => definition.Key;
 
     /// <summary>Display name. Defaults to the key.</summary>
-    public MetricBuilder<T> Title(string title)
+    public MetricBuilder<T> Name(string name)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ensureMutable();
-        definition.Title = title;
+        definition.Name = name;
         return this;
     }
 }

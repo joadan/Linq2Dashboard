@@ -12,11 +12,11 @@ public partial class DateFacet<T>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
 
-    /// <summary>Overrides the title given in the builder. The core's title is a default display name; the page may replace it, for example with a localised string (concept §7).</summary>
+    /// <summary>Overrides the name given in the builder, which is only a default display name, for example with a localised string (concept §7).</summary>
     [Parameter]
-    public string? Title { get; set; }
+    public string? Name { get; set; }
 
-    /// <summary>Replaces the default header (title and clear button). Receives the facet state. Collapsing is then controlled only through <see cref="Collapsed"/>.</summary>
+    /// <summary>Replaces the default header (name and clear button). Receives the facet state. Collapsing is then controlled only through <see cref="Collapsed"/>.</summary>
     [Parameter]
     public RenderFragment<DateFacetState>? HeaderTemplate { get; set; }
 
@@ -56,7 +56,7 @@ public partial class DateFacet<T>
     [Parameter]
     public string NoValuesText { get; set; } = "No values";
 
-    private string HeaderTitle => Title ?? Facet.Title;
+    private string HeaderName => Name ?? Facet.Name;
 
     private DateFacetState Facet => State.Facet(Key) as DateFacetState
         ?? throw new InvalidOperationException($"Facet '{Key}' is not a date facet; use the component for its kind.");

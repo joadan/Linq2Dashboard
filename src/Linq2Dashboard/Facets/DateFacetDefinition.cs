@@ -36,7 +36,7 @@ internal sealed class DateFacetDefinition<T, TDate> : FacetDefinition<T>
             return read.HasValue;
         }, zone, Granularity);
 
-        return new DateFacetIndex(Key, Title, column, Presets, timeProvider);
+        return new DateFacetIndex(Key, Name, column, Presets, timeProvider);
     }
 }
 

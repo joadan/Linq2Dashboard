@@ -12,5 +12,5 @@ internal sealed class TextFacetDefinition<T> : FacetDefinition<T>
     }
 
     public override FacetIndex Build(T[] items, TimeProvider timeProvider, bool parallel) =>
-        new TextFacetIndex<T>(Key, Title, items, predicate, parallel);
+        new TextFacetIndex<T>(Key, Name, items, predicate, parallel);
 }

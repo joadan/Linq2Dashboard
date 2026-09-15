@@ -222,13 +222,13 @@ public class TextFacetTests
         Assert.Throws<ArgumentNullException>(() => Build(b => b.TextFacet("t", null!)));
         Assert.Throws<ArgumentException>(() => Build(b => b.TextFacet(" ", (_, _) => true)));
         Assert.Throws<ArgumentException>(() => Build(b => b.TextFacet("Country", (_, _) => true)));
-        Assert.Throws<ArgumentException>(() => Build(b => b.TextFacet("t", (_, _) => true).Title("")));
+        Assert.Throws<ArgumentException>(() => Build(b => b.TextFacet("t", (_, _) => true).Name("")));
     }
 
     [Fact]
-    public void The_facet_is_described_with_its_kind_and_title()
+    public void The_facet_is_described_with_its_kind_and_name()
     {
-        var dashboard = Build(b => b.TextFacet("t", (_, _) => true).Title("Find"));
+        var dashboard = Build(b => b.TextFacet("t", (_, _) => true).Name("Find"));
 
         Assert.Equal(new FacetInfo("search", "search", FacetKind.Text), dashboard.Facets[2]);
         Assert.Equal(new FacetInfo("t", "Find", FacetKind.Text), dashboard.Facets[3]);

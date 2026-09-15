@@ -16,7 +16,7 @@ public class TextFacetTests : BunitContext
             b.TextFacet("search", (order, text) =>
                 order.Status.Contains(text, StringComparison.OrdinalIgnoreCase)
                 || (order.Country?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false))
-             .Title("Find");
+             .Name("Find");
         });
 
     private IRenderedComponent<DashboardView<Order>> RenderFacet(
@@ -54,7 +54,7 @@ public class TextFacetTests : BunitContext
     private static Selections Text(string text) => Selections.Empty.With("search", new TextSelection(text));
 
     [Fact]
-    public void Renders_title_input_and_the_context_count()
+    public void Renders_name_input_and_the_context_count()
     {
         var cut = RenderFacet();
 

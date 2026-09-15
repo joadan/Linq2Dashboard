@@ -6,10 +6,10 @@ namespace Linq2Dashboard;
 /// </summary>
 public abstract class FacetState
 {
-    private protected FacetState(string key, string title, FacetKind kind, Selection? selection, int contextCount)
+    private protected FacetState(string key, string name, FacetKind kind, Selection? selection, int contextCount)
     {
         Key = key;
-        Title = title;
+        Name = name;
         Kind = kind;
         Selection = selection;
         ContextCount = contextCount;
@@ -18,8 +18,8 @@ public abstract class FacetState
     /// <summary>Stable identity used in selections, state and bookmarks.</summary>
     public string Key { get; }
 
-    /// <summary>Display title: the key unless the builder set one.</summary>
-    public string Title { get; }
+    /// <summary>Display name: the key unless the builder set one.</summary>
+    public string Name { get; }
 
     /// <summary>Which kind of facet this is, and so which subclass of <see cref="FacetState"/> to cast to.</summary>
     public FacetKind Kind { get; }
@@ -44,10 +44,10 @@ public sealed class ValueFacetState : FacetState
     private readonly Func<object?, string?> labelOf;
 
     internal ValueFacetState(
-        string key, string title, FacetKind kind, Selection? selection, int contextCount,
+        string key, string name, FacetKind kind, Selection? selection, int contextCount,
         IReadOnlyList<FacetValue> values, FacetCount? other, int distinctCount, bool isSearchable,
         Func<string, int, IReadOnlyList<FacetValue>> search, Func<object?, string?> labelOf)
-        : base(key, title, kind, selection, contextCount)
+        : base(key, name, kind, selection, contextCount)
     {
         Values = values;
         Other = other;
@@ -98,9 +98,9 @@ public sealed class ValueFacetState : FacetState
 public sealed class RangeFacetState : FacetState
 {
     internal RangeFacetState(
-        string key, string title, Selection? selection, int contextCount,
+        string key, string name, Selection? selection, int contextCount,
         double min, double max, IReadOnlyList<RangeBucket> buckets, FacetValue @null)
-        : base(key, title, FacetKind.Range, selection, contextCount)
+        : base(key, name, FacetKind.Range, selection, contextCount)
     {
         Min = min;
         Max = max;
@@ -125,10 +125,10 @@ public sealed class RangeFacetState : FacetState
 public sealed class DateFacetState : FacetState
 {
     internal DateFacetState(
-        string key, string title, Selection? selection, int contextCount,
+        string key, string name, Selection? selection, int contextCount,
         DateGranularity granularity, TimeZoneInfo timeZone, IReadOnlyList<DateBucket> buckets,
         IReadOnlyList<PresetState> presets, FacetValue @null)
-        : base(key, title, FacetKind.Date, selection, contextCount)
+        : base(key, name, FacetKind.Date, selection, contextCount)
     {
         Granularity = granularity;
         TimeZone = timeZone;
@@ -159,8 +159,8 @@ public sealed class DateFacetState : FacetState
 /// </summary>
 public sealed class TextFacetState : FacetState
 {
-    internal TextFacetState(string key, string title, Selection? selection, int contextCount)
-        : base(key, title, FacetKind.Text, selection, contextCount)
+    internal TextFacetState(string key, string name, Selection? selection, int contextCount)
+        : base(key, name, FacetKind.Text, selection, contextCount)
     {
     }
 

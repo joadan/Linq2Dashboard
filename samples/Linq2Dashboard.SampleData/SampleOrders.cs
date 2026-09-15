@@ -72,22 +72,22 @@ public static class SampleOrders
             b.ValueFacet(x => x.Status);
             b.ValueFacet(x => x.Category).Top(10);
             b.ValueFacet("Customer", x => x.CustomerId).Label(x => x.Customer).Top(10).Searchable();
-            b.BooleanFacet(x => x.IsActive).Title("Active");
+            b.BooleanFacet(x => x.IsActive).Name("Active");
             b.RangeFacet(x => x.Amount).Buckets(50, 100, 200, 500, 1000, 2000);
             b.DateFacet(x => x.OrderDate)
-             .Title("Order date")
+             .Name("Order date")
              .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
              .Granularity(DateGranularity.Month)
              .Presets(DatePreset.Last30Days, DatePreset.ThisYear);
             b.TextFacet("search", (x, text) =>
                 (x.Customer?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false)
                 || x.Category.Contains(text, StringComparison.OrdinalIgnoreCase))
-             .Title("Search");
-            b.Count("orders").Title("Orders");
-            b.Sum("revenue", x => x.Amount).Title("Revenue");
-            b.Average("average", x => x.Amount).Title("Average order");
-            b.Distinct("customers", x => x.Customer).Title("Customers");
-            b.Calculated("perCustomer", m => m["revenue"] / m["customers"]).Title("Revenue per customer");
+             .Name("Search");
+            b.Count("orders").Name("Orders");
+            b.Sum("revenue", x => x.Amount).Name("Revenue");
+            b.Average("average", x => x.Amount).Name("Average order");
+            b.Distinct("customers", x => x.Customer).Name("Customers");
+            b.Calculated("perCustomer", m => m["revenue"] / m["customers"]).Name("Revenue per customer");
             b.OrderByDescending(x => x.OrderDate);
         });
 

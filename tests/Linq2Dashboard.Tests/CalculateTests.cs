@@ -402,7 +402,7 @@ public class CalculateTests
     {
         var dashboard = Build(b =>
         {
-            b.Calculated("aov", m => m["revenue"] / m["orders"]).Title("Average order");
+            b.Calculated("aov", m => m["revenue"] / m["orders"]).Name("Average order");
             b.Calculated("aovShare", m => m.Share("revenue") / m.Share("orders")); // reads shares, and an earlier calculated metric is visible too
             b.Calculated("doubleAov", m => m["aov"] * 2);
         });
@@ -639,7 +639,7 @@ public class CalculateTests
         Assert.Equal([FacetKind.Value, FacetKind.Value, FacetKind.Boolean, FacetKind.Range, FacetKind.Range, FacetKind.Date], state.Facets.Select(f => f.Kind));
         Assert.Equal(["orders", "revenue", "avgDiscount"], state.Metrics.Select(m => m.Key));
         Assert.True(state.TryGetFacet("Status", out FacetState status));
-        Assert.Equal("Status", status.Title);
+        Assert.Equal("Status", status.Name);
         Assert.False(status.HasSelection);
     }
 

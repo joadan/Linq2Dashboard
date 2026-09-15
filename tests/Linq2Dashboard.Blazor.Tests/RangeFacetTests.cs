@@ -14,7 +14,7 @@ public class RangeFacetTests : BunitContext
         Dashboard.Create(TestData.Orders(), b =>
         {
             b.ValueFacet(x => x.Country);
-            b.RangeFacet(x => x.Amount).Title("Order amount").Buckets(100, 500, 1000);
+            b.RangeFacet(x => x.Amount).Name("Order amount").Buckets(100, 500, 1000);
             b.RangeFacet(x => x.Discount).Buckets(10, 100);
         });
 
@@ -50,7 +50,7 @@ public class RangeFacetTests : BunitContext
     private static string Style(IElement bucket) => bucket.GetAttribute("style")!.Replace(" ", "");
 
     [Fact]
-    public void Renders_title_bounds_buckets_and_counts()
+    public void Renders_name_bounds_buckets_and_counts()
     {
         var cut = RenderFacet("Amount");
 

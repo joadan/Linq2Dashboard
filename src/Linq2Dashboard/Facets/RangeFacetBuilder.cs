@@ -19,11 +19,11 @@ public sealed class RangeFacetBuilder<T>
     public string Key => definition.Key;
 
     /// <summary>Display name. Defaults to the key.</summary>
-    public RangeFacetBuilder<T> Title(string title)
+    public RangeFacetBuilder<T> Name(string name)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ensureMutable();
-        definition.Title = title;
+        definition.Name = name;
         return this;
     }
 

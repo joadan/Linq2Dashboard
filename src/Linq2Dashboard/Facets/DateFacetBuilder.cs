@@ -3,7 +3,7 @@ namespace Linq2Dashboard;
 /// <summary>Fluent configuration of a date facet (design §2.1).</summary>
 public sealed class DateFacetBuilder<T>
 {
-    private readonly Action<string> setTitle;
+    private readonly Action<string> setName;
     private readonly Action<TimeZoneInfo> setZone;
     private readonly Action<DateGranularity> setGranularity;
     private readonly Action<DatePreset[]> setPresets;
@@ -11,14 +11,14 @@ public sealed class DateFacetBuilder<T>
 
     internal DateFacetBuilder(
         string key,
-        Action<string> setTitle,
+        Action<string> setName,
         Action<TimeZoneInfo> setZone,
         Action<DateGranularity> setGranularity,
         Action<DatePreset[]> setPresets,
         Action ensureMutable)
     {
         Key = key;
-        this.setTitle = setTitle;
+        this.setName = setName;
         this.setZone = setZone;
         this.setGranularity = setGranularity;
         this.setPresets = setPresets;
@@ -29,11 +29,11 @@ public sealed class DateFacetBuilder<T>
     public string Key { get; }
 
     /// <summary>Display name. Defaults to the key.</summary>
-    public DateFacetBuilder<T> Title(string title)
+    public DateFacetBuilder<T> Name(string name)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ensureMutable();
-        setTitle(title);
+        setName(name);
         return this;
     }
 

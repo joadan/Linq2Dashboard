@@ -17,7 +17,7 @@ internal sealed class MetricDefinition<T>
     public MetricDefinition(string key, Aggregation aggregation, Func<T, double?>? selector)
     {
         Key = key;
-        Title = key;
+        Name = key;
         Aggregation = aggregation;
         this.selector = selector;
     }
@@ -26,7 +26,7 @@ internal sealed class MetricDefinition<T>
     public MetricDefinition(string key, Func<T[], DistinctColumn> buildDistinct)
     {
         Key = key;
-        Title = key;
+        Name = key;
         Aggregation = Aggregation.Distinct;
         this.buildDistinct = buildDistinct;
     }
@@ -35,34 +35,34 @@ internal sealed class MetricDefinition<T>
     public MetricDefinition(string key, Func<MetricValues, double?> formula)
     {
         Key = key;
-        Title = key;
+        Name = key;
         Aggregation = Aggregation.Calculated;
         this.formula = formula;
     }
 
     public string Key { get; }
 
-    public string Title { get; set; }
+    public string Name { get; set; }
 
     public Aggregation Aggregation { get; }
 
-    public MetricInfo Info => new(Key, Title, Aggregation);
+    public MetricInfo Info => new(Key, Name, Aggregation);
 
     public MetricIndex Build(T[] items)
     {
         if (formula is not null)
         {
-            return new MetricIndex(Key, Title, Aggregation, null, null, formula, items.Length);
+            return new MetricIndex(Key, Name, Aggregation, null, null, formula, items.Length);
         }
 
         if (buildDistinct is not null)
         {
-            return new MetricIndex(Key, Title, Aggregation, null, buildDistinct(items), null, items.Length);
+            return new MetricIndex(Key, Name, Aggregation, null, buildDistinct(items), null, items.Length);
         }
 
         if (selector is null)
         {
-            return new MetricIndex(Key, Title, Aggregation, null, null, null, items.Length);
+            return new MetricIndex(Key, Name, Aggregation, null, null, null, items.Length);
         }
 
         var column = MetricColumn.Build(items.Length, (int row, out double value) =>
@@ -72,7 +72,7 @@ internal sealed class MetricDefinition<T>
             return read.HasValue;
         });
 
-        return new MetricIndex(Key, Title, Aggregation, column, null, null, items.Length);
+        return new MetricIndex(Key, Name, Aggregation, column, null, null, items.Length);
     }
 }
 
@@ -83,15 +83,15 @@ internal sealed class MetricIndex
     private readonly MetricAggregate total;
     private readonly int distinctTotal;
 
-    public MetricIndex(string key, string title, Aggregation aggregation, MetricColumn? column, DistinctColumn? distinct, Func<MetricValues, double?>? formula, int rowCount)
-        : this(key, title, aggregation, column, distinct, formula, rowCount, column?.Total ?? MetricAggregate.Empty, distinct?.DistinctCount ?? 0)
+    public MetricIndex(string key, string name, Aggregation aggregation, MetricColumn? column, DistinctColumn? distinct, Func<MetricValues, double?>? formula, int rowCount)
+        : this(key, name, aggregation, column, distinct, formula, rowCount, column?.Total ?? MetricAggregate.Empty, distinct?.DistinctCount ?? 0)
     {
     }
 
-    private MetricIndex(string key, string title, Aggregation aggregation, MetricColumn? column, DistinctColumn? distinct, Func<MetricValues, double?>? formula, int rowCount, MetricAggregate total, int distinctTotal)
+    private MetricIndex(string key, string name, Aggregation aggregation, MetricColumn? column, DistinctColumn? distinct, Func<MetricValues, double?>? formula, int rowCount, MetricAggregate total, int distinctTotal)
     {
         Key = key;
-        Title = title;
+        Name = name;
         Aggregation = aggregation;
         Column = column;
         Distinct = distinct;
@@ -103,7 +103,7 @@ internal sealed class MetricIndex
 
     public string Key { get; }
 
-    public string Title { get; }
+    public string Name { get; }
 
     public Aggregation Aggregation { get; }
 
@@ -116,14 +116,14 @@ internal sealed class MetricIndex
     /// <summary>Rows the share is measured against: the dataset, or the scope for an index made by <see cref="Scope"/> (concept §4.10).</summary>
     public int RowCount { get; }
 
-    public MetricInfo Info => new(Key, Title, Aggregation);
+    public MetricInfo Info => new(Key, Name, Aggregation);
 
     /// <summary>
     /// This metric with its totals over the rows in <paramref name="scope"/> (concept §4.10): one
     /// aggregation pass for a numeric column, one distinct count for a distinct column, nothing else.
     /// </summary>
     public MetricIndex Scope(RowSet scope) => new(
-        Key, Title, Aggregation, Column, Distinct, formula, scope.Count,
+        Key, Name, Aggregation, Column, Distinct, formula, scope.Count,
         Column?.Aggregate(scope) ?? MetricAggregate.Empty,
         Distinct?.CountIn(scope) ?? 0);
 
@@ -139,29 +139,29 @@ internal sealed class MetricIndex
         if (formula is not null)
         {
             double? result = formula(earlier);
-            return new MetricState(Key, Title, Aggregation, result is double r && double.IsFinite(r) ? r : null, null);
+            return new MetricState(Key, Name, Aggregation, result is double r && double.IsFinite(r) ? r : null, null);
         }
 
         if (Distinct is not null)
         {
             int distinct = Distinct.CountIn(matching);
             return distinct == 0
-                ? new MetricState(Key, Title, Aggregation, null, null)
-                : new MetricState(Key, Title, Aggregation, distinct, ShareOf(distinct, distinctTotal));
+                ? new MetricState(Key, Name, Aggregation, null, null)
+                : new MetricState(Key, Name, Aggregation, distinct, ShareOf(distinct, distinctTotal));
         }
 
         if (Column is null)
         {
-            return new MetricState(Key, Title, Aggregation, matching.Count, ShareOf(matching.Count, RowCount));
+            return new MetricState(Key, Name, Aggregation, matching.Count, ShareOf(matching.Count, RowCount));
         }
 
         MetricAggregate aggregate = Column.Aggregate(matching);
         return Aggregation switch
         {
-            Aggregation.Sum => new MetricState(Key, Title, Aggregation, aggregate.SumOrNull, aggregate.IsEmpty ? null : ShareOf(aggregate.Sum, total.Sum)),
-            Aggregation.Average => new MetricState(Key, Title, Aggregation, aggregate.Average, null),
-            Aggregation.Min => new MetricState(Key, Title, Aggregation, aggregate.MinOrNull, null),
-            Aggregation.Max => new MetricState(Key, Title, Aggregation, aggregate.MaxOrNull, null),
+            Aggregation.Sum => new MetricState(Key, Name, Aggregation, aggregate.SumOrNull, aggregate.IsEmpty ? null : ShareOf(aggregate.Sum, total.Sum)),
+            Aggregation.Average => new MetricState(Key, Name, Aggregation, aggregate.Average, null),
+            Aggregation.Min => new MetricState(Key, Name, Aggregation, aggregate.MinOrNull, null),
+            Aggregation.Max => new MetricState(Key, Name, Aggregation, aggregate.MaxOrNull, null),
             _ => throw new InvalidOperationException($"Unexpected aggregation {Aggregation}."),
         };
     }

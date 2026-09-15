@@ -12,7 +12,7 @@ public class ValueFacetTests : BunitContext
         Dashboard.Create(TestData.Orders(), b =>
         {
             b.ValueFacet(x => x.Country);
-            b.ValueFacet(x => x.Status).Title("Order status").Searchable();
+            b.ValueFacet(x => x.Status).Name("Order status").Searchable();
             b.ValueFacet("top", x => x.Country).Top(2);
             b.ValueFacet("city", x => x.Country).Label(x => x.Address?.City).Searchable();
             b.BooleanFacet(x => x.IsActive);
@@ -50,7 +50,7 @@ public class ValueFacetTests : BunitContext
     private static string Count(IElement item) => item.QuerySelector(".l2d-facet-value-count")!.TextContent.Trim();
 
     [Fact]
-    public void Renders_title_values_and_filtered_counts_in_rank_order()
+    public void Renders_name_values_and_filtered_counts_in_rank_order()
     {
         var cut = RenderFacet("Status");
 

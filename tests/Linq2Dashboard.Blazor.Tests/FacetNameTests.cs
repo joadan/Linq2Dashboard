@@ -5,16 +5,16 @@ using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor.Tests;
 
-/// <summary>The core's title is a default display name; each facet component may override it (concept §7).</summary>
-public class FacetTitleTests : BunitContext
+/// <summary>The core's name is a default display name; each facet component may override it (concept §7).</summary>
+public class FacetNameTests : BunitContext
 {
     private static Dashboard<Order> BuildDashboard() =>
         Dashboard.Create(TestData.Orders(), b =>
         {
-            b.ValueFacet(x => x.Country).Title("Country");
-            b.RangeFacet(x => x.Amount).Title("Amount").Buckets(100, 500, 1000);
-            b.DateFacet(x => x.OrderDate).Title("Ordered").TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
-            b.TextFacet("search", (order, text) => order.Status.Contains(text, StringComparison.OrdinalIgnoreCase)).Title("Find");
+            b.ValueFacet(x => x.Country).Name("Country");
+            b.RangeFacet(x => x.Amount).Name("Amount").Buckets(100, 500, 1000);
+            b.DateFacet(x => x.OrderDate).Name("Ordered").TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
+            b.TextFacet("search", (order, text) => order.Status.Contains(text, StringComparison.OrdinalIgnoreCase)).Name("Find");
         });
 
     private IRenderedComponent<DashboardView<Order>> RenderWith<TComponent>(Action<ComponentParameterCollectionBuilder<TComponent>> configure)
@@ -27,7 +27,7 @@ public class FacetTitleTests : BunitContext
         });
 
     [Fact]
-    public void Without_an_override_the_header_shows_the_builder_title()
+    public void Without_an_override_the_header_shows_the_builder_name()
     {
         var cut = RenderWith<ValueFacet<Order>>(f => f.Add(x => x.Key, "Country"));
 
@@ -35,12 +35,12 @@ public class FacetTitleTests : BunitContext
     }
 
     [Fact]
-    public void A_value_facet_title_can_be_overridden()
+    public void A_value_facet_name_can_be_overridden()
     {
         var cut = RenderWith<ValueFacet<Order>>(f =>
         {
             f.Add(x => x.Key, "Country");
-            f.Add(x => x.Title, "Land");
+            f.Add(x => x.Name, "Land");
         });
 
         Assert.Equal("Land", cut.Find(".l2d-facet-title").TextContent);
@@ -48,36 +48,36 @@ public class FacetTitleTests : BunitContext
     }
 
     [Fact]
-    public void A_range_facet_title_can_be_overridden()
+    public void A_range_facet_name_can_be_overridden()
     {
         var cut = RenderWith<RangeFacet<Order>>(f =>
         {
             f.Add(x => x.Key, "Amount");
-            f.Add(x => x.Title, "Belopp");
+            f.Add(x => x.Name, "Belopp");
         });
 
         Assert.Equal("Belopp", cut.Find(".l2d-facet-title").TextContent);
     }
 
     [Fact]
-    public void A_date_facet_title_can_be_overridden()
+    public void A_date_facet_name_can_be_overridden()
     {
         var cut = RenderWith<DateFacet<Order>>(f =>
         {
             f.Add(x => x.Key, "OrderDate");
-            f.Add(x => x.Title, "Beställd");
+            f.Add(x => x.Name, "Beställd");
         });
 
         Assert.Equal("Beställd", cut.Find(".l2d-facet-title").TextContent);
     }
 
     [Fact]
-    public void A_text_facet_title_can_be_overridden_and_labels_the_input()
+    public void A_text_facet_name_can_be_overridden_and_labels_the_input()
     {
         var cut = RenderWith<TextFacet<Order>>(f =>
         {
             f.Add(x => x.Key, "search");
-            f.Add(x => x.Title, "Sök");
+            f.Add(x => x.Name, "Sök");
         });
 
         Assert.Equal("Sök", cut.Find(".l2d-facet-title").TextContent);
@@ -96,7 +96,7 @@ public class FacetTitleTests : BunitContext
             {
                 builder.OpenComponent<ValueFacet<Order>>(0);
                 builder.AddComponentParameter(1, "Key", "Country");
-                builder.AddComponentParameter(2, "Title", "Land");
+                builder.AddComponentParameter(2, "Name", "Land");
                 builder.CloseComponent();
                 builder.OpenComponent<ActiveSelections<Order>>(3);
                 builder.CloseComponent();

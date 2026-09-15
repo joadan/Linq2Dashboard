@@ -12,9 +12,9 @@ public partial class Metric<T>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
 
-    /// <summary>Overrides the title given in the builder.</summary>
+    /// <summary>Overrides the name given in the builder.</summary>
     [Parameter]
-    public string? Title { get; set; }
+    public string? Name { get; set; }
 
     /// <summary>
     /// Shows the metric's share of its total under the value, as a percentage (concept §4.4). Only
@@ -24,7 +24,7 @@ public partial class Metric<T>
     public bool ShowShare { get; set; }
 
     /// <summary>
-    /// Replaces the title and value inside the tile with the template's markup. The tile element and its
+    /// Replaces the name and value inside the tile with the template's markup. The tile element and its
     /// classes stay. The context carries the formatted pieces and the raw state (design §9.5).
     /// </summary>
     [Parameter]
@@ -38,7 +38,7 @@ public partial class Metric<T>
         {
             MetricState current = Current;
             string? share = ShowShare && current.Share is double value ? Formatter.FormatShare(value) : null;
-            return new MetricTileContent(Title ?? current.Title, Formatter.FormatMetric(current), share, !current.HasValue, current);
+            return new MetricTileContent(Name ?? current.Name, Formatter.FormatMetric(current), share, !current.HasValue, current);
         }
     }
 

@@ -308,7 +308,7 @@ The UI consumes a **UI-friendly state** and produces **selections**. It never se
 ```text
 FacetState
     Key            stable string identity, e.g. "country"
-    Title          display name
+    Name           display name
     Kind           Value | Boolean | Range | Date | Text | Custom
     Values         presented values with total/filtered counts and selected flag
     Selection      the current selection in a serialisable form
@@ -393,7 +393,7 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **Top N ranking supports both modes.** Per facet, by filtered count (default) or by total count. See §6.
 - **Ranking picks the values; the UI orders them.** Rank mode stays in the definition because it needs every value's count. The display order of the presented values is a UI choice: rank, label or value, either direction, null last. Decided 2026-09-15. See §6.
 - **Facet keys: derived by default, explicit when given.** Unique, case-sensitive, fixed at initialisation. See §7.
-- **The title in the definition is a default display name; the UI may override it.** A title is presentation, but the state is consumed outside Blazor too, so the core carries one string per facet and metric and every consumer has a name for every key. A component replaces it for its own rendering only, for example with a localised string, so one dashboard serves every language without a rebuild. Nothing else (state, chips, JSON) sees the override. Decided 2026-09-15. See §7.
+- **The name in the definition is a default display name; the UI may override it.** A display name is presentation, but the state is consumed outside Blazor too, so the core carries one string per facet and metric and every consumer has a name for every key. A component replaces it for its own rendering only, for example with a localised string, so one dashboard serves every language without a rebuild. Nothing else (state, chips, JSON) sees the override. It is called `Name`, not `Title`, since `title` is an HTML attribute the components pass through and a parameter of that name would swallow it. Decided 2026-09-15. See §7.
 - **Metrics are over all matching rows only.** Per-facet-value metrics belong to grouping, later. See §4.4 and §8.
 - **Zero-count values stay in the state.** The core always includes them; hiding or greying them out is a UI choice. See §4.3.
 - **Metrics skip null.** Sum, average, min and max use rows with a value; average divides by that number. Count is unaffected. See §4.4.

@@ -98,7 +98,7 @@ public sealed class DashboardBuilder<T>
         AddFacet(definition);
         return new DateFacetBuilder<T>(
             key,
-            title => definition.Title = title,
+            name => definition.Name = name,
             zone => definition.Zone = zone,
             granularity => definition.Granularity = granularity,
             presets => definition.Presets = presets,
@@ -182,7 +182,7 @@ public sealed class DashboardBuilder<T>
         var earlier = new MetricState[metrics.Count];
         for (int i = 0; i < earlier.Length; i++)
         {
-            earlier[i] = new MetricState(metrics[i].Key, metrics[i].Title, metrics[i].Aggregation, null, null);
+            earlier[i] = new MetricState(metrics[i].Key, metrics[i].Name, metrics[i].Aggregation, null, null);
         }
 
         formula(new MetricValues(earlier, earlier.Length));

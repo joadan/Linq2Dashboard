@@ -9,9 +9,9 @@ public partial class ActiveSelections<T>
     [Parameter]
     public bool HideWhenEmpty { get; set; } = true;
 
-    /// <summary>Prefix each chip with its facet's title. Default true.</summary>
+    /// <summary>Prefix each chip with its facet's name. Default true.</summary>
     [Parameter]
-    public bool ShowFacetTitle { get; set; } = true;
+    public bool ShowFacetName { get; set; } = true;
 
     /// <summary>
     /// One chip per facet with its selected values inside, each removable on its own, instead of one

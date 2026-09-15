@@ -9,13 +9,13 @@ internal sealed class RangeFacetIndex : FacetIndex
 {
     private readonly int[] totals;
 
-    public RangeFacetIndex(string key, string title, RangeColumn column)
-        : this(key, title, column, column.TotalCountsArray, column.RowCount)
+    public RangeFacetIndex(string key, string name, RangeColumn column)
+        : this(key, name, column, column.TotalCountsArray, column.RowCount)
     {
     }
 
-    private RangeFacetIndex(string key, string title, RangeColumn column, int[] totals, int rowCount)
-        : base(key, title, FacetKind.Range, rowCount)
+    private RangeFacetIndex(string key, string name, RangeColumn column, int[] totals, int rowCount)
+        : base(key, name, FacetKind.Range, rowCount)
     {
         Column = column;
         this.totals = totals;
@@ -51,7 +51,7 @@ internal sealed class RangeFacetIndex : FacetIndex
         }
 
         var nullValue = new FacetValue(null, totals[0], counts[0], range is { IncludeNull: true });
-        return new RangeFacetState(Key, Title, selection, context.Count, Column.Min, Column.Max, buckets, nullValue);
+        return new RangeFacetState(Key, Name, selection, context.Count, Column.Min, Column.Max, buckets, nullValue);
     }
 
     /// <inheritdoc />
@@ -59,7 +59,7 @@ internal sealed class RangeFacetIndex : FacetIndex
     {
         var scoped = new int[Column.BucketCount + 1];
         Column.CountInto(scope, scoped);
-        return new RangeFacetIndex(Key, Title, Column, scoped, scope.Count);
+        return new RangeFacetIndex(Key, Name, Column, scoped, scope.Count);
     }
 
     /// <summary>Design §2.5: bounds and flags, defaults omitted; <c>{ "onlyNull": true }</c> for the null rows alone.</summary>

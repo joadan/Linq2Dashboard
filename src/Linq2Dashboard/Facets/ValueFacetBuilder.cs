@@ -19,11 +19,11 @@ public sealed class ValueFacetBuilder<T, TProp>
     public string Key => definition.Key;
 
     /// <summary>Display name. Defaults to the key.</summary>
-    public ValueFacetBuilder<T, TProp> Title(string title)
+    public ValueFacetBuilder<T, TProp> Name(string name)
     {
-        ArgumentException.ThrowIfNullOrWhiteSpace(title);
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
         ensureMutable();
-        definition.Title = title;
+        definition.Name = name;
         return this;
     }
 

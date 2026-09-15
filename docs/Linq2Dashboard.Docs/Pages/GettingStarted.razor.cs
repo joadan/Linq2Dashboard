@@ -12,7 +12,7 @@ public partial class GettingStarted
             b.Where(x => x.CompanyId == 42);                       // fixed filter: defines the dataset
 
             b.ValueFacet(x => x.Country);
-            b.ValueFacet(x => x.Status).Title("Order status");
+            b.ValueFacet(x => x.Status).Name("Order status");
             b.ValueFacet("Customer", x => x.CustomerId)            // count and select by id ...
              .Label(x => x.CustomerName)                           // ... show and search by name
              .Top(20).Searchable();

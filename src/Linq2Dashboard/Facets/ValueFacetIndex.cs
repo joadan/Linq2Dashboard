@@ -15,16 +15,16 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     private readonly int valueCount;
 
     public ValueFacetIndex(
-        string key, string title, FacetKind kind, ValueColumn<TValue> column,
+        string key, string name, FacetKind kind, ValueColumn<TValue> column,
         int? top, RankMode rankMode, bool searchable, ValueFormatter<TValue>? formatter, string?[]? labels = null)
-        : this(key, title, kind, column, column.TotalCountsArray, column.RowCount, top, rankMode, searchable, formatter, Validate(column, labels), null)
+        : this(key, name, kind, column, column.TotalCountsArray, column.RowCount, top, rankMode, searchable, formatter, Validate(column, labels), null)
     {
     }
 
     private ValueFacetIndex(
-        string key, string title, FacetKind kind, ValueColumn<TValue> column, int[] totals, int rowCount,
+        string key, string name, FacetKind kind, ValueColumn<TValue> column, int[] totals, int rowCount,
         int? top, RankMode rankMode, bool searchable, ValueFormatter<TValue>? formatter, string?[]? labels, Lazy<string[]>? searchLabels)
-        : base(key, title, kind, rowCount)
+        : base(key, name, kind, rowCount)
     {
         Column = column;
         this.totals = totals;
@@ -85,7 +85,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     {
         var scoped = new int[Column.DistinctCount + 1];
         Column.CountInto(scope, scoped);
-        return new ValueFacetIndex<TValue>(Key, Title, Kind, Column, scoped, scope.Count, Top, RankMode, Searchable, formatter, labels, searchLabels);
+        return new ValueFacetIndex<TValue>(Key, Name, Kind, Column, scoped, scope.Count, Top, RankMode, Searchable, formatter, labels, searchLabels);
     }
 
     /// <summary>Design §4.3 and §4.4: count, rank, pin selected values, fill to Top N, compute Other.</summary>
@@ -155,7 +155,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         }
 
         return new ValueFacetState(
-            Key, Title, Kind, selection, context.Count,
+            Key, Name, Kind, selection, context.Count,
             facetValues, other, valueCount, Searchable,
             (text, max) => Search(text, max, counts, selected), LabelOf);
     }

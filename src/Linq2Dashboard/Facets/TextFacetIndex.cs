@@ -15,8 +15,8 @@ internal sealed class TextFacetIndex<T> : FacetIndex
     private readonly Func<T, string, bool> predicate;
     private readonly bool parallel;
 
-    public TextFacetIndex(string key, string title, T[] items, Func<T, string, bool> predicate, bool parallel)
-        : base(key, title, FacetKind.Text, items.Length)
+    public TextFacetIndex(string key, string name, T[] items, Func<T, string, bool> predicate, bool parallel)
+        : base(key, name, FacetKind.Text, items.Length)
     {
         this.items = items;
         this.predicate = predicate;
@@ -67,7 +67,7 @@ internal sealed class TextFacetIndex<T> : FacetIndex
     public override FacetState Present(RowSet context, Selection? selection)
     {
         ExpectOrNull<TextSelection>(selection);
-        return new TextFacetState(Key, Title, selection, context.Count);
+        return new TextFacetState(Key, Name, selection, context.Count);
     }
 
     /// <summary>Design §2.5: <c>{ "text": "acme" }</c>.</summary>

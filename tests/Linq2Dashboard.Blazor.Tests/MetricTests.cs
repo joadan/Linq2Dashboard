@@ -12,11 +12,11 @@ public class MetricTests : BunitContext
         {
             b.ValueFacet(x => x.Country);
             b.RangeFacet(x => x.Discount);
-            b.Count("orders").Title("Orders");
-            b.Sum("revenue", x => x.Amount).Title("Revenue");
-            b.Average("avgDiscount", x => x.Discount).Title("Average discount");
-            b.Distinct("countries", x => x.Country).Title("Countries");
-            b.Calculated("aov", m => m["revenue"] / m["orders"]).Title("Average order");
+            b.Count("orders").Name("Orders");
+            b.Sum("revenue", x => x.Amount).Name("Revenue");
+            b.Average("avgDiscount", x => x.Discount).Name("Average discount");
+            b.Distinct("countries", x => x.Country).Name("Countries");
+            b.Calculated("aov", m => m["revenue"] / m["orders"]).Name("Average order");
         });
 
     private IRenderedComponent<DashboardView<Order>> RenderWith<TComponent>(Action<ComponentParameterCollectionBuilder<TComponent>> configure, Selections? selections = null)
@@ -46,12 +46,12 @@ public class MetricTests : BunitContext
     }
 
     [Fact]
-    public void The_title_can_be_overridden_and_the_value_follows_selections()
+    public void The_name_can_be_overridden_and_the_value_follows_selections()
     {
         var cut = RenderWith<Metric<Order>>(m =>
         {
             m.Add(x => x.Key, "orders");
-            m.Add(x => x.Title, "Order count");
+            m.Add(x => x.Name, "Order count");
         }, Selections.Empty.With("Country", ValueSelection.Of("SE")));
 
         Assert.Equal("Order count", cut.Find(".l2d-metric-title").TextContent);
@@ -149,7 +149,7 @@ public class MetricTests : BunitContext
     [Fact]
     public void Matching_count_is_its_own_tile()
     {
-        var cut = RenderWith<MatchingCount<Order>>(m => m.Add(x => x.Title, "Rows"), Selections.Empty.With("Country", ValueSelection.Of("NO")));
+        var cut = RenderWith<MatchingCount<Order>>(m => m.Add(x => x.Name, "Rows"), Selections.Empty.With("Country", ValueSelection.Of("NO")));
 
         var tile = cut.Find(".l2d-metric");
         Assert.Contains("l2d-metric-matching", tile.ClassName);
@@ -158,7 +158,7 @@ public class MetricTests : BunitContext
     }
 
     [Fact]
-    public void Matching_count_defaults_its_title_and_updates_on_click()
+    public void Matching_count_defaults_its_name_and_updates_on_click()
     {
         var cut = Render<DashboardView<Order>>(parameters =>
         {
@@ -194,7 +194,7 @@ public class MetricTests : BunitContext
         }, Selections.Empty.With("Country", ValueSelection.Of("SE")));
 
         Assert.NotNull(seen);
-        Assert.Equal("Revenue", seen.Title);
+        Assert.Equal("Revenue", seen.Name);
         var formatter = new DefaultDashboardFormatter(CultureInfo.InvariantCulture);
         Assert.Equal(formatter.FormatMetric(seen.Metric!), seen.Value);
         Assert.Equal(formatter.FormatShare(seen.Metric!.Share!.Value), seen.Share);
@@ -210,12 +210,12 @@ public class MetricTests : BunitContext
         {
             m.Add(x => x.Key, "avgDiscount");
             m.Add(x => x.ShowShare, true);
-            m.Add(x => x.Title, "Discount");
+            m.Add(x => x.Name, "Discount");
             m.Add(x => x.MetricTemplate, tile => { seen = tile; return ""; });
         }, Selections.Empty.With("Discount", RangeSelection.OnlyNull));
 
         Assert.NotNull(seen);
-        Assert.Equal("Discount", seen.Title);
+        Assert.Equal("Discount", seen.Name);
         Assert.Equal("–", seen.Value);
         Assert.Null(seen.Share);
         Assert.True(seen.IsEmpty);
@@ -227,13 +227,13 @@ public class MetricTests : BunitContext
         MetricTileContent? seen = null;
         var cut = RenderWith<MatchingCount<Order>>(m =>
         {
-            m.Add(x => x.Title, "Rows");
+            m.Add(x => x.Name, "Rows");
             m.Add(x => x.ShowShare, true);
             m.Add(x => x.MetricTemplate, tile => { seen = tile; return $"<i class='custom'>{tile.Value}</i>"; });
         }, Selections.Empty.With("Country", ValueSelection.Of("NO")));
 
         Assert.NotNull(seen);
-        Assert.Equal("Rows", seen.Title);
+        Assert.Equal("Rows", seen.Name);
         Assert.Equal("2", seen.Value);
         Assert.Equal("25.0 %", seen.Share);
         Assert.False(seen.IsEmpty);

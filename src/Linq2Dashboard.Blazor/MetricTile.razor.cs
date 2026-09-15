@@ -15,9 +15,9 @@ public partial class MetricTile
     [Parameter]
     public string Key { get; set; } = string.Empty;
 
-    /// <summary>The tile's title.</summary>
+    /// <summary>The tile's name.</summary>
     [Parameter, EditorRequired]
-    public string Title { get; set; } = string.Empty;
+    public string Name { get; set; } = string.Empty;
 
     /// <summary>The formatted value.</summary>
     [Parameter, EditorRequired]
@@ -39,7 +39,7 @@ public partial class MetricTile
     [Parameter]
     public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
-    /// <summary>Replaces the title and value; the tile element and its classes stay.</summary>
+    /// <summary>Replaces the name and value; the tile element and its classes stay.</summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 

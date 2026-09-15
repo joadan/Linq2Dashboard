@@ -47,7 +47,7 @@ var dashboard = Dashboard.Create(orders, b =>
     b.ValueFacet(x => x.Country);                    // key "Country", from the member name
     b.ValueFacet("Customer", x => x.CustomerId)      // explicit key; count and select by id...
      .Label(x => x.CustomerName)                     // ...show and search by name
-     .Title("Customer").Top(20).Searchable();
+     .Name("Customer").Top(20).Searchable();
     b.BooleanFacet(x => x.IsActive);
     b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);   // or .AutoBuckets(10)
     b.DateFacet(x => x.OrderDate)
@@ -57,7 +57,7 @@ var dashboard = Dashboard.Create(orders, b =>
     b.TextFacet("search", (x, text) => x.CustomerName.Contains(text, StringComparison.OrdinalIgnoreCase));
 
     b.Count("orders");
-    b.Sum("revenue", x => x.Amount).Title("Revenue");
+    b.Sum("revenue", x => x.Amount).Name("Revenue");
     b.Average("average", x => x.Amount);
     b.Min("smallest", x => x.Amount);
     b.Max("largest", x => x.Amount);
@@ -73,9 +73,9 @@ Rules of the builder:
 
 - A facet declared from a member expression takes the member's name as its key. Anything else needs an explicit key. Keys are case-sensitive and must be unique among facets and among metrics.
 - Range facets accept any numeric type or its nullable form. Date facets accept `DateTime`, `DateTimeOffset`, `DateOnly` or their nullable forms.
-- Value facet options: `Title`, `Top(n)` with an "Other" remainder, `RankBy(RankMode.TotalCount)` for a stable list, `Searchable()`, `Label(row => text)`, `Comparer(...)`, `Serialize(format, parse)` for value types JSON cannot round-trip by default.
-- Range facet options: `Title`, `Buckets(cuts...)` strictly ascending, or `AutoBuckets(count)` for equal widths.
-- Date facet options: `Title`, `TimeZone`, `Granularity` (Year, Month, ISO Week, Day), `Presets` (Today, Yesterday, Last7Days, Last30Days, ThisWeek, ThisMonth, ThisYear).
+- Value facet options: `Name`, `Top(n)` with an "Other" remainder, `RankBy(RankMode.TotalCount)` for a stable list, `Searchable()`, `Label(row => text)`, `Comparer(...)`, `Serialize(format, parse)` for value types JSON cannot round-trip by default.
+- Range facet options: `Name`, `Buckets(cuts...)` strictly ascending, or `AutoBuckets(count)` for equal widths.
+- Date facet options: `Name`, `TimeZone`, `Granularity` (Year, Month, ISO Week, Day), `Presets` (Today, Yesterday, Last7Days, Last30Days, ThisWeek, ThisMonth, ThisYear).
 - `Calculated` reads earlier metrics by key through `m["key"]`. It gives no value when any input has none or the result is not finite. Define its inputs before it.
 - `UseTimeProvider` supplies "now" for relative presets, for tests.
 - Mistakes surface inside `Create`, not at first use: an unknown metric key in a formula, a non-numeric range selector, non-ascending cuts, a duplicate key.
@@ -148,17 +148,17 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 | Component | Renders | Notable parameters |
 |---|---|---|
 | `DashboardView` | Owns selections and state, cascades them. | `Dashboard`, `@bind-Selections`, `StateChanged`, `Formatter` |
-| `ValueFacet` | Values with counts, the null value, "Other", search. | `Key`, `Title`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate` |
-| `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Title`, `Layout`, `ShowSlider`, `ShowBounds` |
-| `DateFacet` | Presets with counts, one bar per period. | `Key`, `Title`, `Layout`, `ShowPresets` |
-| `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Title`, `DebounceMilliseconds`, `Placeholder`, `ShowContextCount` |
-| `ActiveSelections` | One removable chip per selection, clear all. | `ShowFacetTitle`, `GroupValues` |
-| `Metric` | One tile by key; a dash when there is no value. | `Key`, `Title`, `ShowShare`, `MetricTemplate` |
-| `MatchingCount` | A tile with the matching row count. | `Title`, `ShowShare`, `MetricTemplate` |
+| `ValueFacet` | Values with counts, the null value, "Other", search. | `Key`, `Name`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate` |
+| `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Name`, `Layout`, `ShowSlider`, `ShowBounds` |
+| `DateFacet` | Presets with counts, one bar per period. | `Key`, `Name`, `Layout`, `ShowPresets` |
+| `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`, `DebounceMilliseconds`, `Placeholder`, `ShowContextCount` |
+| `ActiveSelections` | One removable chip per selection, clear all. | `ShowFacetName`, `GroupValues` |
+| `Metric` | One tile by key; a dash when there is no value. | `Key`, `Name`, `ShowShare`, `MetricTemplate` |
+| `MatchingCount` | A tile with the matching row count. | `Name`, `ShowShare`, `MetricTemplate` |
 | `Results` | Matching rows through your template, paged or virtualised. | `RowTemplate`, `HeaderTemplate`, `EmptyTemplate`, `Layout`, `PageSize`, `Virtualize` |
 
-- **Titles.** The `Title` given in the builder is the default display name and travels with the state, so plain-C# consumers, `ActiveSelections` and `StateSummary` have a name for every key. Each facet component and `Metric` take a `Title` parameter that replaces it in that component only, for example with a localised string, so one dashboard serves every language.
-- **Tile templates.** `MetricTemplate` on `Metric` and `MatchingCount` receives a `MetricTileContent`: the formatted `Title`, `Value` and `Share` (null when not shown), `IsEmpty`, and the raw `Metric` state (null for the matching count). Compose these with your own markup; the tile element and its classes stay.
+- **Names.** The `Name` given in the builder is the default display name and travels with the state, so plain-C# consumers, `ActiveSelections` and `StateSummary` have a name for every key. Each facet component and `Metric` take a `Name` parameter that replaces it in that component only, for example with a localised string, so one dashboard serves every language.
+- **Tile templates.** `MetricTemplate` on `Metric` and `MatchingCount` receives a `MetricTileContent`: the formatted `Name`, `Value` and `Share` (null when not shown), `IsEmpty`, and the raw `Metric` state (null for the matching count). Compose these with your own markup; the tile element and its classes stay.
 - **Formatting** goes through one `IDashboardFormatter` cascaded from `DashboardView`. Derive from `DefaultDashboardFormatter` to change culture, number formats, the null label or preset names. Pass a fixed culture in tests.
 - **Styling** is plain CSS. Every `--l2d-*` custom property is declared on `.l2d-dashboard`; override them on that element or an ancestor. Every component takes `Class` and passes unknown attributes to its root element. State classes `l2d-selected`, `l2d-zero`, `l2d-null`, `l2d-collapsed` and `l2d-metric-empty` are stable hooks.
 - **Callbacks.** `SelectionsChanged` fires on every click, for bookmarking. `StateChanged` hands the host each new `DashboardState<T>`, the initial one included, for a chart of its own.

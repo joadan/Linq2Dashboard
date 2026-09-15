@@ -13,8 +13,8 @@ public class TemplateTests : BunitContext
             b.ValueFacet(x => x.Country);
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
             b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm);
-            b.Count("orders").Title("Orders");
-            b.Sum("revenue", x => x.Amount).Title("Revenue");
+            b.Count("orders").Name("Orders");
+            b.Sum("revenue", x => x.Amount).Name("Revenue");
         });
 
     private IRenderedComponent<DashboardView<Order>> RenderWith<TComponent>(Action<ComponentParameterCollectionBuilder<TComponent>> configure, Selections? selections = null)
@@ -37,7 +37,7 @@ public class TemplateTests : BunitContext
         var cut = RenderWith<ValueFacet<Order>>(f =>
         {
             f.Add(x => x.Key, "Country");
-            f.Add(x => x.HeaderTemplate, facet => $"<div class='custom-header'>{facet.Title} ({facet.DistinctCount})</div>");
+            f.Add(x => x.HeaderTemplate, facet => $"<div class='custom-header'>{facet.Name} ({facet.DistinctCount})</div>");
         });
 
         Assert.Equal("Country (4)", cut.Find(".custom-header").TextContent);

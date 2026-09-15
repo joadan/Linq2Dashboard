@@ -24,11 +24,11 @@ public class DashboardBuilderTests
     }
 
     [Fact]
-    public void Explicit_keys_and_titles_are_used_when_given()
+    public void Explicit_keys_and_names_are_used_when_given()
     {
         var dashboard = Create(b =>
         {
-            b.ValueFacet("status", x => x.Status).Title("Order status");
+            b.ValueFacet("status", x => x.Status).Name("Order status");
             b.ValueFacet(x => x.Country);
         });
 
@@ -241,7 +241,7 @@ public class DashboardBuilderTests
         var dashboard = Create(b =>
         {
             b.DateFacet(x => x.OrderDate)
-             .Title("Ordered")
+             .Name("Ordered")
              .TimeZone(TestData.Stockholm)
              .Granularity(DateGranularity.Week)
              .Presets(DatePreset.Today, DatePreset.Last7Days, DatePreset.Today);
@@ -249,7 +249,7 @@ public class DashboardBuilderTests
         });
 
         var index = Assert.IsType<DateFacetIndex>(dashboard.FacetIndex("OrderDate"));
-        Assert.Equal("Ordered", index.Title);
+        Assert.Equal("Ordered", index.Name);
         Assert.Same(TestData.Stockholm, index.Column.Zone);
         Assert.Equal(DateGranularity.Week, index.Column.Granularity);
         Assert.Equal([DatePreset.Today, DatePreset.Last7Days], index.Presets);
@@ -269,7 +269,7 @@ public class DashboardBuilderTests
     {
         var dashboard = Create(b =>
         {
-            b.Count("orders").Title("Orders");
+            b.Count("orders").Name("Orders");
             b.Sum("revenue", x => x.Amount);
             b.Average("avgDiscount", x => x.Discount);
             b.Min("minQty", x => x.Quantity);
@@ -375,7 +375,7 @@ public class DashboardBuilderTests
         Assert.Throws<InvalidOperationException>(() => captured!.Where(_ => true));
         Assert.Throws<InvalidOperationException>(() => facet!.Top(5));
         Assert.Throws<InvalidOperationException>(() => facet!.Label(x => x.Status));
-        Assert.Throws<InvalidOperationException>(() => metric!.Title("x"));
+        Assert.Throws<InvalidOperationException>(() => metric!.Name("x"));
     }
 
     [Fact]

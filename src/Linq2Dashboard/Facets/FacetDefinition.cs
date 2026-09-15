@@ -14,16 +14,16 @@ internal abstract class FacetDefinition<T>
     {
         Key = key;
         Kind = kind;
-        Title = key;
+        Name = key;
     }
 
     public string Key { get; }
 
-    public string Title { get; set; }
+    public string Name { get; set; }
 
     public FacetKind Kind { get; }
 
-    public FacetInfo Info => new(Key, Title, Kind);
+    public FacetInfo Info => new(Key, Name, Kind);
 
     /// <summary>
     /// Builds the index once, at <c>Create</c>. <paramref name="parallel"/> is the dashboard's

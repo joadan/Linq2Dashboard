@@ -24,6 +24,6 @@ internal sealed class RangeFacetDefinition<T> : FacetDefinition<T>
             return read.HasValue;
         }, Bucketing);
 
-        return new RangeFacetIndex(Key, Title, column);
+        return new RangeFacetIndex(Key, Name, column);
     }
 }

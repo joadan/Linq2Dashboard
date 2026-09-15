@@ -18,7 +18,7 @@ public class ClassAndAttributeTests : BunitContext
             b.ValueFacet(x => x.Country);
             b.RangeFacet(x => x.Discount);
             b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm);
-            b.Sum("revenue", x => x.Amount).Title("Revenue");
+            b.Sum("revenue", x => x.Amount).Name("Revenue");
             b.OrderBy(x => x.Id);
         });
 
@@ -50,6 +50,7 @@ public class ClassAndAttributeTests : BunitContext
         component.AddUnmatched("id", "host-id");
         component.AddUnmatched("style", "grid-area: side");
         component.AddUnmatched("data-host", "yes");
+        component.AddUnmatched("title", "host tooltip");
     }
 
     private static void AssertStyled(IElement root, params string[] libraryClasses)
@@ -63,6 +64,7 @@ public class ClassAndAttributeTests : BunitContext
         Assert.Equal("host-id", root.Id);
         Assert.Equal("grid-area: side", root.GetAttribute("style"));
         Assert.Equal("yes", root.GetAttribute("data-host"));
+        Assert.Equal("host tooltip", root.GetAttribute("title"));
     }
 
     [Fact]
@@ -75,6 +77,7 @@ public class ClassAndAttributeTests : BunitContext
             parameters.AddUnmatched("id", "host-id");
             parameters.AddUnmatched("style", "grid-area: side");
             parameters.AddUnmatched("data-host", "yes");
+            parameters.AddUnmatched("title", "host tooltip");
         });
 
         AssertStyled(cut.Find("#host-id"), "l2d-dashboard");
@@ -91,6 +94,7 @@ public class ClassAndAttributeTests : BunitContext
             facet.AddUnmatched("id", "host-id");
             facet.AddUnmatched("style", "grid-area: side");
             facet.AddUnmatched("data-host", "yes");
+            facet.AddUnmatched("title", "host tooltip");
         });
 
         IElement root = cut.Find(".l2d-value-facet");
@@ -109,6 +113,7 @@ public class ClassAndAttributeTests : BunitContext
             facet.AddUnmatched("id", "host-id");
             facet.AddUnmatched("style", "grid-area: side");
             facet.AddUnmatched("data-host", "yes");
+            facet.AddUnmatched("title", "host tooltip");
         });
 
         AssertStyled(cut.Find(".l2d-range-facet"), "l2d-facet", "l2d-range-facet", "l2d-range-histogram", "l2d-collapsed");
@@ -124,6 +129,7 @@ public class ClassAndAttributeTests : BunitContext
             facet.AddUnmatched("id", "host-id");
             facet.AddUnmatched("style", "grid-area: side");
             facet.AddUnmatched("data-host", "yes");
+            facet.AddUnmatched("title", "host tooltip");
         });
 
         AssertStyled(cut.Find(".l2d-date-facet"), "l2d-facet", "l2d-date-facet");
@@ -139,6 +145,7 @@ public class ClassAndAttributeTests : BunitContext
             results.AddUnmatched("id", "host-id");
             results.AddUnmatched("style", "grid-area: side");
             results.AddUnmatched("data-host", "yes");
+            results.AddUnmatched("title", "host tooltip");
         });
 
         AssertStyled(cut.Find(".l2d-results"), "l2d-results");
@@ -171,6 +178,7 @@ public class ClassAndAttributeTests : BunitContext
             metric.AddUnmatched("id", "host-id");
             metric.AddUnmatched("style", "grid-area: side");
             metric.AddUnmatched("data-host", "yes");
+            metric.AddUnmatched("title", "host tooltip");
         });
 
         IElement tile = cut.Find(".l2d-metric");

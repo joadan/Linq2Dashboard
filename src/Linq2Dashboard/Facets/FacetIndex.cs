@@ -9,24 +9,24 @@ namespace Linq2Dashboard.Facets;
 /// </summary>
 internal abstract class FacetIndex
 {
-    protected FacetIndex(string key, string title, FacetKind kind, int rowCount)
+    protected FacetIndex(string key, string name, FacetKind kind, int rowCount)
     {
         Key = key;
-        Title = title;
+        Name = name;
         Kind = kind;
         RowCount = rowCount;
     }
 
     public string Key { get; }
 
-    public string Title { get; }
+    public string Name { get; }
 
     public FacetKind Kind { get; }
 
     /// <summary>Rows in the dataset this index counts against: every row for an index built by the builder, the scope for one made by <see cref="Scope"/> (concept §4.10).</summary>
     public int RowCount { get; }
 
-    public FacetInfo Info => new(Key, Title, Kind);
+    public FacetInfo Info => new(Key, Name, Kind);
 
     /// <summary>Rows matching <paramref name="selection"/> (design §4.1). Throws if the selection is of the wrong kind.</summary>
     public abstract RowSet RowsMatching(Selection selection);

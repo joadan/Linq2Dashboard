@@ -7,7 +7,7 @@ namespace Linq2Dashboard;
 /// <see cref="Aggregation.Sum"/> and <see cref="Aggregation.Distinct"/> and null for the other
 /// aggregations, when there is no value, or when the total is zero.
 /// </summary>
-public sealed record MetricState(string Key, string Title, Aggregation Aggregation, double? Value, double? Share)
+public sealed record MetricState(string Key, string Name, Aggregation Aggregation, double? Value, double? Share)
 {
     /// <summary>True when at least one matching row contributed a value; otherwise the UI shows a dash (concept §4.4).</summary>
     public bool HasValue => Value.HasValue;

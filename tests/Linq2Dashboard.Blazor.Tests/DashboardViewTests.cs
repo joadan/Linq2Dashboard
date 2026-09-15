@@ -15,8 +15,8 @@ public class DashboardViewTests : BunitContext
             b.ValueFacet(x => x.Status);
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
             b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
-            b.Count("orders").Title("Orders");
-            b.Sum("revenue", x => x.Amount).Title("Revenue");
+            b.Count("orders").Name("Orders");
+            b.Sum("revenue", x => x.Amount).Name("Revenue");
             b.UseTimeProvider(new FixedTimeProvider(TestData.Instant("2026-03-15T10:00:00Z")));
         });
 
