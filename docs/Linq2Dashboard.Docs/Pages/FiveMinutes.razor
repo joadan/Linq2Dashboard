@@ -1,0 +1,67 @@
+@page "/five-minutes"
+
+<PageTitle>Five minutes · Linq2Dashboard</PageTitle>
+
+<h1>Try it in five minutes</h1>
+
+<p>
+    A dashboard over a hand-written list of orders, in a fresh Blazor app, with nothing to download. Every step is a
+    copy-paste. When it runs, replace the list with your own collection and keep the rest.
+</p>
+
+<h2>1. A new app and the two packages</h2>
+
+<p>A Blazor Web App with server interactivity. The commands are the same on Windows, macOS and Linux.</p>
+
+<pre><code>@CreateAppExample</code></pre>
+
+<h2>2. The rows</h2>
+
+<p>Add <code>Order.cs</code> at the project root. A record and a dozen rows are enough to see every facet do something. Note the order without a country: null is a value and shows up as one.</p>
+
+<pre><code>@RowsExample</code></pre>
+
+<h2>3. Build the dashboard once</h2>
+
+<p>In <code>Program.cs</code>, register the dashboard as a singleton. It is immutable and thread-safe, so one instance serves every user. Add the two usings at the top and the registration next to the existing service calls.</p>
+
+<pre><code>@ProgramExample</code></pre>
+
+<h2>4. The usings</h2>
+
+<p>Append two lines to <code>Components/_Imports.razor</code> so every page sees the engine and the components.</p>
+
+<pre><code>@ImportsExample</code></pre>
+
+<h2>5. The page</h2>
+
+<p>
+    Replace the contents of <code>Components/Pages/Home.razor</code>. The line after the route is the one people forget:
+    without <code>@@rendermode InteractiveServer</code> the page renders once and clicks do nothing.
+</p>
+
+<pre><code>@PageExample</code></pre>
+
+<p>
+    The template's <code>App.razor</code> already links <code>Shop.styles.css</code>, the app's scoped-CSS bundle. The components' styles
+    are bundled into it, so there is no stylesheet or script to add.
+</p>
+
+<h2>6. Run it</h2>
+
+<pre><code>dotnet run</code></pre>
+
+<p>
+    Open the address it prints. Click <em>SE</em> under Country: the other countries keep their counts, Status and Amount narrow to
+    Swedish orders, the tiles and the table follow, and the URL gains <code>?Country=SE</code>. Click the null value to see the order
+    with no country. Remove the chip under the tiles to clear it.
+</p>
+
+<h2>What to change next</h2>
+
+<ul>
+    <li><strong>Your data.</strong> Replace <code>Order.All</code> with any <code>IEnumerable&lt;T&gt;</code> you already hold in memory, and the selectors with your properties. Build takes about a second per million rows.</li>
+    <li><strong>More facets and metrics.</strong> The <a href="getting-started">getting started</a> page shows the whole builder: labels, top-N with search, date presets, text search, calculated metrics.</li>
+    <li><strong>Layout and styling.</strong> Every component takes <code>Class</code> and every colour and size is a <code>--l2d-*</code> custom property. The <a href="usage">usage</a> guide lists them and the rules that surprise.</li>
+    <li><strong>A larger starting point.</strong> The <a href="https://github.com/joadan/Linq2Dashboard/tree/master/samples/Linq2Dashboard.Sample" target="_blank" rel="noopener">sample project</a> in the repository is the same wiring over 200 000 generated rows, with scopes, virtualised results and a custom formatter.</li>
+</ul>
