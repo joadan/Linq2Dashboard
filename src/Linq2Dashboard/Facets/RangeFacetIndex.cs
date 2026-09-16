@@ -135,6 +135,76 @@ internal sealed class RangeFacetIndex : FacetIndex
         return new RangeSelection(from, to, fromInclusive, toInclusive, includeNull);
     }
 
+    /// <summary>Writes <c>from..to</c>, in bracket notation when an end is exclusive, with <c>,null</c> for the null rows; <c>null</c> alone for only the null rows (design §2.5).</summary>
+    public override string SerializeQuery(Selection selection)
+    {
+        RangeSelection range = Expect<RangeSelection>(selection);
+        if (range.OnlyNulls)
+        {
+            return QueryValues.NullToken;
+        }
+
+        string interval = QueryValues.FormatInterval(
+            range.From is double from ? QueryValues.FormatDouble(from) : string.Empty,
+            range.To is double to ? QueryValues.FormatDouble(to) : string.Empty,
+            range.FromInclusive,
+            range.ToInclusive);
+        return range.IncludeNull ? interval + "," + QueryValues.NullToken : interval;
+    }
+
+    /// <summary>Reads the interval form; a single number is the closed interval at that value. Anything that does not parse drops the selection.</summary>
+    public override Selection? DeserializeQuery(string value)
+    {
+        if (value == QueryValues.NullToken)
+        {
+            return RangeSelection.OnlyNull;
+        }
+
+        if (!QueryValues.SplitNullSuffix(value, out string interval, out bool includeNull))
+        {
+            return null;
+        }
+
+        interval = QueryValues.StripBrackets(interval, out bool fromInclusive, out bool toInclusive);
+        int separator = interval.IndexOf(QueryValues.IntervalSeparator, StringComparison.Ordinal);
+        string fromText = separator < 0 ? interval : interval[..separator];
+        string toText = separator < 0 ? interval : interval[(separator + QueryValues.IntervalSeparator.Length)..];
+
+        double? from = null;
+        double? to = null;
+        if (fromText.Length > 0)
+        {
+            if (!QueryValues.TryParseDouble(fromText, out double f))
+            {
+                return null;
+            }
+
+            from = f;
+        }
+
+        if (toText.Length > 0)
+        {
+            if (!QueryValues.TryParseDouble(toText, out double t))
+            {
+                return null;
+            }
+
+            to = t;
+        }
+
+        if (from is null && to is null && !includeNull)
+        {
+            return null;
+        }
+
+        if (from is double lo && to is double hi && lo > hi)
+        {
+            return null;
+        }
+
+        return new RangeSelection(from, to, fromInclusive, toInclusive, includeNull);
+    }
+
     /// <summary>Whether the selected interval contains every value the bucket can hold.</summary>
     internal static bool Covers(RangeSelection range, double from, double to, bool lastBucket)
     {

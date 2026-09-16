@@ -193,6 +193,37 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         return values.Count == 0 ? null : new ValueSelection(values);
     }
 
+    /// <summary>Writes <c>v1,v2,null</c>: each value in its JSON text form, escaped for the list (design §2.5).</summary>
+    public override string SerializeQuery(Selection selection)
+    {
+        ValueSelection values = Expect<ValueSelection>(selection);
+        return string.Join(',', values.Values.Select(v => v is null ? QueryValues.NullToken : QueryValues.EscapeToken(FormatValueText(v))));
+    }
+
+    /// <summary>Reads a comma-separated list; tokens that cannot be read are dropped, and nothing readable yields null.</summary>
+    public override Selection? DeserializeQuery(string value)
+    {
+        var values = new List<object?>();
+        foreach (string? token in QueryValues.SplitTokens(value))
+        {
+            if (TryParseValue(token is null ? null : JsonValue.Create(token), out object? parsed))
+            {
+                values.Add(parsed);
+            }
+        }
+
+        return values.Count == 0 ? null : new ValueSelection(values);
+    }
+
+    /// <summary>A facet value as the text a query string carries: the JSON string itself, or the JSON text of a number or boolean.</summary>
+    private string FormatValueText(object value)
+    {
+        JsonNode? node = FormatValue(value);
+        return node is JsonValue json && json.GetValueKind() == System.Text.Json.JsonValueKind.String
+            ? json.GetValue<string>()
+            : node?.ToJsonString() ?? QueryValues.NullToken;
+    }
+
     /// <summary>A facet value as JSON: through the application's formatter when given, otherwise the defaults.</summary>
     internal JsonNode? FormatValue(object? value)
     {

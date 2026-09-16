@@ -160,6 +160,84 @@ internal sealed class DateFacetIndex : FacetIndex
         return DateSelection.Between(from, to) with { IncludeNull = includeNull };
     }
 
+    /// <summary>Writes the preset name in camelCase or <c>from..to</c> in compact ISO 8601, with <c>,null</c> for the null rows; <c>null</c> alone for only the null rows (design §2.5).</summary>
+    public override string SerializeQuery(Selection selection)
+    {
+        DateSelection date = Expect<DateSelection>(selection);
+        if (date.OnlyNulls)
+        {
+            return QueryValues.NullToken;
+        }
+
+        string interval = date.Preset is DatePreset preset
+            ? JsonValues.CamelCase(preset)
+            : QueryValues.FormatInterval(
+                date.From is DateTimeOffset from ? QueryValues.FormatInstant(from) : string.Empty,
+                date.To is DateTimeOffset to ? QueryValues.FormatInstant(to) : string.Empty);
+        return date.IncludeNull ? interval + "," + QueryValues.NullToken : interval;
+    }
+
+    /// <summary>Reads a preset name, case-insensitively, or an instant interval. Anything that does not parse drops the selection.</summary>
+    public override Selection? DeserializeQuery(string value)
+    {
+        if (value == QueryValues.NullToken)
+        {
+            return DateSelection.OnlyNull;
+        }
+
+        if (!QueryValues.SplitNullSuffix(value, out string interval, out bool includeNull))
+        {
+            return null;
+        }
+
+        if (Enum.TryParse(interval, ignoreCase: true, out DatePreset preset) && Enum.IsDefined(preset))
+        {
+            return DateSelection.Relative(preset) with { IncludeNull = includeNull };
+        }
+
+        int separator = interval.IndexOf(QueryValues.IntervalSeparator, StringComparison.Ordinal);
+        if (separator < 0)
+        {
+            return null;
+        }
+
+        string fromText = interval[..separator];
+        string toText = interval[(separator + QueryValues.IntervalSeparator.Length)..];
+        DateTimeOffset? from = null;
+        DateTimeOffset? to = null;
+        if (fromText.Length > 0)
+        {
+            if (!QueryValues.TryParseInstant(fromText, out DateTimeOffset f))
+            {
+                return null;
+            }
+
+            from = f;
+        }
+
+        if (toText.Length > 0)
+        {
+            if (!QueryValues.TryParseInstant(toText, out DateTimeOffset t))
+            {
+                return null;
+            }
+
+            to = t;
+        }
+
+        if (from is null && to is null && !includeNull)
+        {
+            return null;
+        }
+
+        if (from is DateTimeOffset lo && to is DateTimeOffset hi && lo > hi)
+        {
+            return null;
+        }
+
+        return DateSelection.Between(from, to) with { IncludeNull = includeNull };
+    }
+
     /// <summary>The instant interval a preset means right now, in the facet's zone.</summary>
     public (DateTimeOffset From, DateTimeOffset To) ResolvePreset(DatePreset preset) =>
         DatePresets.Resolve(preset, TimeProvider.GetUtcNow(), Column.Zone);

@@ -53,6 +53,15 @@ internal abstract class FacetIndex
     /// </summary>
     public abstract Selection? Deserialize(JsonObject json);
 
+    /// <summary>Writes a selection of this facet's kind as the value of its query-string parameter (design §2.5).</summary>
+    public abstract string SerializeQuery(Selection selection);
+
+    /// <summary>
+    /// Reads a selection from its query-string value, decoded. Returns null when the text does not fit this
+    /// facet or nothing usable remains, with the same leniency as <see cref="Deserialize"/> (design §2.5).
+    /// </summary>
+    public abstract Selection? DeserializeQuery(string value);
+
     protected TSelection? ExpectOrNull<TSelection>(Selection? selection) where TSelection : Selection =>
         selection is null ? null : Expect<TSelection>(selection);
 

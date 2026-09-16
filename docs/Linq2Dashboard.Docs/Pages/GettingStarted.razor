@@ -79,4 +79,4 @@ dotnet add package Linq2Dashboard.Blazor --prerelease</code></pre>
 
 <h2>Bookmarks</h2>
 
-<p>Selections serialise to JSON through <code>dashboard.Serializer</code>. Reading is lenient: unknown facets and values that cannot be read are dropped, so a stale bookmark degrades to fewer selections rather than an error. The <a href="demo">demo</a> keeps the current selections in the URL this way.</p>
+<p>Selections serialise to JSON through <code>dashboard.Serializer</code>. Reading is lenient: unknown facets and values that cannot be read are dropped, so a stale bookmark degrades to fewer selections rather than an error. For a URL, <code>ToQueryString</code> and <code>FromQueryString</code> write one readable parameter per facet, such as <code>?Country=SE,NO&amp;Amount=100..500</code>; <code>SyncUrl</code> on <code>DashboardView</code> does this for you, which is how the <a href="demo">demo</a> keeps its selections in the URL.</p>

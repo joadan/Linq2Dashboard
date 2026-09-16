@@ -91,6 +91,16 @@ internal sealed class TextFacetIndex<T> : FacetIndex
         return selection.IsEmpty ? null : selection;
     }
 
+    /// <summary>The text itself is the parameter value (design §2.5).</summary>
+    public override string SerializeQuery(Selection selection) => Expect<TextSelection>(selection).Text;
+
+    /// <summary>Blank text drops the selection, as in JSON.</summary>
+    public override Selection? DeserializeQuery(string value)
+    {
+        var selection = new TextSelection(value);
+        return selection.IsEmpty ? null : selection;
+    }
+
     private ulong ScanWord(int word, string text)
     {
         int start = word << 6;

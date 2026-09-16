@@ -33,7 +33,7 @@
 }
 else
 {
-    <DashboardView T="SampleOrder" @ref="view" Dashboard="dashboard" Formatter="DemoFormatter.Instance" Selections="selections" SelectionsChanged="OnSelectionsChanged" StateChanged="OnStateChanged">
+    <DashboardView T="SampleOrder" @ref="view" Dashboard="dashboard" Formatter="DemoFormatter.Instance" SyncUrl="true" Selections="selections" SelectionsChanged="OnSelectionsChanged" StateChanged="OnStateChanged">
         <div class="demo-layout">
             <aside class="demo-facets">
                 <TextFacet T="SampleOrder" Key="search" Placeholder="Customer or category" />
@@ -119,8 +119,9 @@ else
                     </RowTemplate>
                 </Results>
                 <details class="demo-json">
-                    <summary>Selections as JSON, also kept in the URL</summary>
+                    <summary>Selections as JSON and as the URL query</summary>
                     <pre>@dashboard.Serializer.ToJson(selections, indented: true)</pre>
+                    <pre>?@dashboard.Serializer.ToQueryString(selections)</pre>
                 </details>
             </div>
         </div>

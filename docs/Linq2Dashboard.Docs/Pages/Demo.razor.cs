@@ -9,7 +9,6 @@ public partial class Demo
 {
     private static readonly int[] RowOptions = [20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000];
     private const int DefaultRows = 50_000;
-    private const string SelectionsParameter = "s";
     private const string RowsParameter = "rows";
 
     private DashboardView<SampleOrder>? view;
@@ -30,7 +29,7 @@ public partial class Demo
             rows = requested;
         }
 
-        await BuildAsync(query[SelectionsParameter]);
+        await BuildAsync();
     }
 
     private async Task OnRowsChanged(ChangeEventArgs e)
@@ -38,13 +37,12 @@ public partial class Demo
         if (int.TryParse(e.Value?.ToString(), out int requested) && RowOptions.Contains(requested) && requested != rows)
         {
             rows = requested;
-            // New data means a new dashboard; the selections carry over (concept §4.9).
-            string json = dashboard?.Serializer.ToJson(selections) ?? "{}";
-            await BuildAsync(json);
+            // New data means a new dashboard; the selections carry over (concept §4.9), and the view restores them from the URL.
+            await BuildAsync();
         }
     }
 
-    private async Task BuildAsync(string? selectionsJson)
+    private async Task BuildAsync()
     {
         building = true;
         dashboard = null;
@@ -61,33 +59,14 @@ public partial class Demo
         Dashboard<SampleOrder> built = SampleOrders.BuildDashboard(orders);
         buildMilliseconds = watch.ElapsedMilliseconds;
 
-        selections = Restore(built, selectionsJson);
         dashboard = built;
         building = false;
-        UpdateUrl();
-    }
-
-    private static Selections Restore(Dashboard<SampleOrder> target, string? json)
-    {
-        if (string.IsNullOrWhiteSpace(json))
-        {
-            return Selections.Empty;
-        }
-
-        try
-        {
-            return target.Serializer.FromJson(json);
-        }
-        catch (System.Text.Json.JsonException)
-        {
-            return Selections.Empty;
-        }
+        UpdateRowsInUrl();
     }
 
     private Task OnSelectionsChanged(Selections changed)
     {
         selections = changed;
-        UpdateUrl();
         return Task.CompletedTask;
     }
 
@@ -120,19 +99,21 @@ public partial class Demo
     private static string BarTitle(DateBucket bucket) =>
         $"{bucket.PeriodStart:MMM yyyy}: {bucket.FilteredCount:N0} of {bucket.TotalCount:N0} orders";
 
-    private void UpdateUrl()
+    /// <summary>
+    /// The row count is the page's own URL parameter; the selections are the view's, kept by <c>SyncUrl</c>. The
+    /// other parameters are copied as they are so the view's readable form is not re-encoded.
+    /// </summary>
+    private void UpdateRowsInUrl()
     {
-        if (dashboard is null)
+        var uri = new Uri(Navigation.Uri);
+        IEnumerable<string> others = uri.Query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Where(segment => !segment.StartsWith(RowsParameter + "=", StringComparison.Ordinal));
+        string query = string.Join('&', rows == DefaultRows ? others : others.Prepend($"{RowsParameter}={rows}"));
+        string url = uri.GetLeftPart(UriPartial.Path) + (query.Length > 0 ? "?" + query : string.Empty);
+        if (url != Navigation.Uri)
         {
-            return;
+            Navigation.NavigateTo(url, replace: true);
         }
-
-        string? json = selections.IsEmpty ? null : dashboard.Serializer.ToJson(selections);
-        string url = Navigation.GetUriWithQueryParameters(new Dictionary<string, object?>
-        {
-            [RowsParameter] = rows == DefaultRows ? null : rows,
-            [SelectionsParameter] = json,
-        });
-        Navigation.NavigateTo(url, replace: true);
     }
 }

@@ -102,6 +102,21 @@ var s = Selections.Empty
 
 Bookmarks: `dashboard.Serializer.ToJson(selections)` and `FromJson(json)`. Reading is lenient. Unknown facets and unreadable values are dropped, so a stale bookmark gives fewer selections, never an error.
 
+URLs: `ToQueryString(selections)` and `FromQueryString(query)` use one readable parameter per facet, named by the facet key, that a person or another page can write by hand. Reading is as lenient as JSON and accepts a whole URL.
+
+```text
+?Country=SE,NO&Amount=[100..500)&OrderDate=last30Days&Shipped=2026-03-01T00:00+01:00..&Discount=null&search=acme
+```
+
+| Facet kind | Form | Notes |
+|---|---|---|
+| Value, Boolean | `SE,NO,null` | `null` is the null value; `\,` a literal comma; `""` the empty string |
+| Range | `100..500`, `100..`, `..500`, `[100..500)` | inclusive without brackets; `(` or `)` marks an exclusive end; `,null` adds the null rows; `null` alone is only the null rows |
+| Date | `last30Days` or `2026-03-01T00:00+01:00..2026-04-01T00:00+02:00` | preset names as in `DatePreset`, case-insensitive; `,null` and `null` as for ranges |
+| Text | `acme` | the text itself |
+
+Both take a `prefix` so two dashboards on one page, or a page's own parameters, do not collide: `ToQueryString(selections, "o.")` writes `o.Country=SE`. `ToQueryString` also takes the existing query or URL and keeps every parameter in it that is not one of the dashboard's facets. `ToQuery` gives the parameters as a dictionary with `null` for unselected facets, the shape `NavigationManager.GetUriWithQueryParameters` takes. In Blazor, `SyncUrl` on `DashboardView` does all of this for you.
+
 ## The state
 
 `dashboard.Calculate(selections)` returns a `DashboardState<T>`: a consistent, immutable snapshot. Same selections, same state, and the result is cached by selections.
@@ -147,7 +162,7 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 
 | Component | Renders | Notable parameters |
 |---|---|---|
-| `DashboardView` | Owns selections and state, cascades them. | `Dashboard`, `@bind-Selections`, `StateChanged`, `Formatter` |
+| `DashboardView` | Owns selections and state, cascades them. | `Dashboard`, `@bind-Selections`, `StateChanged`, `Formatter`, `Key`, `SyncUrl` |
 | `ValueFacet` | Values with counts, the null value, "Other", search. | `Key`, `Name`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate`, `InputClass` |
 | `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Name`, `Layout`, `ShowSlider`, `ShowBounds`, `InputClass` |
 | `DateFacet` | Presets with counts, one bar per period. | `Key`, `Name`, `Layout`, `ShowPresets` |
@@ -162,6 +177,7 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 - **Formatting** goes through one `IDashboardFormatter` cascaded from `DashboardView`. Derive from `DefaultDashboardFormatter` to change culture, number formats, the null label or preset names. Pass a fixed culture in tests.
 - **Styling** is plain CSS. Every `--l2d-*` custom property is declared on `.l2d-dashboard`; override them on that element or an ancestor. Every component takes `Class` and passes unknown attributes to its root element. The text input, the value facet's search box and the range slider's number inputs take `InputClass`: when set, it replaces the library's default input look (`l2d-input`) with your classes, so `InputClass="form-control"` gives a Bootstrap input with nothing to override; the hook classes `l2d-text-input`, `l2d-facet-search` and `l2d-slider-input-from`/`-to` stay. State classes `l2d-selected`, `l2d-zero`, `l2d-null`, `l2d-collapsed` and `l2d-metric-empty` are stable hooks.
 - **Callbacks.** `SelectionsChanged` fires on every click, for bookmarking. `StateChanged` hands the host each new `DashboardState<T>`, the initial one included, for a chart of its own.
+- **Selections in the URL.** `SyncUrl="true"` keeps the selections in the page URL in the query form above, restores them on load, and follows back, forward and links within the page. On first render the URL wins when it has selections for the view, and `SelectionsChanged` reports them; otherwise `Selections` applies and is written. Every change replaces the URL in place and keeps the page's other parameters. Give each view a `Key` when a page has two; its parameters are then `key.facet`. `Key` also renders as `data-key` on the root. Prerendering reads the URL and never writes it.
 - **Hosting.** Blazor Server is the primary target. WebAssembly works unchanged within the browser's memory.
 
 ## Rules that surprise

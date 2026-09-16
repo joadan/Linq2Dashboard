@@ -25,7 +25,7 @@
     <span class="sample-scope-note">The same dashboard over a subset of the rows, through <code>Dashboard.Where</code>. Totals follow the scope; selections carry over. <code>Where(selections)</code> turns the current view into a dashboard of its own.</span>
 </div>
 
-<DashboardView T="SampleOrder" Dashboard="Scoped" @bind-Selections="selections">
+<DashboardView T="SampleOrder" Dashboard="Scoped" SyncUrl="true" @bind-Selections="selections">
     <div class="sample-layout">
         <aside class="sample-facets">
             <TextFacet T="SampleOrder" Key="search" Placeholder="Customer or category" />
@@ -86,6 +86,7 @@
 </DashboardView>
 
 <details>
-    <summary>Selections as JSON</summary>
+    <summary>Selections as JSON and as the URL query</summary>
     <pre>@Dashboard.Serializer.ToJson(selections, indented: true)</pre>
+    <pre>?@Dashboard.Serializer.ToQueryString(selections)</pre>
 </details>
