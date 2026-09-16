@@ -61,13 +61,23 @@ public partial class DashboardView<T>
         IDashboardFormatter formatter = Formatter ?? DefaultDashboardFormatter.Instance;
         Selections selections = Selections ?? Linq2Dashboard.Selections.Empty;
 
-        if (context is null || !ReferenceEquals(contextDashboard, Dashboard) || !ReferenceEquals(contextFormatter, formatter))
+        if (context is null)
         {
             context = new DashboardContext<T>(Dashboard, selections, formatter, OnSelectionsChangedAsync, OnStateChangedAsync);
             contextDashboard = Dashboard;
             contextFormatter = formatter;
             lastSelectionsParameter = Selections;
             return OnStateChangedAsync(context.State);
+        }
+
+        // Another dashboard, typically a scope of the first (concept §4.10), or another formatter: the same context
+        // adopts it, so the components inside, which subscribed to this context once, all follow the change.
+        if (!ReferenceEquals(contextDashboard, Dashboard) || !ReferenceEquals(contextFormatter, formatter))
+        {
+            contextDashboard = Dashboard;
+            contextFormatter = formatter;
+            lastSelectionsParameter = Selections;
+            return context.RebindAsync(Dashboard, formatter, selections);
         }
 
         if (!Equals(Selections, lastSelectionsParameter))

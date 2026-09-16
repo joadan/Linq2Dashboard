@@ -196,6 +196,46 @@ public class DashboardViewTests : BunitContext
     }
 
     [Fact]
+    public void Giving_the_view_another_dashboard_recalculates_every_component()
+    {
+        // The sample's scope switch (concept §4.10): the same view, the same components, a scoped dashboard. Metrics,
+        // counts and facets must all follow, although none of them re-renders for a parameter of its own.
+        var dashboard = BuildDashboard();
+        var scoped = dashboard.Where(Selections.Empty.With("Country", ValueSelection.Of("SE")));
+        DashboardState<Order>? raised = null;
+        var cut = RenderView(dashboard, onStateChanged: s => raised = s);
+        DashboardContext<Order> context = cut.Instance.Context;
+
+        cut.Render(parameters => parameters.Add(p => p.Dashboard, scoped));
+
+        Assert.Equal("3", cut.Find(".l2d-matching").TextContent);
+        Assert.Equal("3", cut.Find(".l2d-total").TextContent);
+        Assert.Equal("3", cut.Find(".l2d-metric[data-key='orders']").TextContent);
+        Assert.Equal("3,599.50", cut.Find(".l2d-metric[data-key='revenue']").TextContent);
+        Assert.Equal(["SE"], cut.FindAll("section[data-key='Country'] li").Select(li => li.QuerySelector("button")!.TextContent.Trim()));
+        Assert.Equal(3, raised!.TotalCount);
+        Assert.Same(context, cut.Instance.Context);
+        Assert.Same(scoped, context.Dashboard);
+
+        // Clicks after the switch go to the new dashboard.
+        ValueButton(cut, "Status", "Open").Click();
+        Assert.Equal("2", cut.Find(".l2d-matching").TextContent);
+        Assert.Equal("3", cut.Find(".l2d-total").TextContent);
+    }
+
+    [Fact]
+    public void Giving_the_view_another_formatter_reformats_every_component()
+    {
+        var cut = RenderView(BuildDashboard());
+        Assert.Equal("8", cut.Find(".l2d-matching").TextContent);
+
+        cut.Render(parameters => parameters.Add(p => p.Formatter, new ShoutingFormatter()));
+
+        Assert.Equal("#8", cut.Find(".l2d-matching").TextContent);
+        Assert.Equal("~5424.5", cut.Find(".l2d-metric[data-key='revenue']").TextContent);
+    }
+
+    [Fact]
     public void Custom_child_content_receives_the_context()
     {
         var dashboard = BuildDashboard();

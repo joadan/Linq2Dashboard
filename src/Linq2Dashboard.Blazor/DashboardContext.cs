@@ -25,11 +25,11 @@ public sealed class DashboardContext<T>
         this.onStateChanged = onStateChanged;
     }
 
-    /// <summary>The dashboard being rendered.</summary>
-    public Dashboard<T> Dashboard { get; }
+    /// <summary>The dashboard being rendered. Changes when the host gives the view another dashboard, such as a scope of the first (concept §4.10); the context itself stays.</summary>
+    public Dashboard<T> Dashboard { get; private set; }
 
     /// <summary>The formatter every component inside uses.</summary>
-    public IDashboardFormatter Formatter { get; }
+    public IDashboardFormatter Formatter { get; private set; }
 
     /// <summary>The current selections. Immutable; every change produces a new instance.</summary>
     public Selections Selections { get; private set; }
@@ -77,6 +77,19 @@ public sealed class DashboardContext<T>
             return Task.CompletedTask;
         }
 
+        Recalculate(selections);
+        return onStateChanged(State);
+    }
+
+    /// <summary>
+    /// Adopts another dashboard or formatter from the view's parameters, recalculates with the given selections and
+    /// notifies components and the host. The context instance is kept, so every component inside keeps its
+    /// subscription and follows the change; a scoped dashboard (concept §4.10) thus updates every tile and facet.
+    /// </summary>
+    internal Task RebindAsync(Dashboard<T> dashboard, IDashboardFormatter formatter, Selections selections)
+    {
+        Dashboard = dashboard;
+        Formatter = formatter;
         Recalculate(selections);
         return onStateChanged(State);
     }
