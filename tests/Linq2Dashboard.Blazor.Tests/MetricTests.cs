@@ -59,30 +59,18 @@ public class MetricTests : BunitContext
     }
 
     [Fact]
-    public void The_share_of_the_total_is_shown_only_when_asked_for()
+    public void The_share_of_the_total_is_shown_under_the_value()
     {
-        var selections = Selections.Empty.With("Country", ValueSelection.Of("SE"));
+        var cut = RenderWith<Metric<Order>>(m => m.Add(x => x.Key, "revenue"), Selections.Empty.With("Country", ValueSelection.Of("SE")));
 
-        var plain = RenderWith<Metric<Order>>(m => m.Add(x => x.Key, "revenue"), selections);
-        Assert.Empty(plain.FindAll(".l2d-metric-share"));
-
-        var withShare = RenderWith<Metric<Order>>(m =>
-        {
-            m.Add(x => x.Key, "revenue");
-            m.Add(x => x.ShowShare, true);
-        }, selections);
-        Assert.Equal("3,599.50", withShare.Find(".l2d-metric-value").TextContent);
-        Assert.Equal("66.4 %", withShare.Find(".l2d-metric-share").TextContent); // 3 599.5 of 5 424.5
+        Assert.Equal("3,599.50", cut.Find(".l2d-metric-value").TextContent);
+        Assert.Equal("66.4 %", cut.Find(".l2d-metric-share").TextContent); // 3 599.5 of 5 424.5
     }
 
     [Fact]
-    public void An_average_has_no_share_even_when_asked_for()
+    public void An_average_has_no_share()
     {
-        var cut = RenderWith<Metric<Order>>(m =>
-        {
-            m.Add(x => x.Key, "avgDiscount");
-            m.Add(x => x.ShowShare, true);
-        });
+        var cut = RenderWith<Metric<Order>>(m => m.Add(x => x.Key, "avgDiscount"));
 
         Assert.Empty(cut.FindAll(".l2d-metric-share"));
     }
@@ -90,11 +78,7 @@ public class MetricTests : BunitContext
     [Fact]
     public void A_distinct_count_renders_as_a_whole_number_with_its_share()
     {
-        var cut = RenderWith<Metric<Order>>(m =>
-        {
-            m.Add(x => x.Key, "countries");
-            m.Add(x => x.ShowShare, true);
-        }, Selections.Empty.With("Country", ValueSelection.Of("SE", "NO")));
+        var cut = RenderWith<Metric<Order>>(m => m.Add(x => x.Key, "countries"), Selections.Empty.With("Country", ValueSelection.Of("SE", "NO")));
 
         Assert.Equal("Countries", cut.Find(".l2d-metric-title").TextContent);
         Assert.Equal("2", cut.Find(".l2d-metric-value").TextContent); // of SE, NO, DK
@@ -104,11 +88,7 @@ public class MetricTests : BunitContext
     [Fact]
     public void A_calculated_metric_renders_like_any_other_and_has_no_share()
     {
-        var cut = RenderWith<Metric<Order>>(m =>
-        {
-            m.Add(x => x.Key, "aov");
-            m.Add(x => x.ShowShare, true);
-        });
+        var cut = RenderWith<Metric<Order>>(m => m.Add(x => x.Key, "aov"));
 
         Assert.Equal("Average order", cut.Find(".l2d-metric-title").TextContent);
         Assert.Equal("678.06", cut.Find(".l2d-metric-value").TextContent); // 5 424.5 / 8
@@ -116,9 +96,9 @@ public class MetricTests : BunitContext
     }
 
     [Fact]
-    public void Matching_count_can_show_its_share_of_all_rows()
+    public void Matching_count_shows_its_share_of_all_rows()
     {
-        var cut = RenderWith<MatchingCount<Order>>(m => m.Add(x => x.ShowShare, true), Selections.Empty.With("Country", ValueSelection.Of("SE")));
+        var cut = RenderWith<MatchingCount<Order>>(m => { }, Selections.Empty.With("Country", ValueSelection.Of("SE")));
 
         Assert.Equal("3", cut.Find(".l2d-metric-value").TextContent);
         Assert.Equal("37.5 %", cut.Find(".l2d-metric-share").TextContent);
@@ -192,7 +172,6 @@ public class MetricTests : BunitContext
         RenderWith<Metric<Order>>(m =>
         {
             m.Add(x => x.Key, "revenue");
-            m.Add(x => x.ShowShare, true);
             m.Add(x => x.MetricTemplate, tile => { seen = tile; return ""; });
         }, Selections.Empty.With("Country", ValueSelection.Of("SE")));
 
@@ -212,7 +191,6 @@ public class MetricTests : BunitContext
         RenderWith<Metric<Order>>(m =>
         {
             m.Add(x => x.Key, "avgDiscount");
-            m.Add(x => x.ShowShare, true);
             m.Add(x => x.Name, "Discount");
             m.Add(x => x.MetricTemplate, tile => { seen = tile; return ""; });
         }, Selections.Empty.With("Discount", RangeSelection.OnlyNull));
@@ -231,7 +209,6 @@ public class MetricTests : BunitContext
         var cut = RenderWith<MatchingCount<Order>>(m =>
         {
             m.Add(x => x.Name, "Rows");
-            m.Add(x => x.ShowShare, true);
             m.Add(x => x.MetricTemplate, tile => { seen = tile; return $"<i class='custom'>{tile.Value}</i>"; });
         }, Selections.Empty.With("Country", ValueSelection.Of("NO")));
 
