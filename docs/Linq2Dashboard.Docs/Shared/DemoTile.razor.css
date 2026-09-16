@@ -1,10 +1,25 @@
-/* Sizes and the tile colour come from the demo page: --demo-metric-* and --demo-tile-color are set on the
-   metrics grid and on each tile by key, and inherit into this content. */
+/* Sizes come from the demo page: the --demo-metric-* properties are set on the metrics grid and inherit here.
+   The tile is a two-column grid: text left, framed by the padding; the icon panel the tile's full height on the
+   right, flush with the edge. */
+.demo-tile {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    column-gap: 0.75rem;
+    align-items: center;
+    overflow: hidden;
+    min-width: 0;
+    padding-left: var(--demo-metric-pad-x, 1rem);
+    border: 1px solid var(--l2d-border, #d4d4d8);
+    border-radius: var(--l2d-radius, 0.25rem);
+    background: var(--docs-surface, #ffffff);
+}
+
 .demo-tile-text {
     display: flex;
     flex-direction: column;
     gap: 0.125rem;
     min-width: 0;
+    padding: var(--demo-metric-pad-y, 0.875rem) 0;
 }
 
 .demo-tile-title {
@@ -44,4 +59,19 @@
 .demo-tile-icon ::deep svg {
     width: var(--demo-metric-icon-glyph, 2.25rem);
     height: var(--demo-metric-icon-glyph, 2.25rem);
+}
+
+/* One hue per tile: the icon takes the colour, its panel a light tint of the same colour. */
+.demo-tile[data-key="matching"] { --demo-tile-color: #2563eb; }
+.demo-tile[data-key="revenue"] { --demo-tile-color: #16a34a; }
+.demo-tile[data-key="average"] { --demo-tile-color: #d97706; }
+.demo-tile[data-key="customers"] { --demo-tile-color: #7c3aed; }
+.demo-tile[data-key="perCustomer"] { --demo-tile-color: #0d9488; }
+
+@media (prefers-color-scheme: dark) {
+    .demo-tile[data-key="matching"] { --demo-tile-color: #60a5fa; }
+    .demo-tile[data-key="revenue"] { --demo-tile-color: #4ade80; }
+    .demo-tile[data-key="average"] { --demo-tile-color: #fbbf24; }
+    .demo-tile[data-key="customers"] { --demo-tile-color: #a78bfa; }
+    .demo-tile[data-key="perCustomer"] { --demo-tile-color: #2dd4bf; }
 }

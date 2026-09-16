@@ -134,7 +134,7 @@ public class MetricTests : BunitContext
     }
 
     [Fact]
-    public void A_template_replaces_the_tile_content()
+    public void A_template_replaces_the_whole_tile_and_owns_the_root()
     {
         var cut = RenderWith<Metric<Order>>(m =>
         {
@@ -142,7 +142,10 @@ public class MetricTests : BunitContext
             m.Add(x => x.MetricTemplate, tile => $"<b class='custom'>{tile.Metric!.Key}={tile.Value}</b>");
         });
 
-        Assert.Equal("revenue=5,424.50", cut.Find(".l2d-metric .custom").TextContent);
+        var custom = cut.Find(".custom");
+        Assert.Equal("revenue=5,424.50", custom.TextContent);
+        Assert.Contains("l2d-dashboard", custom.ParentElement!.ClassName);
+        Assert.Empty(cut.FindAll(".l2d-metric"));
         Assert.Empty(cut.FindAll(".l2d-metric-title"));
     }
 
@@ -238,7 +241,8 @@ public class MetricTests : BunitContext
         Assert.Equal("25.0 %", seen.Share);
         Assert.False(seen.IsEmpty);
         Assert.Null(seen.Metric);
-        Assert.Equal("2", cut.Find(".l2d-metric-matching .custom").TextContent);
+        Assert.Equal("2", cut.Find(".custom").TextContent);
+        Assert.Empty(cut.FindAll(".l2d-metric"));
         Assert.Empty(cut.FindAll(".l2d-metric-title"));
     }
 

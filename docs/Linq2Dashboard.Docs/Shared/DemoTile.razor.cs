@@ -12,4 +12,7 @@ public partial class DemoTile
     /// <summary>The demo icon to draw beside the text.</summary>
     [Parameter, EditorRequired]
     public string Icon { get; set; } = string.Empty;
+
+    /// <summary>The metric key for styling, or "matching" for the matching count, which is not a metric.</summary>
+    private string Key => Content.Metric?.Key ?? "matching";
 }

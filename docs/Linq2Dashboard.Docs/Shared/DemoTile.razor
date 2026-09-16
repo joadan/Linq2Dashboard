@@ -1,12 +1,15 @@
-@* The demo's metric tile content: the formatted pieces on the left, an icon panel the tile's full height on the right.
-   Rendered through MetricTemplate, so the layout, typography and colours are the page's, not the library's. *@
+@* The demo's metric tile: the formatted pieces on the left, an icon panel the tile's full height on the right.
+   Rendered through MetricTemplate, which renders no element of its own, so the frame, layout, typography and
+   colours are all the page's. The key goes on the root so the stylesheet can give each tile its hue. *@
 
-<span class="demo-tile-text">
-    <span class="demo-tile-title">@Content.Name</span>
-    <span class="demo-tile-value @(Content.IsEmpty ? "demo-tile-empty" : null)">@Content.Value</span>
-    @if (Content.Share is not null)
-    {
-        <span class="demo-tile-share">@Content.Share</span>
-    }
-</span>
-<span class="demo-tile-icon" aria-hidden="true"><DemoIcon Name="@Icon" /></span>
+<div class="demo-tile" data-key="@Key">
+    <span class="demo-tile-text">
+        <span class="demo-tile-title">@Content.Name</span>
+        <span class="demo-tile-value @(Content.IsEmpty ? "demo-tile-empty" : null)">@Content.Value</span>
+        @if (Content.Share is not null)
+        {
+            <span class="demo-tile-share">@Content.Share</span>
+        }
+    </span>
+    <span class="demo-tile-icon" aria-hidden="true"><DemoIcon Name="@Icon" /></span>
+</div>

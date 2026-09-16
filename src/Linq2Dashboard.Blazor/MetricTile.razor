@@ -1,17 +1,10 @@
-@* The tile shared by Metric and MatchingCount: a name over a value, or custom content. *@
+@* The default tile shared by Metric and MatchingCount: a name over a value, with an optional share. *@
 
 <div @attributes="AdditionalAttributes" class="@RootClass" data-key="@Key">
-    @if (ChildContent is not null)
+    <span class="l2d-metric-title">@Name</span>
+    <span class="l2d-metric-value">@Value</span>
+    @if (Share is not null)
     {
-        @ChildContent
-    }
-    else
-    {
-        <span class="l2d-metric-title">@Name</span>
-        <span class="l2d-metric-value">@Value</span>
-        @if (Share is not null)
-        {
-            <span class="l2d-metric-share">@Share</span>
-        }
+        <span class="l2d-metric-share">@Share</span>
     }
 </div>

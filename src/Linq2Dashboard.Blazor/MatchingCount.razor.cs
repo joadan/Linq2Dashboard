@@ -17,9 +17,10 @@ public partial class MatchingCount<T>
     public bool ShowShare { get; set; }
 
     /// <summary>
-    /// Replaces the name and count inside the tile with the template's markup. The tile element and its
-    /// classes stay. The context carries the formatted pieces; its <c>Metric</c> is null since the count is
-    /// not a metric in the core (design §9.5).
+    /// Replaces the whole tile with the template's markup: the library renders no element of its own, so the
+    /// template owns the root and puts its own classes and hooks on it. <c>Class</c> and extra attributes apply
+    /// to the default tile only. The context carries the formatted pieces; its <c>Metric</c> is null since the
+    /// count is not a metric in the core (design §9.5).
     /// </summary>
     [Parameter]
     public RenderFragment<MetricTileContent>? MetricTemplate { get; set; }
@@ -32,6 +33,4 @@ public partial class MatchingCount<T>
             return new MetricTileContent(Name, Formatter.FormatCount(State.MatchingCount), share, IsEmpty: false, Metric: null);
         }
     }
-
-    private RenderFragment? Template => MetricTemplate is null ? null : MetricTemplate(Content);
 }

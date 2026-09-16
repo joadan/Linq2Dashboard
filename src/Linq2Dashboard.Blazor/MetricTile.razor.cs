@@ -4,7 +4,8 @@ using Microsoft.AspNetCore.Components;
 namespace Linq2Dashboard.Blazor;
 
 /// <summary>
-/// The tile rendered by <see cref="Metric{T}"/> and <see cref="MatchingCount{T}"/>, so both look the same and are styled once.
+/// The default tile rendered by <see cref="Metric{T}"/> and <see cref="MatchingCount{T}"/> when they have no
+/// template, so both look the same and are styled once.
 /// A rendering detail of those two components, not part of the supported API: it is public only because Razor
 /// components cannot be internal, is hidden from IntelliSense, and may change without notice (design §9).
 /// </summary>
@@ -38,10 +39,6 @@ public partial class MetricTile
     /// <summary>Attributes the placing component passes through onto the tile element (design §9).</summary>
     [Parameter]
     public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
-
-    /// <summary>Replaces the name and value; the tile element and its classes stay.</summary>
-    [Parameter]
-    public RenderFragment? ChildContent { get; set; }
 
     private string RootClass
     {

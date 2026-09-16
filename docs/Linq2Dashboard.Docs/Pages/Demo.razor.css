@@ -95,8 +95,9 @@
     max-width: 60rem;
 }
 
-/* Metric tiles: as many per row as fit, never narrower than 11rem, so two per row on a phone. The library draws the
-   tile's frame; DemoTile draws what is inside it through MetricTemplate, so layout and colour below are the page's. */
+/* Metric tiles: as many per row as fit, never narrower than 11rem, so two per row on a phone. Each tile is a DemoTile
+   rendered through MetricTemplate, which renders no element of the library's, so the tile itself is drawn entirely
+   by DemoTile.razor.css; the sizes below inherit into it. */
 .demo-metrics {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr));
@@ -106,37 +107,6 @@
     --demo-metric-icon-panel: 4.5rem;
     --demo-metric-icon-glyph: 2.25rem;
     --demo-metric-size: clamp(1.0625rem, 0.875rem + 0.5vw, 1.25rem);
-    --l2d-metric-padding: var(--demo-metric-pad-y) var(--demo-metric-pad-x);
-    --l2d-metric-background: var(--docs-surface);
-}
-
-/* The tile becomes a two-column grid: text left, the icon panel the tile's full height on the right, flush with the
-   edge. The panel bleeds through the tile's padding with negative margins while the padding still frames the text. */
-.demo-metrics ::deep .l2d-metric {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    column-gap: 0.75rem;
-    align-items: center;
-    overflow: hidden;
-}
-
-.demo-metrics ::deep .demo-tile-icon {
-    margin: calc(-1 * var(--demo-metric-pad-y)) calc(-1 * var(--demo-metric-pad-x)) calc(-1 * var(--demo-metric-pad-y)) 0;
-}
-
-/* One hue per tile: the icon takes the colour, its panel a light tint of the same colour. */
-.demo-metrics ::deep .l2d-metric-matching { --demo-tile-color: #2563eb; }
-.demo-metrics ::deep [data-key="revenue"] { --demo-tile-color: #16a34a; }
-.demo-metrics ::deep [data-key="average"] { --demo-tile-color: #d97706; }
-.demo-metrics ::deep [data-key="customers"] { --demo-tile-color: #7c3aed; }
-.demo-metrics ::deep [data-key="perCustomer"] { --demo-tile-color: #0d9488; }
-
-@media (prefers-color-scheme: dark) {
-    .demo-metrics ::deep .l2d-metric-matching { --demo-tile-color: #60a5fa; }
-    .demo-metrics ::deep [data-key="revenue"] { --demo-tile-color: #4ade80; }
-    .demo-metrics ::deep [data-key="average"] { --demo-tile-color: #fbbf24; }
-    .demo-metrics ::deep [data-key="customers"] { --demo-tile-color: #a78bfa; }
-    .demo-metrics ::deep [data-key="perCustomer"] { --demo-tile-color: #2dd4bf; }
 }
 
 @media (max-width: 48rem) {
