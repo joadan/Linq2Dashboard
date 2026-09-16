@@ -14,7 +14,7 @@
 
     @if (!collapsed)
     {
-        <input type="search" class="l2d-text-input" placeholder="@Placeholder" aria-label="@HeaderName" value="@text"
+        <input type="search" class="@CssClasses.Input("l2d-text-input", InputClass)" placeholder="@Placeholder" aria-label="@HeaderName" value="@text"
                @oninput="OnInput" @onkeydown="OnKeyDown" />
     }
 </section>

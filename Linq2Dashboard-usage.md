@@ -148,10 +148,10 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 | Component | Renders | Notable parameters |
 |---|---|---|
 | `DashboardView` | Owns selections and state, cascades them. | `Dashboard`, `@bind-Selections`, `StateChanged`, `Formatter` |
-| `ValueFacet` | Values with counts, the null value, "Other", search. | `Key`, `Name`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate` |
-| `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Name`, `Layout`, `ShowSlider`, `ShowBounds` |
+| `ValueFacet` | Values with counts, the null value, "Other", search. | `Key`, `Name`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate`, `InputClass` |
+| `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Name`, `Layout`, `ShowSlider`, `ShowBounds`, `InputClass` |
 | `DateFacet` | Presets with counts, one bar per period. | `Key`, `Name`, `Layout`, `ShowPresets` |
-| `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`, `DebounceMilliseconds`, `Placeholder` |
+| `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`, `DebounceMilliseconds`, `Placeholder`, `InputClass` |
 | `ActiveSelections` | One removable chip per selection, clear all. | `ShowFacetName`, `GroupValues` |
 | `Metric` | One tile by key; a dash when there is no value. | `Key`, `Name`, `ShowShare`, `MetricTemplate` |
 | `MatchingCount` | A tile with the matching row count. | `Name`, `ShowShare`, `MetricTemplate` |
@@ -160,7 +160,7 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 - **Names.** The `Name` given in the builder is the default display name and travels with the state, so plain-C# consumers, `ActiveSelections` and `StateSummary` have a name for every key. Each facet component and `Metric` take a `Name` parameter that replaces it in that component only, for example with a localised string, so one dashboard serves every language.
 - **Tile templates.** `MetricTemplate` on `Metric` and `MatchingCount` receives a `MetricTileContent`: the formatted `Name`, `Value` and `Share` (null when not shown), `IsEmpty`, and the raw `Metric` state (null for the matching count). Compose these with your own markup; the tile element and its classes stay.
 - **Formatting** goes through one `IDashboardFormatter` cascaded from `DashboardView`. Derive from `DefaultDashboardFormatter` to change culture, number formats, the null label or preset names. Pass a fixed culture in tests.
-- **Styling** is plain CSS. Every `--l2d-*` custom property is declared on `.l2d-dashboard`; override them on that element or an ancestor. Every component takes `Class` and passes unknown attributes to its root element. State classes `l2d-selected`, `l2d-zero`, `l2d-null`, `l2d-collapsed` and `l2d-metric-empty` are stable hooks.
+- **Styling** is plain CSS. Every `--l2d-*` custom property is declared on `.l2d-dashboard`; override them on that element or an ancestor. Every component takes `Class` and passes unknown attributes to its root element. The text input, the value facet's search box and the range slider's number inputs take `InputClass`: when set, it replaces the library's default input look (`l2d-input`) with your classes, so `InputClass="form-control"` gives a Bootstrap input with nothing to override; the hook classes `l2d-text-input`, `l2d-facet-search` and `l2d-slider-input-from`/`-to` stay. State classes `l2d-selected`, `l2d-zero`, `l2d-null`, `l2d-collapsed` and `l2d-metric-empty` are stable hooks.
 - **Callbacks.** `SelectionsChanged` fires on every click, for bookmarking. `StateChanged` hands the host each new `DashboardState<T>`, the initial one included, for a chart of its own.
 - **Hosting.** Blazor Server is the primary target. WebAssembly works unchanged within the browser's memory.
 

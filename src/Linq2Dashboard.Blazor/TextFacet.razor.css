@@ -5,6 +5,11 @@
 }
 
 .l2d-text-input {
+    min-width: 0;
+}
+
+/* Default skin, rendered only when the host passes no InputClass. */
+.l2d-input {
     font: inherit;
     font-size: var(--l2d-small-size, 0.8125rem);
     padding: 0.25rem 0.5rem;

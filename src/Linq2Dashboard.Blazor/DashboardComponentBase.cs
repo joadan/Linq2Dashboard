@@ -35,8 +35,7 @@ public abstract class DashboardComponentBase<T> : ComponentBase, IDisposable
     public IReadOnlyDictionary<string, object>? AdditionalAttributes { get; set; }
 
     /// <summary>The root element's class attribute: the library's classes followed by <see cref="Class"/>.</summary>
-    protected string RootClass(string libraryClasses) =>
-        string.IsNullOrWhiteSpace(Class) ? libraryClasses : $"{libraryClasses} {Class.Trim()}";
+    protected string RootClass(string libraryClasses) => CssClasses.Join(libraryClasses, Class);
 
     /// <summary>Subscribes to the context; throws when the component is not inside a <see cref="DashboardView{T}"/>.</summary>
     protected override void OnInitialized()

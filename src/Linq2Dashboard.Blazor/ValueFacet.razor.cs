@@ -61,6 +61,13 @@ public partial class ValueFacet<T>
     [Parameter]
     public string SearchPlaceholder { get; set; } = "Search";
 
+    /// <summary>
+    /// Classes for the search box, replacing the library's default look (<c>l2d-input</c>) so a CSS framework's
+    /// class takes over cleanly, for example <c>form-control</c>. The hook class <c>l2d-facet-search</c> stays (design §9).
+    /// </summary>
+    [Parameter]
+    public string? InputClass { get; set; }
+
     /// <summary>Accessible label and tooltip of the header's clear button, which shows an ×.</summary>
     [Parameter]
     public string ClearText { get; set; } = "Clear";

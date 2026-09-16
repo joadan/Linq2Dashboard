@@ -50,6 +50,13 @@ public partial class TextFacet<T>
     [Parameter]
     public string Placeholder { get; set; } = "Type to filter";
 
+    /// <summary>
+    /// Classes for the text input, replacing the library's default look (<c>l2d-input</c>) so a CSS framework's
+    /// class takes over cleanly, for example <c>form-control</c>. The hook class <c>l2d-text-input</c> stays (design §9).
+    /// </summary>
+    [Parameter]
+    public string? InputClass { get; set; }
+
     /// <summary>Accessible label and tooltip of the header's clear button, which shows an ×.</summary>
     [Parameter]
     public string ClearText { get; set; } = "Clear";

@@ -31,7 +31,7 @@
         @if (ShowSlider && !double.IsNaN(Facet.Min) && Facet.Max > Facet.Min)
         {
             <RangeSlider Min="Facet.Min" Max="Facet.Max" From="SliderFrom" To="SliderTo" Step="SliderStep"
-                         Formatter="Formatter" ShowInputs="SliderInputs" OnChange="ApplySlider" />
+                         Formatter="Formatter" ShowInputs="SliderInputs" InputClass="@InputClass" OnChange="ApplySlider" />
         }
     }
 </section>

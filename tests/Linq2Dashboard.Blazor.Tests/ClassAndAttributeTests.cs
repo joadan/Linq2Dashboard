@@ -12,10 +12,16 @@ namespace Linq2Dashboard.Blazor.Tests;
 /// </summary>
 public class ClassAndAttributeTests : BunitContext
 {
-    private static Dashboard<Order> BuildDashboard() =>
+    private static Dashboard<Order> BuildDashboard(bool searchable = false) =>
         Dashboard.Create(TestData.Orders(), b =>
         {
             b.ValueFacet(x => x.Country);
+            if (searchable)
+            {
+                b.ValueFacet(x => x.Status).Searchable();
+                b.TextFacet("search", (x, text) => x.Status.Contains(text, StringComparison.OrdinalIgnoreCase));
+            }
+
             b.RangeFacet(x => x.Discount);
             b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm);
             b.Sum("revenue", x => x.Amount).Name("Revenue");
@@ -29,11 +35,11 @@ public class ClassAndAttributeTests : BunitContext
         builder.CloseElement();
     };
 
-    private IRenderedComponent<DashboardView<Order>> RenderWith<TComponent>(Action<ComponentParameterCollectionBuilder<TComponent>> configure, Selections? selections = null)
+    private IRenderedComponent<DashboardView<Order>> RenderWith<TComponent>(Action<ComponentParameterCollectionBuilder<TComponent>> configure, Selections? selections = null, bool searchable = false)
         where TComponent : IComponent =>
         Render<DashboardView<Order>>(parameters =>
         {
-            parameters.Add(p => p.Dashboard, BuildDashboard());
+            parameters.Add(p => p.Dashboard, BuildDashboard(searchable));
             parameters.Add(p => p.Formatter, new DefaultDashboardFormatter(CultureInfo.InvariantCulture));
             if (selections is not null)
             {
@@ -233,5 +239,65 @@ public class ClassAndAttributeTests : BunitContext
         var cut = RenderWith<ValueFacet<Order>>(facet => facet.Add(f => f.Key, "Country"));
 
         Assert.Equal("l2d-facet l2d-value-facet", cut.Find("section").GetAttribute("class"));
+    }
+
+    // InputClass replaces the library's default input skin (l2d-input) with the host's classes, so a CSS
+    // framework's class such as form-control is not fought by the scoped stylesheet. The hook class stays.
+
+    [Fact]
+    public void TextFacet_input_has_the_hook_and_the_default_skin_without_an_InputClass()
+    {
+        var cut = RenderWith<TextFacet<Order>>(facet => facet.Add(f => f.Key, "search"), searchable: true);
+
+        Assert.Equal("l2d-text-input l2d-input", cut.Find("input").GetAttribute("class"));
+    }
+
+    [Fact]
+    public void TextFacet_InputClass_replaces_the_default_skin_and_keeps_the_hook()
+    {
+        var cut = RenderWith<TextFacet<Order>>(facet =>
+        {
+            facet.Add(f => f.Key, "search");
+            facet.Add(f => f.InputClass, " form-control form-control-sm ");
+        }, searchable: true);
+
+        Assert.Equal("l2d-text-input form-control form-control-sm", cut.Find("input").GetAttribute("class"));
+    }
+
+    [Fact]
+    public void ValueFacet_InputClass_styles_the_search_box()
+    {
+        var plain = RenderWith<ValueFacet<Order>>(facet => facet.Add(f => f.Key, "Status"), searchable: true);
+        Assert.Equal("l2d-facet-search l2d-input", plain.Find("input").GetAttribute("class"));
+
+        var styled = RenderWith<ValueFacet<Order>>(facet =>
+        {
+            facet.Add(f => f.Key, "Status");
+            facet.Add(f => f.InputClass, "form-control");
+        }, searchable: true);
+        Assert.Equal("l2d-facet-search form-control", styled.Find("input").GetAttribute("class"));
+    }
+
+    [Fact]
+    public void RangeFacet_InputClass_styles_the_slider_number_inputs_and_leaves_the_range_inputs_alone()
+    {
+        var plain = RenderWith<RangeFacet<Order>>(facet =>
+        {
+            facet.Add(f => f.Key, "Discount");
+            facet.Add(f => f.ShowSlider, true);
+        });
+        Assert.Equal("l2d-slider-input-from l2d-input", plain.Find("input[type=number].l2d-slider-input-from").GetAttribute("class"));
+        Assert.Equal("l2d-slider-input-to l2d-input", plain.Find("input[type=number].l2d-slider-input-to").GetAttribute("class"));
+
+        var styled = RenderWith<RangeFacet<Order>>(facet =>
+        {
+            facet.Add(f => f.Key, "Discount");
+            facet.Add(f => f.ShowSlider, true);
+            facet.Add(f => f.InputClass, "form-control");
+        });
+        Assert.Equal("l2d-slider-input-from form-control", styled.Find("input[type=number].l2d-slider-input-from").GetAttribute("class"));
+        Assert.Equal("l2d-slider-input-to form-control", styled.Find("input[type=number].l2d-slider-input-to").GetAttribute("class"));
+        Assert.Equal("l2d-slider-from", styled.Find("input.l2d-slider-from").GetAttribute("class"));
+        Assert.Equal("l2d-slider-to", styled.Find("input.l2d-slider-to").GetAttribute("class"));
     }
 }

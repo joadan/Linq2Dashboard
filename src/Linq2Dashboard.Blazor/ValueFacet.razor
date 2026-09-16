@@ -16,7 +16,7 @@
     {
         @if (Facet.IsSearchable)
         {
-            <input type="search" class="l2d-facet-search" placeholder="@SearchPlaceholder" value="@searchText"
+            <input type="search" class="@CssClasses.Input("l2d-facet-search", InputClass)" placeholder="@SearchPlaceholder" value="@searchText"
                    @oninput="e => searchText = e.Value?.ToString() ?? string.Empty" />
         }
 

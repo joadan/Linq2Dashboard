@@ -63,6 +63,14 @@ public partial class RangeFacet<T>
     [Parameter]
     public bool SliderInputs { get; set; } = true;
 
+    /// <summary>
+    /// Classes for the slider's two number inputs, replacing the library's default look (<c>l2d-input</c>) so a
+    /// CSS framework's class takes over cleanly, for example <c>form-control</c>. The hook classes
+    /// <c>l2d-slider-input-from</c> and <c>l2d-slider-input-to</c> stay; the range inputs are not affected (design §9).
+    /// </summary>
+    [Parameter]
+    public string? InputClass { get; set; }
+
     /// <summary>Accessible label and tooltip of the header's clear button, which shows an ×.</summary>
     [Parameter]
     public string ClearText { get; set; } = "Clear";

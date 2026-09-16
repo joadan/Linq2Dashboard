@@ -17,6 +17,10 @@ public partial class RangeSlider
     private double? lastTo;
     private bool initialised;
 
+    /// <summary>Classes for the number inputs in place of the default <c>l2d-input</c> skin; see <see cref="RangeFacet{T}.InputClass"/>.</summary>
+    [Parameter]
+    public string? InputClass { get; set; }
+
     /// <summary>Lower end of the slider: the dataset's minimum.</summary>
     [Parameter, EditorRequired]
     public double Min { get; set; }

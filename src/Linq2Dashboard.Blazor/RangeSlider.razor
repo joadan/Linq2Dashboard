@@ -12,10 +12,10 @@
     @if (ShowInputs)
     {
         <div class="l2d-slider-inputs">
-            <input type="number" class="l2d-slider-input-from" min="@Text(Min)" max="@Text(Max)" step="@Text(Step)" value="@Text(from)"
+            <input type="number" class="@CssClasses.Input("l2d-slider-input-from", InputClass)" min="@Text(Min)" max="@Text(Max)" step="@Text(Step)" value="@Text(from)"
                    aria-label="@FromLabel" @onchange="e => ApplyFrom(e.Value)" />
             <span class="l2d-slider-separator">–</span>
-            <input type="number" class="l2d-slider-input-to" min="@Text(Min)" max="@Text(Max)" step="@Text(Step)" value="@Text(to)"
+            <input type="number" class="@CssClasses.Input("l2d-slider-input-to", InputClass)" min="@Text(Min)" max="@Text(Max)" step="@Text(Step)" value="@Text(to)"
                    aria-label="@ToLabel" @onchange="e => ApplyTo(e.Value)" />
         </div>
     }
