@@ -143,6 +143,16 @@ public class RangeFacetTests : BunitContext
     }
 
     [Fact]
+    public void Bucket_tooltip_shows_label_counts_and_the_filtered_share_of_the_total()
+    {
+        var cut = RenderFacet("Amount", Selections.Empty.With("Country", ValueSelection.Of("SE")));
+
+        var titles = Buckets(cut).Select(b => b.QuerySelector("button")!.GetAttribute("title")!).ToList();
+        Assert.EndsWith(": 0 (2) 0.0 %", titles[0]);
+        Assert.EndsWith(": 1 (2) 50.0 %", titles[1]);
+    }
+
+    [Fact]
     public void Clear_removes_the_facets_selection()
     {
         Selections? raised = null;

@@ -22,7 +22,7 @@
             {
                 <li class="l2d-preset @(preset.Selected ? "l2d-selected" : null) @(preset.FilteredCount == 0 ? "l2d-zero" : null)">
                     <button type="button" class="l2d-preset-button" aria-pressed="@(preset.Selected ? "true" : "false")"
-                            title="@Formatter.FormatCount(preset.FilteredCount) (@Formatter.FormatCount(preset.TotalCount))"
+                            title="@CountText.Tooltip(Formatter, preset.FilteredCount, preset.TotalCount)"
                             @onclick="() => ClickPreset(preset)">
                         <span class="l2d-preset-label">@Formatter.FormatPreset(preset.Preset)</span>
                         @if (ShowCounts)

@@ -60,6 +60,7 @@ public class DateFacetTests : BunitContext
         Assert.Equal(["1 (1)", "2 (2)", "3 (3)", "2 (2)"], Buckets(cut).Select(Count));
         Assert.Equal(["This month", "Last 7 days"], Presets(cut).Select(Label));
         Assert.Equal(["3 (3)", "1 (1)"], Presets(cut).Select(Count));
+        Assert.Equal(["3 (3) 100.0 %", "1 (1) 100.0 %"], Presets(cut).Select(p => p.QuerySelector("button")!.GetAttribute("title")));
         Assert.Empty(cut.FindAll(".l2d-facet-clear"));
     }
 

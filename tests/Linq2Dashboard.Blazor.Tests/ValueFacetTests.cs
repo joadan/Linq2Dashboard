@@ -144,6 +144,15 @@ public class ValueFacetTests : BunitContext
     }
 
     [Fact]
+    public void Tooltip_shows_filtered_count_total_and_the_filtered_share_of_the_total()
+    {
+        var cut = RenderFacet("Country", Selections.Empty.With("Status", ValueSelection.Of("Open")));
+
+        var button = Items(cut).Single(li => Label(li) == "SE").QuerySelector("button")!;
+        Assert.Equal("2 (3) 66.7 %", button.GetAttribute("title"));
+    }
+
+    [Fact]
     public void Other_is_shown_when_top_n_truncates_and_hidden_while_searching()
     {
         var cut = RenderFacet("top");
