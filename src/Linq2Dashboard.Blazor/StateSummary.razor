@@ -3,11 +3,11 @@
 
 <div @attributes="AdditionalAttributes" class="@RootClass("l2d-summary")">
     <p class="l2d-summary-counts">
-        <strong class="l2d-matching">@Formatter.FormatCount(State.MatchingCount)</strong> of
+        <strong class="l2d-matching">@Formatter.FormatCount(State.MatchingCount)</strong> @OfText
         <span class="l2d-total">@Formatter.FormatCount(State.TotalCount)</span>
         @if (!State.Selections.IsEmpty)
         {
-            <button type="button" class="l2d-clear-all" @onclick="() => Context.ClearAllAsync()">Clear all</button>
+            <button type="button" class="l2d-clear-all" @onclick="() => Context.ClearAllAsync()">@ClearAllText</button>
         }
     </p>
 
@@ -29,7 +29,7 @@
                 @facet.Name
                 @if (facet.HasSelection)
                 {
-                    <button type="button" class="l2d-clear" @onclick="() => Context.ClearAsync(facet.Key)">Clear</button>
+                    <button type="button" class="l2d-clear" @onclick="() => Context.ClearAsync(facet.Key)">@ClearText</button>
                 }
             </h4>
             <ul>
@@ -47,7 +47,7 @@
                         }
                         @if (values.Other is FacetCount other)
                         {
-                            <li class="l2d-other">Other <span class="l2d-count">@Formatter.FormatCount(other.FilteredCount) / @Formatter.FormatCount(other.TotalCount)</span></li>
+                            <li class="l2d-other">@OtherText <span class="l2d-count">@Formatter.FormatCount(other.FilteredCount) / @Formatter.FormatCount(other.TotalCount)</span></li>
                         }
                         break;
 

@@ -1,0 +1,28 @@
+using Microsoft.AspNetCore.Components;
+
+namespace Linq2Dashboard.Blazor;
+
+/// <summary>
+/// A plain rendering of the whole state: matching and total counts, every metric, and every facet with its
+/// values, buckets, presets and the null value as clickable items (design §9). It is the default child of
+/// <see cref="DashboardView{T}"/>, so a view with no content shows something complete, and it is a way to
+/// see everything the state holds while laying out a page with the intent-carrying components.
+/// </summary>
+public partial class StateSummary<T>
+{
+    /// <summary>Text between the matching count and the total count.</summary>
+    [Parameter]
+    public string OfText { get; set; } = "of";
+
+    /// <summary>Text of the button that clears every selection, shown when there is one.</summary>
+    [Parameter]
+    public string ClearAllText { get; set; } = "Clear all";
+
+    /// <summary>Text of the button in a facet's heading that clears that facet, shown when it has a selection.</summary>
+    [Parameter]
+    public string ClearText { get; set; } = "Clear";
+
+    /// <summary>Label of the "Other" row that holds the values Top N left out (concept §6).</summary>
+    [Parameter]
+    public string OtherText { get; set; } = "Other";
+}
