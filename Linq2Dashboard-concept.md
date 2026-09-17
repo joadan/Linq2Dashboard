@@ -75,7 +75,7 @@ The engine is a function: **(dataset, selections) → state**. The UI is a loop:
 | **Metric** | A named summary number over the matching rows. |
 | **Result page** | A slice of the matching rows, in a chosen order, for display. |
 | **State** | An immutable snapshot: counts, facet values, selections, metrics, and access to the result rows, all calculated from the same selections at the same moment. |
-| **Row selection** | Rows the user has marked in a grid for an action. Unrelated to filtering. |
+| **Row selection** | Rows the user has marked in a grid for an action. An application concern, outside the library; unrelated to filtering. |
 
 ---
 
@@ -143,7 +143,7 @@ A **text facet** (§5) is the other thing typing can do: its text is a selection
 
 ### 4.6 Row selection is not filtering
 
-Ticking rows in a result grid marks them for an action (export, bulk edit, navigation). It has no effect on facets, metrics, or paging.
+Ticking rows in a result grid marks them for an action (export, bulk edit, navigation). It has no effect on facets, metrics, or paging. The library offers no row selection of its own: the result rows are the application's objects, so marking them, and acting on the marks, is the application's concern. This section states the boundary so that no future feature blurs it.
 
 ### 4.7 The state is a consistent snapshot
 

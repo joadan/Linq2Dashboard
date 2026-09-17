@@ -20,7 +20,7 @@ src/Linq2Dashboard/            core, net10.0, no dependencies, package id Linq2D
 src/Linq2Dashboard.Blazor/     Razor class library: DashboardView<T>, DashboardContext<T>, IDashboardFormatter, components
 samples/Linq2Dashboard.Sample/ Blazor Server sample over 200 000 generated rows
 samples/Linq2Dashboard.SampleData/  the generator both the sample and the docs site use
-docs/Linq2Dashboard.Docs/      Blazor WebAssembly docs site: demo, getting started, concept and design rendered from the root markdown; deployed to GitHub Pages by .github/workflows/pages.yml
+docs/Linq2Dashboard.Docs/      Blazor WebAssembly docs site: demo, getting started, concept and design rendered from the root markdown; deployed to GitHub Pages by the CI workflow on every push to master
 tests/Linq2Dashboard.Tests/    xUnit, InternalsVisibleTo
 tests/Linq2Dashboard.Blazor.Tests/   bUnit; tests pass an invariant-culture formatter so they do not depend on the machine
 benchmarks/Linq2Dashboard.Benchmarks/   BenchmarkDotNet, plus a --memory report
@@ -42,7 +42,7 @@ dotnet pack src/Linq2Dashboard/Linq2Dashboard.csproj -c Release -o artifacts   #
 
 - Private fields are plain camelCase, never `_prefixed`. Use `this.field = field` in constructors when a parameter shares the name.
 - Blazor components are always split: markup in `X.razor`, everything else in a `X.razor.cs` partial class. No `@code` blocks, in the library, the docs site or the sample. `@typeparam`, `@inherits` and `@inject` stay in the `.razor` file; the partial class repeats the type parameter and omits the base class.
-- Zero build warnings. Nullable is enabled everywhere; do not suppress warnings except the documented `CS8714` in `ValueColumn`. Every public type and member has a doc comment: `CS1591` is not suppressed, so a missing one fails the zero-warning rule. Overrides and interface implementations use `<inheritdoc />`.
+- Zero build warnings. Nullable is enabled everywhere; do not suppress warnings except the documented `CS8714` in `ValueColumn` and `DistinctColumn`. Every public type and member has a doc comment: `CS1591` is not suppressed, so a missing one fails the zero-warning rule. Overrides and interface implementations use `<inheritdoc />`.
 - Every behavioural rule in the concept has a named test. A new rule or an edge case gets a test in the same commit.
 - Validate eagerly in the builder so mistakes surface inside `Dashboard.Create`, not at first use.
 - Reading external input (JSON selections) is lenient: drop what cannot be read. Code paths are strict: unknown keys throw.

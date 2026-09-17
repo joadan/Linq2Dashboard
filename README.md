@@ -31,7 +31,7 @@ var dashboard = Dashboard.Create(orders, b =>
     b.Where(x => x.CompanyId == 42);                       // fixed filter: defines the dataset
 
     b.ValueFacet(x => x.Country);
-    b.ValueFacet(x => x.Status).Title("Order status");
+    b.ValueFacet(x => x.Status).Name("Order status");
     b.ValueFacet(x => x.Customer).Top(20).Searchable();
     b.BooleanFacet(x => x.IsActive);
     b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);   // below 100, 100-500, 500-1000, 1000 and above
@@ -170,7 +170,7 @@ src/Linq2Dashboard/              the core library, net10.0, no dependencies
 src/Linq2Dashboard.Blazor/       Blazor components
 samples/Linq2Dashboard.Sample/   Blazor Server sample app
 samples/Linq2Dashboard.SampleData/   generated sample data shared by the sample and the docs site
-docs/Linq2Dashboard.Docs/        Blazor WebAssembly docs site with the live demo, deployed to GitHub Pages by .github/workflows/pages.yml
+docs/Linq2Dashboard.Docs/        Blazor WebAssembly docs site with the live demo, deployed to GitHub Pages by the CI workflow on every push to master
 tests/Linq2Dashboard.Tests/      xUnit; every behavioural rule has a named test
 tests/Linq2Dashboard.Blazor.Tests/   bUnit component tests
 benchmarks/Linq2Dashboard.Benchmarks/   BenchmarkDotNet suite and a --memory report
