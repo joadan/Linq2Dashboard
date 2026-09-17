@@ -21,9 +21,18 @@
 
 <pre><code>@RowsExample</code></pre>
 
-<h2>3. Build the dashboard once</h2>
+<h2>3. The service</h2>
 
-<p>In <code>Program.cs</code>, register the dashboard as a singleton. It is immutable and thread-safe, so one instance serves every user. Add the two usings at the top and the registration next to the existing service calls.</p>
+<p>
+    Add <code>DashboardService.cs</code> at the project root. Real data is not in memory at startup, so the service loads the rows
+    and builds the dashboard the first time a page asks, and keeps the result. The dashboard is immutable and thread-safe, so one
+    instance serves every user until it expires; the next request after that builds a new one over fresh rows. The lock means
+    concurrent first requests share one build, and a failed load is retried on the next request instead of being kept.
+</p>
+
+<pre><code>@ServiceExample</code></pre>
+
+<p>Register the service as a singleton in <code>Program.cs</code>, next to the existing service calls.</p>
 
 <pre><code>@ProgramExample</code></pre>
 
@@ -36,7 +45,8 @@
 <h2>5. The page</h2>
 
 <p>
-    Replace the contents of <code>Components/Pages/Home.razor</code>. The line after the route is the one people forget:
+    Replace the contents of <code>Components/Pages/Home.razor</code>. The page asks the service for the dashboard when it
+    initialises and shows a line of text until it arrives. The line after the route is the one people forget:
     without <code>@@rendermode InteractiveServer</code> the page renders once and clicks do nothing.
 </p>
 
@@ -52,7 +62,13 @@
 <pre><code>dotnet run</code></pre>
 
 <p>
-    Open the address it prints. Click <em>SE</em> under Country: the other countries keep their counts, Status and Amount narrow to
+    Open the address it prints. The first request waits a second for the stand-in load, then the dashboard appears. Reload the
+    page: it is instant, because the service hands out the dashboard it already built. Blazor also renders the page twice, once
+    for the first HTML and once when the circuit connects; the second call gets the cached dashboard too.
+</p>
+
+<p>
+    Click <em>SE</em> under Country: the other countries keep their counts, Status and Amount narrow to
     Swedish orders, the tiles and the table follow, and the URL gains <code>?Country=SE</code>. Click the null value to see the order
     with no country. Remove the chip under the tiles to clear it.
 </p>
@@ -60,7 +76,8 @@
 <h2>What to change next</h2>
 
 <ul>
-    <li><strong>Your data.</strong> Replace <code>Order.All</code> with any <code>IEnumerable&lt;T&gt;</code> you already hold in memory, and the selectors with your properties. Build takes about a second per million rows.</li>
+    <li><strong>Your data.</strong> Replace the body of <code>LoadOrdersAsync</code> with your query, and the selectors with your properties. Anything that yields an <code>IEnumerable&lt;T&gt;</code> works. Build takes about a second per million rows.</li>
+    <li><strong>The lifetime.</strong> Ten minutes is a placeholder. Make it as long as your data stays useful; a dashboard that never changes can drop the expiry altogether. If a rebuild must not make anyone wait, build the next one in the background and swap it in when it is ready: <code>DashboardView</code> follows a new <code>Dashboard</code> parameter and keeps the selections.</li>
     <li><strong>More facets and metrics.</strong> The <a href="getting-started">getting started</a> page shows the whole builder: labels, top-N with search, date presets, text search, calculated metrics.</li>
     <li><strong>Layout and styling.</strong> Every component takes <code>Class</code> and every colour and size is a <code>--l2d-*</code> custom property. The <a href="usage">usage</a> guide lists them and the rules that surprise.</li>
     <li><strong>A larger starting point.</strong> The <a href="https://github.com/joadan/Linq2Dashboard/tree/master/samples/Linq2Dashboard.Sample" target="_blank" rel="noopener">sample project</a> in the repository is the same wiring over 200 000 generated rows, with scopes, virtualised results and a custom formatter.</li>

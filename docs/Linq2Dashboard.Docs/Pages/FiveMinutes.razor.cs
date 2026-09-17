@@ -32,24 +32,63 @@ public partial class FiveMinutes
         }
         """;
 
-    private const string ProgramExample = """
+    private const string ServiceExample = """
         using Linq2Dashboard;
-        using Shop;
 
-        // ... after builder.Services.AddRazorComponents() ...
+        namespace Shop;
 
-        builder.Services.AddSingleton<Dashboard<Order>>(_ => Dashboard.Create(Order.All, b =>
+        public sealed class DashboardService
         {
-            b.ValueFacet(x => x.Country);
-            b.ValueFacet(x => x.Status);
-            b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
-            b.DateFacet(x => x.OrderDate).Presets(DatePreset.ThisYear);
+            private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(10);
 
-            b.Count("orders");
-            b.Sum("revenue", x => x.Amount);
+            private readonly Lock gate = new();
+            private Task<Dashboard<Order>>? current;
+            private DateTime expires;
 
-            b.OrderByDescending(x => x.OrderDate);
-        }));
+            public Task<Dashboard<Order>> GetAsync()
+            {
+                lock (gate)
+                {
+                    if (current is null || current.IsFaulted || DateTime.UtcNow >= expires)
+                    {
+                        current = BuildAsync();
+                        expires = DateTime.UtcNow + Lifetime;
+                    }
+
+                    return current;
+                }
+            }
+
+            private static async Task<Dashboard<Order>> BuildAsync()
+            {
+                IReadOnlyList<Order> orders = await LoadOrdersAsync();
+
+                return Dashboard.Create(orders, b =>
+                {
+                    b.ValueFacet(x => x.Country);
+                    b.ValueFacet(x => x.Status);
+                    b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
+                    b.DateFacet(x => x.OrderDate).Presets(DatePreset.ThisYear);
+
+                    b.Count("orders");
+                    b.Sum("revenue", x => x.Amount);
+
+                    b.OrderByDescending(x => x.OrderDate);
+                });
+            }
+
+            private static async Task<IReadOnlyList<Order>> LoadOrdersAsync()
+            {
+                // Stands in for the query that loads your rows: a database, an API, a file.
+                await Task.Delay(TimeSpan.FromSeconds(1));
+                return Order.All;
+            }
+        }
+        """;
+
+    private const string ProgramExample = """
+        // ... after builder.Services.AddRazorComponents() ...
+        builder.Services.AddSingleton<Shop.DashboardService>();
         """;
 
     private const string ImportsExample = """
@@ -60,42 +99,55 @@ public partial class FiveMinutes
     private const string PageExample = """
         @page "/"
         @rendermode InteractiveServer
-        @inject Dashboard<Order> Dashboard
+        @inject DashboardService Dashboards
 
         <PageTitle>Orders</PageTitle>
 
-        <DashboardView T="Order" Dashboard="Dashboard" @bind-Selections="selections" SyncUrl="true">
-            <div style="display: grid; grid-template-columns: 16rem 1fr; gap: 1rem;">
-                <aside>
-                    <ValueFacet T="Order" Key="Country" />
-                    <ValueFacet T="Order" Key="Status" />
-                    <RangeFacet T="Order" Key="Amount" />
-                    <DateFacet  T="Order" Key="OrderDate" />
-                </aside>
-                <main>
-                    <div style="display: flex; gap: 0.5rem;">
-                        <MatchingCount T="Order" />
-                        <Metric T="Order" Key="revenue" />
-                    </div>
-                    <ActiveSelections T="Order" />
-                    <Results T="Order" Layout="ResultsLayout.Table" PageSize="10">
-                        <HeaderTemplate><tr><th>Id</th><th>Country</th><th>Status</th><th>Amount</th><th>Date</th></tr></HeaderTemplate>
-                        <RowTemplate Context="order">
-                            <tr>
-                                <td>@order.Id</td>
-                                <td>@(order.Country ?? "-")</td>
-                                <td>@order.Status</td>
-                                <td>@order.Amount</td>
-                                <td>@order.OrderDate.ToShortDateString()</td>
-                            </tr>
-                        </RowTemplate>
-                    </Results>
-                </main>
-            </div>
-        </DashboardView>
+        @if (dashboard is null)
+        {
+            <p>Loading orders...</p>
+        }
+        else
+        {
+            <DashboardView T="Order" Dashboard="dashboard" @bind-Selections="selections" SyncUrl="true">
+                <div style="display: grid; grid-template-columns: 16rem 1fr; gap: 1rem;">
+                    <aside>
+                        <ValueFacet T="Order" Key="Country" />
+                        <ValueFacet T="Order" Key="Status" />
+                        <RangeFacet T="Order" Key="Amount" />
+                        <DateFacet  T="Order" Key="OrderDate" />
+                    </aside>
+                    <main>
+                        <div style="display: flex; gap: 0.5rem;">
+                            <MatchingCount T="Order" />
+                            <Metric T="Order" Key="revenue" />
+                        </div>
+                        <ActiveSelections T="Order" />
+                        <Results T="Order" Layout="ResultsLayout.Table" PageSize="10">
+                            <HeaderTemplate><tr><th>Id</th><th>Country</th><th>Status</th><th>Amount</th><th>Date</th></tr></HeaderTemplate>
+                            <RowTemplate Context="order">
+                                <tr>
+                                    <td>@order.Id</td>
+                                    <td>@(order.Country ?? "-")</td>
+                                    <td>@order.Status</td>
+                                    <td>@order.Amount</td>
+                                    <td>@order.OrderDate.ToShortDateString()</td>
+                                </tr>
+                            </RowTemplate>
+                        </Results>
+                    </main>
+                </div>
+            </DashboardView>
+        }
 
         @code {
+            private Dashboard<Order>? dashboard;
             private Selections selections = Selections.Empty;
+
+            protected override async Task OnInitializedAsync()
+            {
+                dashboard = await Dashboards.GetAsync();
+            }
         }
         """;
 }

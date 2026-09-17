@@ -16,7 +16,7 @@ Both are prerelease on NuGet while the API settles: `dotnet add package Linq2Das
 ## Wiring checklist
 
 1. **Build once.** `Dashboard.Create(rows, b => { ... })` indexes the collection. Facets, metrics and sort order are fixed here. It takes about a second per million rows.
-2. **Register as a singleton.** The dashboard is immutable and thread-safe; one instance serves every user. `builder.Services.AddSingleton<Dashboard<Order>>(_ => Dashboard.Create(...))`.
+2. **Register as a singleton.** The dashboard is immutable and thread-safe; one instance serves every user. Either the dashboard itself, `builder.Services.AddSingleton<Dashboard<Order>>(_ => Dashboard.Create(...))`, or a singleton service that loads the rows and builds it on first request and hands out the same instance until it decides to rebuild. The [five-minute walkthrough](https://joadan.github.io/Linq2Dashboard/five-minutes) shows such a service.
 3. **Add both usings** to `_Imports.razor`: `@using Linq2Dashboard` and `@using Linq2Dashboard.Blazor`.
 4. **Reference the app's scoped-CSS bundle** in the host page, `YourApp.styles.css`. The components' styles are bundled into it. No other stylesheet or script is needed.
 5. **Wrap the page in `DashboardView`**, inject the dashboard, bind `Selections`, and place components inside. Every component takes `T`, the row type, and a `Key` from the builder.
