@@ -114,6 +114,12 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
     /// <inheritdoc />
     public override bool Equals(object? obj) => Equals(obj as Selections);
 
+    /// <summary>Value equality, the same as <see cref="Equals(Selections)"/>, so <c>a == b</c> never silently compares references.</summary>
+    public static bool operator ==(Selections? left, Selections? right) => left is null ? right is null : left.Equals(right);
+
+    /// <summary>The negation of <see cref="op_Equality"/>.</summary>
+    public static bool operator !=(Selections? left, Selections? right) => !(left == right);
+
     /// <inheritdoc />
     public override int GetHashCode()
     {

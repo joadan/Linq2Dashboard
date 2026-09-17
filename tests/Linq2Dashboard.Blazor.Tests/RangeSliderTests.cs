@@ -157,7 +157,7 @@ public class RangeSliderTests : BunitContext
         cut.Find("input.l2d-slider-input-to").Change("99999"); // clamped to max
         Assert.Equal(Selections.Empty.With("Amount", RangeSelection.Between(250, 2500)), raised);
 
-        var noInputs = RenderFacet(configure: f => f.Add(x => x.SliderInputs, false));
+        var noInputs = RenderFacet(configure: f => f.Add(x => x.ShowSliderInputs, false));
         Assert.Empty(noInputs.FindAll("input[type=number]"));
         Assert.Equal("0 – 2,500", noInputs.Find(".l2d-slider-values").TextContent);
     }

@@ -3,8 +3,10 @@ namespace Linq2Dashboard.Blazor;
 /// <summary>
 /// Turns the culture-free values in a <see cref="DashboardState{T}"/> into text (design §9).
 /// One instance is cascaded from <see cref="DashboardView{T}"/> to every component, so culture
-/// enters the UI in exactly one place. Implement it to change labels, number formats or the null
-/// label; the default is <see cref="DefaultDashboardFormatter"/>.
+/// enters the UI in exactly one place. To change labels, number formats or the null label, derive from
+/// <see cref="DefaultDashboardFormatter"/> and override what you need. The interface itself may gain a
+/// member in a minor version when a component needs new text, so a type that implements it directly
+/// is not protected by compatibility: only the default formatter is.
 /// </summary>
 public interface IDashboardFormatter
 {

@@ -61,7 +61,7 @@ public partial class RangeFacet<T>
 
     /// <summary>Number inputs beside the slider for precise entry. Default true.</summary>
     [Parameter]
-    public bool SliderInputs { get; set; } = true;
+    public bool ShowSliderInputs { get; set; } = true;
 
     /// <summary>
     /// Classes for the slider's two number inputs, replacing the library's default look (<c>l2d-input</c>) so a

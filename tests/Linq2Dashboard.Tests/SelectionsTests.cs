@@ -160,4 +160,19 @@ public class SelectionsTests
         Assert.Throws<ArgumentNullException>(() => Selections.Empty.With("A", null!));
         Assert.Throws<ArgumentException>(() => Selections.Empty.Toggle("", 1));
     }
+
+    [Fact]
+    public void Selections_equality_operators_compare_by_value()
+    {
+        var a = Selections.Empty.With("Country", ValueSelection.Of("SE", "NO")).With("Amount", RangeSelection.AtLeast(100));
+        var b = Selections.Empty.With("Amount", RangeSelection.AtLeast(100)).With("Country", ValueSelection.Of("NO", "SE"));
+        Selections? none = null;
+
+        Assert.True(a == b);
+        Assert.False(a != b);
+        Assert.True(a != a.Clear("Amount"));
+        Assert.True(none == null);
+        Assert.True(a != none);
+        Assert.False(none == a);
+    }
 }
