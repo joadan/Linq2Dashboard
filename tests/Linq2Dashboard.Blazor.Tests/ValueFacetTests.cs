@@ -307,3 +307,31 @@ public class ValueFacetTests : BunitContext
         Assert.Equal(["Copenhagen", "Oslo", "Stockholm"], Items(cut).Select(Label));
     }
 }
+
+public class LabelSortCultureTests : BunitContext
+{
+    private sealed record Town(string Name);
+
+    private static readonly Town[] Towns = [new("Zürich"), new("Örebro"), new("Malmö")];
+
+    private IReadOnlyList<string> Labels(CultureInfo culture) =>
+        Render<DashboardView<Town>>(parameters =>
+        {
+            parameters.Add(p => p.Dashboard, Dashboard.Create(Towns, b => b.ValueFacet(x => x.Name)));
+            parameters.Add(p => p.Formatter, new DefaultDashboardFormatter(culture));
+            parameters.AddChildContent<ValueFacet<Town>>(facet =>
+            {
+                facet.Add(f => f.Key, "Name");
+                facet.Add(f => f.Sort, FacetSort.Label);
+            });
+        }).FindAll("li.l2d-facet-value .l2d-facet-value-label").Select(e => e.TextContent.Trim()).ToList();
+
+    [Fact]
+    public void Sort_by_label_follows_the_formatters_culture_not_the_machines()
+    {
+        // The same values, two formatters: Swedish puts ö after z, the invariant culture puts it next to o.
+        // Neither depends on CultureInfo.CurrentCulture, so the test passes on a Swedish machine and on CI alike.
+        Assert.Equal(["Malmö", "Zürich", "Örebro"], Labels(CultureInfo.GetCultureInfo("sv-SE")));
+        Assert.Equal(["Malmö", "Örebro", "Zürich"], Labels(CultureInfo.InvariantCulture));
+    }
+}

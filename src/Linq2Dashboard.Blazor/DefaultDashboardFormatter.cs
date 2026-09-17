@@ -25,6 +25,9 @@ public class DefaultDashboardFormatter : IDashboardFormatter
     /// <inheritdoc />
     public virtual string NullLabel => "(none)";
 
+    /// <summary>Case-insensitive, in the formatter's culture, so ö sorts after z for Swedish and near o for the invariant culture.</summary>
+    public virtual IComparer<string> LabelComparer => StringComparer.Create(Culture, ignoreCase: true);
+
     /// <summary>An application-defined label (concept §5) wins; otherwise the value is formatted by type in the formatter's culture.</summary>
     public virtual string FormatValue(FacetState facet, object? value) => value switch
     {

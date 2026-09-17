@@ -12,6 +12,14 @@ public interface IDashboardFormatter
     string NullLabel { get; }
 
     /// <summary>
+    /// Orders labels when a component sorts by label (<see cref="FacetSort.Label"/>). It belongs here so that the
+    /// order follows the formatter's culture, not the machine's: the core compares values ordinally and the UI
+    /// orders text, and both must be deterministic for a given formatter. The default is a case-insensitive
+    /// comparer for the formatter's culture.
+    /// </summary>
+    IComparer<string> LabelComparer { get; }
+
+    /// <summary>
     /// A facet value as text. <paramref name="value"/> is the boxed value from <see cref="FacetValue.Value"/>, or null.
     /// Implementations should honour <see cref="ValueFacetState.LabelOf"/> when it returns a label (concept §5), as the default does.
     /// </summary>

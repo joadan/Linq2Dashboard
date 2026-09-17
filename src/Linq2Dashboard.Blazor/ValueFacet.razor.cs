@@ -110,14 +110,19 @@ public partial class ValueFacet<T>
         }
 
         var list = values.ToList();
-        IComparer<FacetValue> comparer = Comparer<FacetValue>.Create(Sort == FacetSort.Value ? CompareValues : CompareLabels);
+        IComparer<FacetValue> comparer = Sort == FacetSort.Value ? Comparer<FacetValue>.Create(CompareValues) : LabelComparer();
         IEnumerable<FacetValue> nonNull = list.Where(v => !v.IsNull);
         IEnumerable<FacetValue> ordered = SortDescending ? nonNull.OrderByDescending(v => v, comparer) : nonNull.OrderBy(v => v, comparer);
         return ordered.Concat(list.Where(v => v.IsNull));
     }
 
-    private int CompareLabels(FacetValue a, FacetValue b) =>
-        StringComparer.CurrentCultureIgnoreCase.Compare(Formatter.FormatValue(Facet, a.Value), Formatter.FormatValue(Facet, b.Value));
+    /// <summary>Orders by the shown text with the formatter's comparer, so the order follows the formatter's culture and not the machine's.</summary>
+    private IComparer<FacetValue> LabelComparer()
+    {
+        ValueFacetState facet = Facet;
+        IComparer<string> labels = Formatter.LabelComparer;
+        return Comparer<FacetValue>.Create((a, b) => labels.Compare(Formatter.FormatValue(facet, a.Value), Formatter.FormatValue(facet, b.Value)));
+    }
 
     private int CompareValues(FacetValue a, FacetValue b)
     {
