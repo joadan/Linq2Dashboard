@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Linq2Dashboard.Facets;
 
 namespace Linq2Dashboard.Tests;
@@ -411,5 +412,16 @@ public class DashboardBuilderTests
         Assert.Throws<ArgumentNullException>(() => Create(b => b.Where(null!)));
         Assert.Throws<ArgumentNullException>(() => Create(b => b.ValueFacet<string>("k", null!)));
         Assert.Throws<ArgumentNullException>(() => Create(b => b.UseTimeProvider(null!)));
+    }
+
+    [Fact]
+    public void Dashboard_is_marked_immutable_so_general_purpose_caches_share_the_instance()
+    {
+        // design §5: HybridCache stores a sealed [ImmutableObject(true)] type as is instead of serialising a copy.
+        var attribute = typeof(Dashboard<Order>).GetCustomAttributes(typeof(ImmutableObjectAttribute), inherit: false)
+            .Cast<ImmutableObjectAttribute>().Single();
+
+        Assert.True(attribute.Immutable);
+        Assert.True(typeof(Dashboard<Order>).IsSealed);
     }
 }

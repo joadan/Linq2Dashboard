@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using Linq2Dashboard.Calculation;
 using Linq2Dashboard.Facets;
 using Linq2Dashboard.Indexing;
@@ -28,6 +29,7 @@ public static class Dashboard
 /// state: the UI owns the current <see cref="Selections"/> and asks for a new
 /// <see cref="DashboardState{T}"/> on every change (concept §2). Thread-safe.
 /// </summary>
+[ImmutableObject(true)]
 public sealed class Dashboard<T>
 {
     private const int RowSetCacheCapacity = 256;
