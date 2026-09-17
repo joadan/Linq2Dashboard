@@ -7,6 +7,7 @@ public partial class FiveMinutes
         cd Shop
         dotnet add package Linq2Dashboard --prerelease
         dotnet add package Linq2Dashboard.Blazor --prerelease
+        dotnet add package Microsoft.Extensions.Caching.Hybrid
         """;
 
     private const string RowsExample = """
@@ -34,53 +35,46 @@ public partial class FiveMinutes
 
     private const string ServiceExample = """
         using Linq2Dashboard;
+        using Microsoft.Extensions.Caching.Hybrid;
 
         namespace Shop;
 
-        public sealed class DashboardService
+        public sealed class DashboardService(HybridCache cache)
         {
-            private static readonly TimeSpan Lifetime = TimeSpan.FromMinutes(10);
+            private const string Key = "orders-dashboard";
 
-            private readonly Lock gate = new();
-            private Task<Dashboard<Order>>? current;
-            private DateTime expires;
-
-            public Task<Dashboard<Order>> GetAsync()
+            private static readonly HybridCacheEntryOptions Options = new()
             {
-                lock (gate)
+                Expiration = TimeSpan.FromMinutes(10),
+                Flags = HybridCacheEntryFlags.DisableDistributedCache,
+            };
+
+            public ValueTask<Dashboard<Order>> GetAsync() =>
+                cache.GetOrCreateAsync(Key, static async cancellationToken =>
                 {
-                    if (current is null || current.IsFaulted || DateTime.UtcNow >= expires)
+                    IReadOnlyList<Order> orders = await LoadOrdersAsync(cancellationToken);
+
+                    return Dashboard.Create(orders, b =>
                     {
-                        current = BuildAsync();
-                        expires = DateTime.UtcNow + Lifetime;
-                    }
+                        b.ValueFacet(x => x.Country);
+                        b.ValueFacet(x => x.Status);
+                        b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
+                        b.DateFacet(x => x.OrderDate).Presets(DatePreset.ThisYear);
 
-                    return current;
-                }
-            }
+                        b.Count("orders");
+                        b.Sum("revenue", x => x.Amount);
 
-            private static async Task<Dashboard<Order>> BuildAsync()
-            {
-                IReadOnlyList<Order> orders = await LoadOrdersAsync();
+                        b.OrderByDescending(x => x.OrderDate);
+                    });
+                }, Options);
 
-                return Dashboard.Create(orders, b =>
-                {
-                    b.ValueFacet(x => x.Country);
-                    b.ValueFacet(x => x.Status);
-                    b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
-                    b.DateFacet(x => x.OrderDate).Presets(DatePreset.ThisYear);
+            // Call this when the orders change; the next GetAsync builds a new dashboard.
+            public ValueTask InvalidateAsync() => cache.RemoveAsync(Key);
 
-                    b.Count("orders");
-                    b.Sum("revenue", x => x.Amount);
-
-                    b.OrderByDescending(x => x.OrderDate);
-                });
-            }
-
-            private static async Task<IReadOnlyList<Order>> LoadOrdersAsync()
+            private static async Task<IReadOnlyList<Order>> LoadOrdersAsync(CancellationToken cancellationToken)
             {
                 // Stands in for the query that loads your rows: a database, an API, a file.
-                await Task.Delay(TimeSpan.FromSeconds(1));
+                await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
                 return Order.All;
             }
         }
@@ -88,6 +82,7 @@ public partial class FiveMinutes
 
     private const string ProgramExample = """
         // ... after builder.Services.AddRazorComponents() ...
+        builder.Services.AddHybridCache();
         builder.Services.AddSingleton<Shop.DashboardService>();
         """;
 

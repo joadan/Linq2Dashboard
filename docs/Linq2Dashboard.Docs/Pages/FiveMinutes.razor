@@ -11,7 +11,7 @@
 
 <h2>1. A new app and the two packages</h2>
 
-<p>A Blazor Web App with server interactivity. The commands are the same on Windows, macOS and Linux.</p>
+<p>A Blazor Web App with server interactivity, the two Linq2Dashboard packages and <code>HybridCache</code>, which the service in step 3 uses. The commands are the same on Windows, macOS and Linux.</p>
 
 <pre><code>@CreateAppExample</code></pre>
 
@@ -25,9 +25,11 @@
 
 <p>
     Add <code>DashboardService.cs</code> at the project root. Real data is not in memory at startup, so the service loads the rows
-    and builds the dashboard the first time a page asks, and keeps the result. The dashboard is immutable and thread-safe, so one
-    instance serves every user until it expires; the next request after that builds a new one over fresh rows. The lock means
-    concurrent first requests share one build, and a failed load is retried on the next request instead of being kept.
+    and builds the dashboard the first time a page asks, and caches the result. The dashboard is immutable and thread-safe, so one
+    instance serves every user until the entry expires; the next request after that builds a new one over fresh rows.
+    <code>HybridCache</code> does the hard parts: concurrent first requests share one build, and a failed load is not cached.
+    The <code>DisableDistributedCache</code> flag matters: a dashboard is an in-memory index and cannot be serialised, so it must
+    never be written to a distributed cache, even when the app later gets one.
 </p>
 
 <pre><code>@ServiceExample</code></pre>
@@ -63,7 +65,7 @@
 
 <p>
     Open the address it prints. The first request waits a second for the stand-in load, then the dashboard appears. Reload the
-    page: it is instant, because the service hands out the dashboard it already built. Blazor also renders the page twice, once
+    page: it is instant, because the cache hands out the dashboard it already built. Blazor also renders the page twice, once
     for the first HTML and once when the circuit connects; the second call gets the cached dashboard too.
 </p>
 
@@ -77,7 +79,7 @@
 
 <ul>
     <li><strong>Your data.</strong> Replace the body of <code>LoadOrdersAsync</code> with your query, and the selectors with your properties. Anything that yields an <code>IEnumerable&lt;T&gt;</code> works. Build takes about a second per million rows.</li>
-    <li><strong>The lifetime.</strong> Ten minutes is a placeholder. Make it as long as your data stays useful; a dashboard that never changes can drop the expiry altogether. If a rebuild must not make anyone wait, build the next one in the background and swap it in when it is ready: <code>DashboardView</code> follows a new <code>Dashboard</code> parameter and keeps the selections.</li>
+    <li><strong>The lifetime.</strong> Ten minutes is a placeholder. Make it as long as your data stays useful, and call <code>InvalidateAsync</code> from the code that changes the orders so the next request rebuilds at once. If a rebuild must not make anyone wait, build the next one in the background and swap it in when it is ready: <code>DashboardView</code> follows a new <code>Dashboard</code> parameter and keeps the selections.</li>
     <li><strong>More facets and metrics.</strong> The <a href="getting-started">getting started</a> page shows the whole builder: labels, top-N with search, date presets, text search, calculated metrics.</li>
     <li><strong>Layout and styling.</strong> Every component takes <code>Class</code> and every colour and size is a <code>--l2d-*</code> custom property. The <a href="usage">usage</a> guide lists them and the rules that surprise.</li>
     <li><strong>A larger starting point.</strong> The <a href="https://github.com/joadan/Linq2Dashboard/tree/master/samples/Linq2Dashboard.Sample" target="_blank" rel="noopener">sample project</a> in the repository is the same wiring over 200 000 generated rows, with scopes, virtualised results and a custom formatter.</li>
