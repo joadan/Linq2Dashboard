@@ -334,4 +334,24 @@ public class LabelSortCultureTests : BunitContext
         Assert.Equal(["Malmö", "Zürich", "Örebro"], Labels(CultureInfo.GetCultureInfo("sv-SE")));
         Assert.Equal(["Malmö", "Örebro", "Zürich"], Labels(CultureInfo.InvariantCulture));
     }
+
+}
+
+public class ValueFacetAccessibilityTests : BunitContext
+{
+    [Fact]
+    public void The_search_box_is_labelled_with_the_facet_name_and_no_matches_is_announced()
+    {
+        var cut = Render<DashboardView<Order>>(parameters =>
+        {
+            parameters.Add(p => p.Dashboard, Dashboard.Create(TestData.Orders(), b => b.ValueFacet(x => x.Status).Name("Order status").Searchable()));
+            parameters.Add(p => p.Formatter, new DefaultDashboardFormatter(CultureInfo.InvariantCulture));
+            parameters.AddChildContent<ValueFacet<Order>>(facet => facet.Add(f => f.Key, "Status"));
+        });
+
+        Assert.Equal("Order status", cut.Find(".l2d-facet-search").GetAttribute("aria-label"));
+
+        cut.Find(".l2d-facet-search").Input("zzz");
+        Assert.Equal("status", cut.Find(".l2d-facet-empty").GetAttribute("role"));
+    }
 }

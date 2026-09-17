@@ -77,6 +77,22 @@ public partial class Results<T>
     [Parameter]
     public string PagerLabel { get; set; } = "Pages";
 
+    /// <summary>Accessible label and tooltip of the first-page button, which shows «.</summary>
+    [Parameter]
+    public string FirstPageText { get; set; } = "First page";
+
+    /// <summary>Accessible label and tooltip of the previous-page button, which shows ‹.</summary>
+    [Parameter]
+    public string PreviousPageText { get; set; } = "Previous page";
+
+    /// <summary>Accessible label and tooltip of the next-page button, which shows ›.</summary>
+    [Parameter]
+    public string NextPageText { get; set; } = "Next page";
+
+    /// <summary>Accessible label and tooltip of the last-page button, which shows ».</summary>
+    [Parameter]
+    public string LastPageText { get; set; } = "Last page";
+
     /// <inheritdoc />
     protected override void OnParametersSet()
     {

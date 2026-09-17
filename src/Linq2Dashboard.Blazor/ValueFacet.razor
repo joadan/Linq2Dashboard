@@ -16,14 +16,14 @@
     {
         @if (Facet.IsSearchable)
         {
-            <input type="search" class="@CssClasses.Input("l2d-facet-search", InputClass)" placeholder="@SearchPlaceholder" value="@searchText"
+            <input type="search" class="@CssClasses.Input("l2d-facet-search", InputClass)" placeholder="@SearchPlaceholder" aria-label="@HeaderName" value="@searchText"
                    @oninput="e => searchText = e.Value?.ToString() ?? string.Empty" />
         }
 
         <ul class="l2d-facet-values">
             @foreach (FacetValue value in Displayed)
             {
-                <li class="l2d-facet-value @(value.Selected ? "l2d-selected" : null) @(value.FilteredCount == 0 ? "l2d-zero" : null) @(value.IsNull ? "l2d-null" : null)">
+                <li @key="value.Value ?? NullKey" class="l2d-facet-value @(value.Selected ? "l2d-selected" : null) @(value.FilteredCount == 0 ? "l2d-zero" : null) @(value.IsNull ? "l2d-null" : null)">
                     <button type="button" class="l2d-facet-value-button" aria-pressed="@(value.Selected ? "true" : "false")"
                             title="@CountText.Tooltip(Formatter, value.FilteredCount, value.TotalCount)"
                             @onclick="() => Context.ToggleAsync(Key, value.Value)">
@@ -52,7 +52,7 @@
             }
             @if (IsSearching && !Displayed.Any())
             {
-                <li class="l2d-facet-empty">@NoMatchesText</li>
+                <li class="l2d-facet-empty" role="status">@NoMatchesText</li>
             }
         </ul>
     }

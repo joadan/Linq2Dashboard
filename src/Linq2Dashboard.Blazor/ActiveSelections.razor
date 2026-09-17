@@ -21,7 +21,7 @@ else
 
                     case ValueSelection values when GroupValues:
                         @* One chip per facet: the values are one OR group (concept §4.1). Each value stays removable on its own. *@
-                        <li class="l2d-chip l2d-chip-group" data-key="@facet.Key">
+                        <li @key="facet.Key" class="l2d-chip l2d-chip-group" data-key="@facet.Key">
                             @if (ShowFacetName)
                             {
                                 <span class="l2d-chip-facet">@facet.Name</span>
@@ -53,7 +53,7 @@ else
                         {
                             object? captured = value;
                             string label = Formatter.FormatValue(facet, value);
-                            <li class="l2d-chip" data-key="@facet.Key">
+                            <li @key="(facet.Key, captured)" class="l2d-chip" data-key="@facet.Key">
                                 @if (ShowFacetName)
                                 {
                                     <span class="l2d-chip-facet">@facet.Name</span>
@@ -67,7 +67,7 @@ else
 
                     default:
                         @* Range and date facets hold one interval and a text facet one text; removing the chip clears the facet. *@
-                        <li class="l2d-chip" data-key="@facet.Key">
+                        <li @key="facet.Key" class="l2d-chip" data-key="@facet.Key">
                             @if (ShowFacetName)
                             {
                                 <span class="l2d-chip-facet">@facet.Name</span>

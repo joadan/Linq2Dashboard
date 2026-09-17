@@ -6,6 +6,10 @@ namespace Linq2Dashboard.Blazor;
 public partial class ValueFacet<T>
 {
     private string searchText = string.Empty;
+
+    /// <summary>Stands in for null in <c>@key</c>, which needs an object; the null value is one list item like any other (concept §4.8).</summary>
+    private static readonly object NullKey = new();
+
     private bool collapsed;
     private bool? lastCollapsedParameter;
 

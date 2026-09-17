@@ -5,7 +5,7 @@
 <div @attributes="AdditionalAttributes" class="@RootClass($"l2d-results{(Virtualize ? " l2d-results-virtualized" : "")}")">
     @if (State.MatchingCount == 0)
     {
-        <div class="l2d-results-empty">
+        <div class="l2d-results-empty" role="status">
             @if (EmptyTemplate is not null)
             {
                 @EmptyTemplate
@@ -20,7 +20,7 @@
     {
         @if (ShowSummary)
         {
-            <p class="l2d-results-summary">@string.Format(VirtualSummaryFormat, Formatter.FormatCount(State.MatchingCount))</p>
+            <p class="l2d-results-summary" role="status">@string.Format(VirtualSummaryFormat, Formatter.FormatCount(State.MatchingCount))</p>
         }
 
         <div class="l2d-results-scroll">
@@ -58,7 +58,7 @@
 
         @if (ShowSummary)
         {
-            <p class="l2d-results-summary">
+            <p class="l2d-results-summary" role="status">
                 @string.Format(SummaryFormat,
                     Formatter.FormatCount(page.PageIndex * page.PageSize + 1),
                     Formatter.FormatCount(page.PageIndex * page.PageSize + page.Items.Count),
@@ -98,11 +98,11 @@
         @if (page.PageCount > 1)
         {
             <nav class="l2d-pager" aria-label="@PagerLabel">
-                <button type="button" class="l2d-pager-first" disabled="@(!page.HasPrevious)" @onclick="() => GoTo(0)">«</button>
-                <button type="button" class="l2d-pager-previous" disabled="@(!page.HasPrevious)" @onclick="() => GoTo(page.PageIndex - 1)">‹</button>
-                <span class="l2d-pager-status">@string.Format(PageFormat, Formatter.FormatCount(page.PageIndex + 1), Formatter.FormatCount(page.PageCount))</span>
-                <button type="button" class="l2d-pager-next" disabled="@(!page.HasNext)" @onclick="() => GoTo(page.PageIndex + 1)">›</button>
-                <button type="button" class="l2d-pager-last" disabled="@(!page.HasNext)" @onclick="() => GoTo(page.PageCount - 1)">»</button>
+                <button type="button" class="l2d-pager-first" aria-label="@FirstPageText" title="@FirstPageText" disabled="@(!page.HasPrevious)" @onclick="() => GoTo(0)">«</button>
+                <button type="button" class="l2d-pager-previous" aria-label="@PreviousPageText" title="@PreviousPageText" disabled="@(!page.HasPrevious)" @onclick="() => GoTo(page.PageIndex - 1)">‹</button>
+                <span class="l2d-pager-status" aria-live="polite">@string.Format(PageFormat, Formatter.FormatCount(page.PageIndex + 1), Formatter.FormatCount(page.PageCount))</span>
+                <button type="button" class="l2d-pager-next" aria-label="@NextPageText" title="@NextPageText" disabled="@(!page.HasNext)" @onclick="() => GoTo(page.PageIndex + 1)">›</button>
+                <button type="button" class="l2d-pager-last" aria-label="@LastPageText" title="@LastPageText" disabled="@(!page.HasNext)" @onclick="() => GoTo(page.PageCount - 1)">»</button>
             </nav>
         }
     }

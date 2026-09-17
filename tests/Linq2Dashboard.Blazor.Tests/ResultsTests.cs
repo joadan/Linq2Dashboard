@@ -183,4 +183,18 @@ public class ResultsTests : BunitContext
         Assert.ThrowsAny<Exception>(() => RenderResults(pageSize: 0));
         Assert.ThrowsAny<Exception>(() => RenderResults(configure: r => r.Add(x => x.PageIndex, -1)));
     }
+
+    [Fact]
+    public void Pager_buttons_are_labelled_and_the_status_is_announced()
+    {
+        // The buttons show glyphs; a screen reader needs the text, and the page change must be announced.
+        var cut = RenderResults();
+
+        Assert.Equal("First page", cut.Find(".l2d-pager-first").GetAttribute("aria-label"));
+        Assert.Equal("Previous page", cut.Find(".l2d-pager-previous").GetAttribute("aria-label"));
+        Assert.Equal("Next page", cut.Find(".l2d-pager-next").GetAttribute("aria-label"));
+        Assert.Equal("Last page", cut.Find(".l2d-pager-last").GetAttribute("aria-label"));
+        Assert.Equal("polite", cut.Find(".l2d-pager-status").GetAttribute("aria-live"));
+        Assert.Equal("status", cut.Find(".l2d-results-summary").GetAttribute("role"));
+    }
 }

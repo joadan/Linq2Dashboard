@@ -20,7 +20,7 @@
         <ul class="l2d-presets">
             @foreach (PresetState preset in Facet.Presets)
             {
-                <li class="l2d-preset @(preset.Selected ? "l2d-selected" : null) @(preset.FilteredCount == 0 ? "l2d-zero" : null)">
+                <li @key="preset.Preset" class="l2d-preset @(preset.Selected ? "l2d-selected" : null) @(preset.FilteredCount == 0 ? "l2d-zero" : null)">
                     <button type="button" class="l2d-preset-button" aria-pressed="@(preset.Selected ? "true" : "false")"
                             title="@CountText.Tooltip(Formatter, preset.FilteredCount, preset.TotalCount)"
                             @onclick="() => ClickPreset(preset)">
