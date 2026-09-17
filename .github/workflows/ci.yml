@@ -10,19 +10,18 @@ on:
 env:
   NETCORE_VERSION: '10.0.x'
 
+# Least privilege by default; the deploy job alone gets what GitHub Pages needs.
 permissions:
   contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: pages
-  cancel-in-progress: true
 
 jobs:
   build:
     name: Build and test
     runs-on: ubuntu-latest
+    # A newer push to the same branch or pull request supersedes a running build.
+    concurrency:
+      group: build-${{ github.ref }}
+      cancel-in-progress: true
     steps:
       - uses: actions/checkout@v6
         with:
@@ -43,8 +42,8 @@ jobs:
       - name: Restore packages
         run: dotnet restore Linq2Dashboard.slnx
 
-      - name: Build solution
-        run: dotnet build Linq2Dashboard.slnx --configuration Release --no-restore
+      - name: Build solution (a warning fails the build; the repository rule is zero warnings)
+        run: dotnet build Linq2Dashboard.slnx --configuration Release --no-restore -warnaserror
 
       - name: Test
         run: dotnet test Linq2Dashboard.slnx --configuration Release --no-build --verbosity normal --collect:"XPlat Code Coverage" --results-directory ./coverage
@@ -99,6 +98,13 @@ jobs:
     if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/master' }}
     needs: build
     runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    # Deployments queue rather than cancel, so a finished build is never left half-published.
+    concurrency:
+      group: pages
+      cancel-in-progress: false
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

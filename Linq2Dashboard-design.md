@@ -625,27 +625,30 @@ The benchmark project is part of the first version, not an afterthought. It gene
 
 ### Measured, first version
 
-Intel Xeon W-2223 (4 cores), .NET 10, BenchmarkDotNet short job, 1 000 000 rows. Run with
+Recorded 2026-09-17 for the 1.0 candidate; the first recording, 2026-09-14 to 15, is in the git history of this file and every
+number moved by less than ten per cent. Intel Xeon W-2223 (4 physical cores, 8 logical), Windows 11 24H2, .NET SDK 10.0.400,
+runtime 10.0.11, BenchmarkDotNet 0.15.8 short job (3 warmups, 3 iterations, 1 launch), 1 000 000 rows. Run with
 `dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --job short --filter *` and `-- --memory`.
+The short job's error bars are wide, so treat differences under about ten per cent as noise.
 
 | Scenario | Sequential | Parallel counting | Target |
 |---|---|---|---|
-| `Create`, full dashboard | 1 040 ms | | < 2 s ✓ |
-| `Create` without sort order | 563 ms | | |
-| `Create`, date facet only | 189 ms | | |
-| `Create`, customer facet only (100 000 values) | 157 ms | | |
-| `Where`, scoped dashboard over about 80 % of the rows (added 2026-09-15) | 28 ms | | 526 KB allocated |
-| `Calculate`, no selection | 3.6 ms | 2.3 ms | < 50 ms ✓ |
-| `Calculate`, 1 facet, warm | 9.3 ms | 5.4 ms | ✓ |
-| `Calculate`, 3 facets, warm | 9.4 ms | 4.9 ms | ✓ |
-| `Calculate`, 5 facets, warm | 5.2 ms | 3.4 ms | ✓ |
-| `Calculate`, range + date interval, warm | 9.2 ms | 5.2 ms | ✓ |
-| `Calculate`, 3 facets, cold caches | 19.9 ms | 15.4 ms | ✓ |
-| `Calculate`, range + date, cold caches | 22.2 ms | 16.5 ms | ✓ |
-| A click: 3 facets cold, then one value toggled | 33.4 ms | 24.0 ms | ✓ (the click alone is the difference, ~13 ms) |
-| `Search` over 100 000 customer labels | 4.3 ms | | |
-| `Calculate`, new text in a text facet, cold (two `Contains` per row) | 80.9 ms | 19.8 ms | see below |
-| `GetPage`, first / middle / last of 2 200 pages | 0.001 / 2.1 / 4.0 ms | | |
+| `Create`, full dashboard | 1 087 ms | | < 2 s ✓ |
+| `Create` without sort order | 590 ms | | |
+| `Create`, date facet only | 193 ms | | |
+| `Create`, customer facet only (100 000 values) | 159 ms | | |
+| `Where`, scoped dashboard over about 80 % of the rows (added 2026-09-15) | 24 ms | | 526 KB allocated |
+| `Calculate`, no selection | 3.7 ms | 2.0 ms | < 50 ms ✓ |
+| `Calculate`, 1 facet, warm | 10.9 ms | 5.4 ms | ✓ |
+| `Calculate`, 3 facets, warm | 10.1 ms | 5.2 ms | ✓ |
+| `Calculate`, 5 facets, warm | 5.3 ms | 3.8 ms | ✓ |
+| `Calculate`, range + date interval, warm | 9.5 ms | 5.9 ms | ✓ |
+| `Calculate`, 3 facets, cold caches | 21.9 ms | 16.2 ms | ✓ |
+| `Calculate`, range + date, cold caches | 22.4 ms | 17.5 ms | ✓ |
+| A click: 3 facets cold, then one value toggled | 35.0 ms | 26.0 ms | ✓ (the click alone is the difference, ~13 ms) |
+| `Search` over 100 000 customer labels | 5.6 ms | | |
+| `Calculate`, new text in a text facet, cold (two `Contains` per row) | 76.6 ms | 19.7 ms | see below |
+| `GetPage`, first / middle / last of 2 200 pages | 0.002 / 2.0 / 4.6 ms | | |
 
 | Memory above the 7.8 MB row array | |
 |---|---|
@@ -660,8 +663,8 @@ Intel Xeon W-2223 (4 cores), .NET 10, BenchmarkDotNet short job, 1 000 000 rows.
 
 Every target is met with margin, so per-value bitmaps stay out (§3.4). What the numbers say about where time goes:
 
-- **A scope costs about 3 % of a build and under 1 % of its memory** (added 2026-09-15): 28 ms and 526 KB against 1 040 ms and 78 MB. One predicate call per row, one counting pass per facet, one aggregation per metric; the row set is 125 KB and the rest is count arrays. A host can afford a scope per tenant, per user or per tab.
-- **The sort order is half of the build.** 480 ms of the 1 040 ms is `Array.Sort` over a million row ids through a delegate comparison. A key-specialised sort (materialise the key into a primitive array and sort indices by it) would likely halve that. Not needed for the target; first candidate if build time matters.
+- **A scope costs about 3 % of a build and under 1 % of its memory** (added 2026-09-15): 24 ms and 526 KB against 1 087 ms and 78 MB. One predicate call per row, one counting pass per facet, one aggregation per metric; the row set is 125 KB and the rest is count arrays. A host can afford a scope per tenant, per user or per tab.
+- **The sort order is half of the build.** About 500 ms of the 1 087 ms is `Array.Sort` over a million row ids through a delegate comparison. A key-specialised sort (materialise the key into a primitive array and sort indices by it) would likely halve that. Not needed for the target; first candidate if build time matters.
 - **The date facet is the next build cost** at about 190 ms, from one time zone conversion per row. Caching the offset per calendar day would remove most of it.
 - **Selection scans cost about 3 ms each**, three times the estimate, because the value scan sets bits one at a time through a range-checked builder. A word-at-a-time scan would bring it to the estimate. Only cold calculations pay this.
 - **Date presets are rescanned on every calculation**, about 1 ms per preset, because their interval depends on "now". Caching the preset row set keyed by its resolved interval would make them free until midnight.

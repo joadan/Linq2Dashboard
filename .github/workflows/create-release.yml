@@ -1,7 +1,10 @@
 name: Create Release
 
 # Run by hand from the Actions tab. Tests, packs both packages, pushes them to NuGet and tags the commit.
-# On master the version is <major.minor>.<height>-beta from version.json; on a release/v* branch it is stable.
+# The version is version.json's major.minor, the git height as patch, and version.json's prerelease tag if it
+# has one: "0.1-beta" gives 0.1.<height>-beta, "1.0" gives 1.0.<height>. The GitHub release is marked
+# prerelease exactly when the version carries a tag. Only master and release/v* branches are public-release
+# branches in version.json; dispatching from any other ref stops before anything is pushed.
 #
 # Publishing uses NuGet Trusted Publishing: no long-lived API key. The job's OIDC token is exchanged for a
 # one-hour NuGet key by NuGet/login, which nuget.org allows because a trusted publishing policy names this
@@ -31,9 +34,15 @@ jobs:
           key: ${{ runner.os }}-nuget-${{ hashFiles('**/*.csproj', '**/Directory.Build.props') }}
           restore-keys: ${{ runner.os }}-nuget-
 
+      - name: Refuse to release from a branch that is not a public-release branch
+        if: ${{ github.ref_name != 'master' && !startsWith(github.ref_name, 'release/') }}
+        run: |
+          echo "::error::Releases are cut from master or a release/v* branch, not from '${{ github.ref_name }}'."
+          exit 1
+
       - name: Get version
         id: nbgv
-        uses: dotnet/nbgv@master
+        uses: dotnet/nbgv@v0.5.2
 
       - name: Test
         run: |
@@ -61,6 +70,6 @@ jobs:
         with:
           tag_name: ${{ steps.nbgv.outputs.SemVer2 }}
           name: Release ${{ steps.nbgv.outputs.SemVer2 }}
-          prerelease: ${{ !startsWith(github.ref_name, 'release/') }}
+          prerelease: ${{ steps.nbgv.outputs.PrereleaseVersion != '' }}
           generate_release_notes: true
           files: artifacts/*.nupkg
