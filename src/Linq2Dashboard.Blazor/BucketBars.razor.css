@@ -74,9 +74,16 @@
     gap: 2px;
 }
 
+/* Each column sizes itself from the space it is given, never from its own text. Without the containment a
+   column's non-wrapping label sets a smallest width, and a row of flex:1 1 0 columns reports that width times
+   the bucket count as its own intrinsic width. That becomes a floor under the host's layout: a facet with many
+   buckets pushes a narrow column, and with it the page, wider than the viewport (design §9). The containment
+   also makes every column a query container, so a column too narrow for its text can drop it. */
 .l2d-buckets-histogram .l2d-bucket {
     flex: 1 1 0;
     min-width: 0;
+    container-type: inline-size;
+    container-name: l2d-bucket;
 }
 
 .l2d-buckets-histogram .l2d-bucket-button {
@@ -113,6 +120,16 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+}
+
+/* A column too narrow for a label or a count shows the bar alone. A clipped label reads as a shorter label and
+   clipped digits read as a smaller number, so nothing is better than part of it; the tooltip still carries both.
+   A container query adds no specificity, so this repeats the selector above and must follow it to win. */
+@container l2d-bucket (max-width: 4rem) {
+    .l2d-buckets-histogram .l2d-bucket-label,
+    .l2d-buckets-histogram .l2d-bucket-count {
+        display: none;
+    }
 }
 
 /* List: label, inline bar, count on one row. */
