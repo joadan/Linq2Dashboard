@@ -24,7 +24,7 @@ public class ClassAndAttributeTests : BunitContext
 
             b.RangeFacet(x => x.Discount);
             b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm);
-            b.Sum("revenue", x => x.Amount).Name("Revenue");
+            b.SumMetric("revenue", x => x.Amount).Name("Revenue");
             b.OrderBy(x => x.Id);
         });
 

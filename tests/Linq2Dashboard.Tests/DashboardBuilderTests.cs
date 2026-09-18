@@ -58,15 +58,15 @@ public class DashboardBuilderTests
 
         Assert.Throws<ArgumentException>(() => Create(b =>
         {
-            b.Count("orders");
-            b.Sum("orders", x => x.Amount);
+            b.CountMetric("orders");
+            b.SumMetric("orders", x => x.Amount);
         }));
 
         var dashboard = Create(b =>
         {
             b.ValueFacet(x => x.Country);
             b.ValueFacet("country", x => x.Status);
-            b.Count("Country"); // metric keys are a separate namespace
+            b.CountMetric("Country"); // metric keys are a separate namespace
         });
         Assert.Equal(2, dashboard.Facets.Count);
         Assert.Single(dashboard.Metrics);
@@ -76,7 +76,7 @@ public class DashboardBuilderTests
     public void Blank_keys_are_rejected()
     {
         Assert.Throws<ArgumentException>(() => Create(b => b.ValueFacet(" ", x => x.Country)));
-        Assert.Throws<ArgumentException>(() => Create(b => b.Count("")));
+        Assert.Throws<ArgumentException>(() => Create(b => b.CountMetric("")));
     }
 
     [Fact]
@@ -103,7 +103,7 @@ public class DashboardBuilderTests
             b.ValueFacet(x => x.Country);
             b.RangeFacet(x => x.Amount);
             b.DateFacet(x => x.OrderDate);
-            b.Sum("revenue", x => x.Amount);
+            b.SumMetric("revenue", x => x.Amount);
             b.OrderBy(x => x.Id);
         });
 
@@ -128,7 +128,7 @@ public class DashboardBuilderTests
             b.ValueFacet(x => x.Country);
             b.RangeFacet(x => x.Amount);
             b.DateFacet(x => x.OrderDate);
-            b.Count("orders");
+            b.CountMetric("orders");
             b.OrderBy(x => x.Id);
         });
 
@@ -206,7 +206,7 @@ public class DashboardBuilderTests
         var error = Assert.Throws<ArgumentException>(() => Create(b => b.RangeFacet(x => x.Status)));
         Assert.Contains("numeric", error.Message);
         Assert.Throws<ArgumentException>(() => Create(b => b.RangeFacet(x => x.OrderDate)));
-        Assert.Throws<ArgumentException>(() => Create(b => b.Sum("s", x => x.Country)));
+        Assert.Throws<ArgumentException>(() => Create(b => b.SumMetric("s", x => x.Country)));
     }
 
     [Fact]
@@ -270,12 +270,12 @@ public class DashboardBuilderTests
     {
         var dashboard = Create(b =>
         {
-            b.Count("orders").Name("Orders");
-            b.Sum("revenue", x => x.Amount);
-            b.Average("avgDiscount", x => x.Discount);
-            b.Min("minQty", x => x.Quantity);
-            b.Max("maxId", x => x.Id);
-            b.Distinct("countries", x => x.Country);
+            b.CountMetric("orders").Name("Orders");
+            b.SumMetric("revenue", x => x.Amount);
+            b.AverageMetric("avgDiscount", x => x.Discount);
+            b.MinMetric("minQty", x => x.Quantity);
+            b.MaxMetric("maxId", x => x.Id);
+            b.DistinctMetric("countries", x => x.Country);
         });
 
         Assert.Equal(
@@ -301,25 +301,25 @@ public class DashboardBuilderTests
     {
         var unknown = Assert.Throws<ArgumentException>(() => Create(b =>
         {
-            b.Count("orders");
-            b.Calculated("aov", m => m["revenue"] / m["orders"]);
+            b.CountMetric("orders");
+            b.CalculatedMetric("aov", m => m["revenue"] / m["orders"]);
         }));
         Assert.Contains("revenue", unknown.Message);
 
         var later = Assert.Throws<ArgumentException>(() => Create(b =>
         {
-            b.Calculated("aov", m => m["revenue"] / m["orders"]); // defined before its inputs
-            b.Count("orders");
-            b.Sum("revenue", x => x.Amount);
+            b.CalculatedMetric("aov", m => m["revenue"] / m["orders"]); // defined before its inputs
+            b.CountMetric("orders");
+            b.SumMetric("revenue", x => x.Amount);
         }));
         Assert.Contains("defined earlier", later.Message);
 
-        Assert.Throws<ArgumentNullException>(() => Create(b => b.Calculated("aov", null!)));
+        Assert.Throws<ArgumentNullException>(() => Create(b => b.CalculatedMetric("aov", null!)));
 
         var dashboard = Create(b =>
         {
-            b.Count("orders");
-            b.Calculated("half", m => m["orders"] / 2);
+            b.CountMetric("orders");
+            b.CalculatedMetric("half", m => m["orders"] / 2);
         });
         Assert.Equal(new MetricInfo("half", "half", Aggregation.Calculated), dashboard.Metrics[1]);
         Assert.Null(dashboard.MetricIndex("half").Column);
@@ -328,11 +328,11 @@ public class DashboardBuilderTests
     [Fact]
     public void Distinct_validates_like_every_other_metric()
     {
-        Assert.Throws<ArgumentNullException>(() => Create(b => b.Distinct<string?>("countries", null!)));
+        Assert.Throws<ArgumentNullException>(() => Create(b => b.DistinctMetric<string?>("countries", null!)));
         Assert.Throws<ArgumentException>(() => Create(b =>
         {
-            b.Count("countries");
-            b.Distinct("countries", x => x.Country);
+            b.CountMetric("countries");
+            b.DistinctMetric("countries", x => x.Country);
         }));
     }
 
@@ -369,7 +369,7 @@ public class DashboardBuilderTests
         {
             captured = b;
             facet = b.ValueFacet(x => x.Country);
-            metric = b.Count("orders");
+            metric = b.CountMetric("orders");
         });
 
         Assert.Throws<InvalidOperationException>(() => captured!.ValueFacet(x => x.Status));

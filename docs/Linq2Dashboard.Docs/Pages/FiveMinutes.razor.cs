@@ -61,8 +61,8 @@ public partial class FiveMinutes
                         b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
                         b.DateFacet(x => x.OrderDate).Presets(DatePreset.ThisYear);
 
-                        b.Count("orders");
-                        b.Sum("revenue", x => x.Amount);
+                        b.CountMetric("orders");
+                        b.SumMetric("revenue", x => x.Amount);
 
                         b.OrderByDescending(x => x.OrderDate);
                     });

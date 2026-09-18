@@ -22,9 +22,9 @@ public static class DashboardFactory
             b.TextFacet("search", (x, text) =>
                 x.Customer.Contains(text, StringComparison.OrdinalIgnoreCase)
                 || x.Brand.Contains(text, StringComparison.OrdinalIgnoreCase));
-            b.Count("orders");
-            b.Sum("revenue", x => x.Amount);
-            b.Average("average", x => x.Amount);
+            b.CountMetric("orders");
+            b.SumMetric("revenue", x => x.Amount);
+            b.AverageMetric("average", x => x.Amount);
             b.OrderByDescending(x => x.OrderDate);
             b.EnableParallelCounting(parallelCounting);
         });

@@ -25,11 +25,11 @@ public partial class GettingStarted
             b.TextFacet("search", (x, text) =>                    // free text; your function decides what matches
                 x.CustomerName.Contains(text, StringComparison.OrdinalIgnoreCase));
 
-            b.Count("orders");
-            b.Sum("revenue", x => x.Amount);
-            b.Average("average", x => x.Amount);
-            b.Distinct("customers", x => x.CustomerId);
-            b.Calculated("perCustomer", m => m["revenue"] / m["customers"]);
+            b.CountMetric("orders");
+            b.SumMetric("revenue", x => x.Amount);
+            b.AverageMetric("average", x => x.Amount);
+            b.DistinctMetric("customers", x => x.CustomerId);
+            b.CalculatedMetric("perCustomer", m => m["revenue"] / m["customers"]);
 
             b.OrderByDescending(x => x.OrderDate);
         });

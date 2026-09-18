@@ -83,11 +83,11 @@ public static class SampleOrders
                 (x.Customer?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false)
                 || x.Category.Contains(text, StringComparison.OrdinalIgnoreCase))
              .Name("Search");
-            b.Count("orders").Name("Orders");
-            b.Sum("revenue", x => x.Amount).Name("Revenue");
-            b.Average("average", x => x.Amount).Name("Average order");
-            b.Distinct("customers", x => x.Customer).Name("Customers");
-            b.Calculated("perCustomer", m => m["revenue"] / m["customers"]).Name("Revenue per customer");
+            b.CountMetric("orders").Name("Orders");
+            b.SumMetric("revenue", x => x.Amount).Name("Revenue");
+            b.AverageMetric("average", x => x.Amount).Name("Average order");
+            b.DistinctMetric("customers", x => x.Customer).Name("Customers");
+            b.CalculatedMetric("perCustomer", m => m["revenue"] / m["customers"]).Name("Revenue per customer");
             b.OrderByDescending(x => x.OrderDate);
         });
 

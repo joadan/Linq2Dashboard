@@ -15,9 +15,9 @@ public class ConcurrencyTests
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
             b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth);
             b.TextFacet("search", (x, text) => x.Status.Contains(text, StringComparison.OrdinalIgnoreCase));
-            b.Count("orders");
-            b.Sum("revenue", x => x.Amount);
-            b.Distinct("countries", x => x.Country);
+            b.CountMetric("orders");
+            b.SumMetric("revenue", x => x.Amount);
+            b.DistinctMetric("countries", x => x.Country);
             b.OrderByDescending(x => x.Amount);
             b.UseTimeProvider(new FixedTimeProvider(TestData.Instant("2026-03-15T10:00:00Z")));
             extra?.Invoke(b);

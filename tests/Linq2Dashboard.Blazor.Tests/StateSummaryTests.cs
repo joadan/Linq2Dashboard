@@ -11,7 +11,7 @@ public class StateSummaryTests : BunitContext
         {
             b.ValueFacet(x => x.Country).Top(2);
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
-            b.Count("orders");
+            b.CountMetric("orders");
         });
 
     private IRenderedComponent<DashboardView<Order>> RenderSummary(Selections? selections = null, Action<ComponentParameterCollectionBuilder<StateSummary<Order>>>? configure = null) =>

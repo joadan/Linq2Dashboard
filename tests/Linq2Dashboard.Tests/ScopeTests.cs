@@ -28,11 +28,11 @@ public class ScopeTests
         b.RangeFacet(x => x.Discount).Buckets(10, 100);
         b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth, DatePreset.Last7Days);
         b.TextFacet("search", (x, text) => x.Status.Contains(text, StringComparison.OrdinalIgnoreCase));
-        b.Count("orders");
-        b.Sum("revenue", x => x.Amount);
-        b.Average("avgDiscount", x => x.Discount);
-        b.Distinct("countries", x => x.Country);
-        b.Calculated("perCountry", m => m["revenue"] / m["countries"]);
+        b.CountMetric("orders");
+        b.SumMetric("revenue", x => x.Amount);
+        b.AverageMetric("avgDiscount", x => x.Discount);
+        b.DistinctMetric("countries", x => x.Country);
+        b.CalculatedMetric("perCountry", m => m["revenue"] / m["countries"]);
         b.OrderByDescending(x => x.Amount);
         b.UseTimeProvider(Clock);
     }

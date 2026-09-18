@@ -35,9 +35,9 @@ public class CreateBenchmarks
             b.BooleanFacet(x => x.IsActive);
             b.RangeFacet(x => x.Amount).Buckets(50, 100, 200, 500, 1000, 2000, 5000);
             b.DateFacet(x => x.OrderDate).TimeZone(DashboardFactory.Stockholm);
-            b.Count("orders");
-            b.Sum("revenue", x => x.Amount);
-            b.Average("average", x => x.Amount);
+            b.CountMetric("orders");
+            b.SumMetric("revenue", x => x.Amount);
+            b.AverageMetric("average", x => x.Amount);
         });
 
     /// <summary>Only the date facet, to isolate the time zone conversion cost noted in the design.</summary>

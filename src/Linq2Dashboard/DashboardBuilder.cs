@@ -131,22 +131,22 @@ public sealed class DashboardBuilder<T>
     }
 
     /// <summary>Number of matching rows (concept §4.4).</summary>
-    public MetricBuilder<T> Count(string key) => AddMetric(key, Aggregation.Count, null);
+    public MetricBuilder<T> CountMetric(string key) => AddMetric(key, Aggregation.Count, null);
 
     /// <summary>Sum of <paramref name="selector"/> over the matching rows, skipping null (concept §4.4). Any numeric type or its nullable form.</summary>
-    public MetricBuilder<T> Sum<TProp>(string key, Expression<Func<T, TProp>> selector) =>
+    public MetricBuilder<T> SumMetric<TProp>(string key, Expression<Func<T, TProp>> selector) =>
         AddMetric(key, Aggregation.Sum, NumericConversion.ToNullableDouble(selector, nameof(selector)));
 
     /// <summary>Average of <paramref name="selector"/> over the matching rows that have a value, not over all matching rows (concept §4.4).</summary>
-    public MetricBuilder<T> Average<TProp>(string key, Expression<Func<T, TProp>> selector) =>
+    public MetricBuilder<T> AverageMetric<TProp>(string key, Expression<Func<T, TProp>> selector) =>
         AddMetric(key, Aggregation.Average, NumericConversion.ToNullableDouble(selector, nameof(selector)));
 
     /// <summary>Smallest non-null value of <paramref name="selector"/> among the matching rows (concept §4.4).</summary>
-    public MetricBuilder<T> Min<TProp>(string key, Expression<Func<T, TProp>> selector) =>
+    public MetricBuilder<T> MinMetric<TProp>(string key, Expression<Func<T, TProp>> selector) =>
         AddMetric(key, Aggregation.Min, NumericConversion.ToNullableDouble(selector, nameof(selector)));
 
     /// <summary>Largest non-null value of <paramref name="selector"/> among the matching rows (concept §4.4).</summary>
-    public MetricBuilder<T> Max<TProp>(string key, Expression<Func<T, TProp>> selector) =>
+    public MetricBuilder<T> MaxMetric<TProp>(string key, Expression<Func<T, TProp>> selector) =>
         AddMetric(key, Aggregation.Max, NumericConversion.ToNullableDouble(selector, nameof(selector)));
 
     /// <summary>
@@ -154,7 +154,7 @@ public sealed class DashboardBuilder<T>
     /// (concept §4.4). Equality follows the value facet rules: strings ignore case unless
     /// <paramref name="comparer"/> is given.
     /// </summary>
-    public MetricBuilder<T> Distinct<TProp>(string key, Expression<Func<T, TProp>> selector, IEqualityComparer<TProp>? comparer = null)
+    public MetricBuilder<T> DistinctMetric<TProp>(string key, Expression<Func<T, TProp>> selector, IEqualityComparer<TProp>? comparer = null)
     {
         ArgumentNullException.ThrowIfNull(selector);
         Func<T, TProp> read = selector.Compile();
@@ -173,7 +173,7 @@ public sealed class DashboardBuilder<T>
     /// checked now; a key first read inside a branch is checked at the first calculation that
     /// reaches it.
     /// </summary>
-    public MetricBuilder<T> Calculated(string key, Func<MetricValues, double?> formula)
+    public MetricBuilder<T> CalculatedMetric(string key, Func<MetricValues, double?> formula)
     {
         ValidateKey(key);
         ArgumentNullException.ThrowIfNull(formula);

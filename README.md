@@ -42,11 +42,11 @@ var dashboard = Dashboard.Create(orders, b =>
     b.TextFacet("search", (x, text) =>                       // free text; the function decides what matches
         x.Customer.Contains(text, StringComparison.OrdinalIgnoreCase));
 
-    b.Count("orders");
-    b.Sum("revenue", x => x.Amount);
-    b.Average("average", x => x.Amount);
-    b.Distinct("customers", x => x.Customer);              // how many different customers the selection touches
-    b.Calculated("perCustomer", m => m["revenue"] / m["customers"]);   // a formula over earlier metrics
+    b.CountMetric("orders");
+    b.SumMetric("revenue", x => x.Amount);
+    b.AverageMetric("average", x => x.Amount);
+    b.DistinctMetric("customers", x => x.Customer);              // how many different customers the selection touches
+    b.CalculatedMetric("perCustomer", m => m["revenue"] / m["customers"]);   // a formula over earlier metrics
 
     b.OrderByDescending(x => x.OrderDate);
 });

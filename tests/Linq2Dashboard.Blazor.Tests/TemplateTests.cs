@@ -13,8 +13,8 @@ public class TemplateTests : BunitContext
             b.ValueFacet(x => x.Country);
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
             b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm);
-            b.Count("orders").Name("Orders");
-            b.Sum("revenue", x => x.Amount).Name("Revenue");
+            b.CountMetric("orders").Name("Orders");
+            b.SumMetric("revenue", x => x.Amount).Name("Revenue");
         });
 
     private IRenderedComponent<DashboardView<Order>> RenderWith<TComponent>(Action<ComponentParameterCollectionBuilder<TComponent>> configure, Selections? selections = null)

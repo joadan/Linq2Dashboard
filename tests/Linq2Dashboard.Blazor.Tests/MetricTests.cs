@@ -12,11 +12,11 @@ public class MetricTests : BunitContext
         {
             b.ValueFacet(x => x.Country);
             b.RangeFacet(x => x.Discount);
-            b.Count("orders").Name("Orders");
-            b.Sum("revenue", x => x.Amount).Name("Revenue");
-            b.Average("avgDiscount", x => x.Discount).Name("Average discount");
-            b.Distinct("countries", x => x.Country).Name("Countries");
-            b.Calculated("aov", m => m["revenue"] / m["orders"]).Name("Average order");
+            b.CountMetric("orders").Name("Orders");
+            b.SumMetric("revenue", x => x.Amount).Name("Revenue");
+            b.AverageMetric("avgDiscount", x => x.Discount).Name("Average discount");
+            b.DistinctMetric("countries", x => x.Country).Name("Countries");
+            b.CalculatedMetric("aov", m => m["revenue"] / m["orders"]).Name("Average order");
         });
 
     private IRenderedComponent<DashboardView<Order>> RenderWith<TComponent>(Action<ComponentParameterCollectionBuilder<TComponent>> configure, Selections? selections = null)

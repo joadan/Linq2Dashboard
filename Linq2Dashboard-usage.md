@@ -56,13 +56,13 @@ var dashboard = Dashboard.Create(orders, b =>
      .Presets(DatePreset.Last30Days, DatePreset.ThisYear);
     b.TextFacet("search", (x, text) => x.CustomerName.Contains(text, StringComparison.OrdinalIgnoreCase));
 
-    b.Count("orders");
-    b.Sum("revenue", x => x.Amount).Name("Revenue");
-    b.Average("average", x => x.Amount);
-    b.Min("smallest", x => x.Amount);
-    b.Max("largest", x => x.Amount);
-    b.Distinct("customers", x => x.CustomerId);
-    b.Calculated("perCustomer", m => m["revenue"] / m["customers"]);
+    b.CountMetric("orders");
+    b.SumMetric("revenue", x => x.Amount).Name("Revenue");
+    b.AverageMetric("average", x => x.Amount);
+    b.MinMetric("smallest", x => x.Amount);
+    b.MaxMetric("largest", x => x.Amount);
+    b.DistinctMetric("customers", x => x.CustomerId);
+    b.CalculatedMetric("perCustomer", m => m["revenue"] / m["customers"]);
 
     b.OrderByDescending(x => x.OrderDate).ThenBy(x => x.Id);
     b.EnableParallelCounting();                      // off by default; helps text facets most
@@ -76,7 +76,7 @@ Rules of the builder:
 - Value facet options: `Name`, `Top(n)` with an "Other" remainder, `RankBy(RankMode.TotalCount)` for a stable list, `Searchable()`, `Label(row => text)`, `Comparer(...)`, `Serialize(format, parse)` for value types JSON cannot round-trip by default.
 - Range facet options: `Name`, `Buckets(cuts...)` strictly ascending, or `AutoBuckets(count)` for equal widths.
 - Date facet options: `Name`, `TimeZone`, `Granularity` (Year, Month, ISO Week, Day), `Presets` (Today, Yesterday, Last7Days, Last30Days, ThisWeek, ThisMonth, ThisYear).
-- `Calculated` reads earlier metrics by key through `m["key"]`. It gives no value when any input has none or the result is not finite. Define its inputs before it.
+- `CalculatedMetric` reads earlier metrics by key through `m["key"]`. It gives no value when any input has none or the result is not finite. Define its inputs before it.
 - `UseTimeProvider` supplies "now" for relative presets, for tests.
 - Mistakes surface inside `Create`, not at first use: an unknown metric key in a formula, a non-numeric range selector, non-ascending cuts, a duplicate key.
 
@@ -168,7 +168,7 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 | `DateFacet` | Presets with counts, one bar per period. | `Key`, `Name`, `Layout`, `ShowPresets` |
 | `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`, `DebounceMilliseconds`, `Placeholder`, `InputClass` |
 | `ActiveSelections` | One removable chip per selection, clear all. | `ShowFacetName`, `GroupValues` |
-| `Metric` | One tile by key with its share of the total; a dash when there is no value. A `Count` metric is the matching row count. | `Key`, `Name`, `MetricTemplate` |
+| `Metric` | One tile by key with its share of the total; a dash when there is no value. A `CountMetric` is the matching row count. | `Key`, `Name`, `MetricTemplate` |
 | `Results` | Matching rows through your template, paged or virtualised. | `RowTemplate`, `HeaderTemplate`, `EmptyTemplate`, `Layout`, `PageSize`, `Virtualize` |
 | `StateSummary` | Everything in the state as plain clickable lists: counts, metrics, every facet. The default content of `DashboardView`, for a first look before laying out a page. | the texts |
 

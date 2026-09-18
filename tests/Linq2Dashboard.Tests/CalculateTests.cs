@@ -23,9 +23,9 @@ public class CalculateTests
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
             b.RangeFacet(x => x.Discount).Buckets(10, 100);
             b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth, DatePreset.Last7Days);
-            b.Count("orders");
-            b.Sum("revenue", x => x.Amount);
-            b.Average("avgDiscount", x => x.Discount);
+            b.CountMetric("orders");
+            b.SumMetric("revenue", x => x.Amount);
+            b.AverageMetric("avgDiscount", x => x.Discount);
             b.OrderByDescending(x => x.Amount);
             b.UseTimeProvider(Clock);
             extra?.Invoke(b);
@@ -331,8 +331,8 @@ public class CalculateTests
 
         var minMax = Build(b =>
         {
-            b.Min("cheapest", x => x.Amount);
-            b.Max("dearest", x => x.Amount);
+            b.MinMetric("cheapest", x => x.Amount);
+            b.MaxMetric("dearest", x => x.Amount);
         }).Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));
         Assert.Null(minMax.Metric("cheapest").Share);
         Assert.Null(minMax.Metric("dearest").Share);
@@ -366,8 +366,8 @@ public class CalculateTests
     {
         var empty = Dashboard.Create(Array.Empty<Order>(), b =>
         {
-            b.Count("orders");
-            b.Sum("revenue", x => x.Amount);
+            b.CountMetric("orders");
+            b.SumMetric("revenue", x => x.Amount);
         }).Calculate();
         Assert.Equal(0, empty.Metric("orders").Value);
         Assert.Null(empty.Metric("orders").Share);
@@ -376,7 +376,7 @@ public class CalculateTests
         var cancelling = Dashboard.Create([new Signed(1, 10), new Signed(2, -10)], b =>
         {
             b.ValueFacet(x => x.Id);
-            b.Sum("net", x => x.Amount);
+            b.SumMetric("net", x => x.Amount);
         }).Calculate(Selections.Empty.With("Id", ValueSelection.Of(1)));
         Assert.Equal(10, cancelling.Metric("net").Value);
         Assert.Null(cancelling.Metric("net").Share);
@@ -387,8 +387,8 @@ public class CalculateTests
     {
         var dashboard = Build(b =>
         {
-            b.Distinct("countries", x => x.Country);
-            b.Distinct("statuses", x => x.Status);
+            b.DistinctMetric("countries", x => x.Country);
+            b.DistinctMetric("statuses", x => x.Status);
         });
 
         var all = dashboard.Calculate();
@@ -413,10 +413,10 @@ public class CalculateTests
     [Fact]
     public void Distinct_takes_a_comparer_and_reports_no_value_over_only_nulls()
     {
-        var caseSensitive = Build(b => b.Distinct("spellings", x => x.Country, StringComparer.Ordinal)).Calculate();
+        var caseSensitive = Build(b => b.DistinctMetric("spellings", x => x.Country, StringComparer.Ordinal)).Calculate();
         Assert.Equal(4, caseSensitive.Metric("spellings").Value); // SE, NO, DK, se
 
-        var untagged = Dashboard.Create([new Tagged(1, null), new Tagged(2, null)], b => b.Distinct("tags", x => x.Tag)).Calculate();
+        var untagged = Dashboard.Create([new Tagged(1, null), new Tagged(2, null)], b => b.DistinctMetric("tags", x => x.Tag)).Calculate();
         Assert.Equal(new MetricState("tags", "tags", Aggregation.Distinct, null, null), untagged.Metric("tags"));
     }
 
@@ -425,9 +425,9 @@ public class CalculateTests
     {
         var dashboard = Build(b =>
         {
-            b.Calculated("aov", m => m["revenue"] / m["orders"]).Name("Average order");
-            b.Calculated("aovShare", m => m.Share("revenue") / m.Share("orders")); // reads shares, and an earlier calculated metric is visible too
-            b.Calculated("doubleAov", m => m["aov"] * 2);
+            b.CalculatedMetric("aov", m => m["revenue"] / m["orders"]).Name("Average order");
+            b.CalculatedMetric("aovShare", m => m.Share("revenue") / m.Share("orders")); // reads shares, and an earlier calculated metric is visible too
+            b.CalculatedMetric("doubleAov", m => m["aov"] * 2);
         });
 
         var all = dashboard.Calculate();
@@ -449,8 +449,8 @@ public class CalculateTests
     {
         var state = Build(b =>
         {
-            b.Calculated("byZero", m => m["revenue"] / (m["orders"] - 8));
-            b.Calculated("nan", m => double.NaN);
+            b.CalculatedMetric("byZero", m => m["revenue"] / (m["orders"] - 8));
+            b.CalculatedMetric("nan", m => double.NaN);
         }).Calculate();
 
         Assert.Null(state.Metric("byZero").Value); // 5 424.5 / 0 is "no value", never infinity
@@ -674,8 +674,8 @@ public class CalculateTests
             b.ValueFacet(x => x.Country).Top(5);
             b.RangeFacet(x => x.Amount);
             b.DateFacet(x => x.OrderDate).Presets(DatePreset.Today);
-            b.Count("orders");
-            b.Sum("revenue", x => x.Amount);
+            b.CountMetric("orders");
+            b.SumMetric("revenue", x => x.Amount);
         });
 
         var state = empty.Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));

@@ -32,7 +32,7 @@ public static class MemoryReport
         Report("IsActive (boolean)", orders, baseline, b => b.BooleanFacet(x => x.IsActive));
         Report("Amount (range, 8 buckets)", orders, baseline, b => b.RangeFacet(x => x.Amount).Buckets(50, 100, 200, 500, 1000, 2000, 5000));
         Report("OrderDate (date, month)", orders, baseline, b => b.DateFacet(x => x.OrderDate).TimeZone(DashboardFactory.Stockholm));
-        Report("Sum metric", orders, baseline, b => b.Sum("revenue", x => x.Amount));
+        Report("Sum metric", orders, baseline, b => b.SumMetric("revenue", x => x.Amount));
         Report("OrderBy (sort order)", orders, baseline, b => b.OrderByDescending(x => x.OrderDate));
         Console.WriteLine();
 

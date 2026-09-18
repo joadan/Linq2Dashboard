@@ -22,7 +22,7 @@ public class TextFacetTests
             b.TextFacet("search", (order, text) =>
                 order.Status.Contains(text, StringComparison.OrdinalIgnoreCase)
                 || (order.Country?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false));
-            b.Count("orders");
+            b.CountMetric("orders");
             extra?.Invoke(b);
         });
 
