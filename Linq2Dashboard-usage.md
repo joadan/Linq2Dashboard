@@ -150,11 +150,11 @@ Cast `state.Facet(key)` by the facet's kind: `ValueFacetState` for value and boo
 ## Scoping
 
 ```csharp
-Dashboard<Order> nordic = dashboard.Where(x => x.Region == "Nordic");   // same definitions, a subset of the rows
-Dashboard<Order> view = dashboard.Where(selections);                      // the rows the selections match, resolved by the facets
+Dashboard<Order> nordic = dashboard.ScopeTo(x => x.Region == "Nordic");   // same definitions, a subset of the rows
+Dashboard<Order> view = dashboard.ScopeTo(selections);                      // the rows the selections match, resolved by the facets
 ```
 
-A scoped dashboard is the cheap way to show the same dashboard over a subset: one tab per region, one page per customer, one dashboard per tenant. It shares the parent's indexes and costs milliseconds, not a rebuild. It behaves exactly like a dashboard built with the predicate as a fixed filter: `TotalCount`, total counts, "Other" and metric shares are against the subset, and a value no row in the subset has is not listed. Range and date buckets stay the parent's, so every scope has the same axes. The scope is not a selection: nothing shows it and JSON does not carry it. The same `Selections` and the same `Serializer` work for every scope, and scopes compose. `Where(selections)` scopes in the facets' own terms, so the current view or a saved bookmark can become a dashboard of its own: it starts with nothing selected, its facets list only the values in scope, and a relative date preset is frozen at that moment. Give the scoped dashboard to `DashboardView` as its `Dashboard`; switching the parameter recalculates every component inside with the same selections. Keep the scoped dashboards you switch between, since each caches its own states.
+A scoped dashboard is the cheap way to show the same dashboard over a subset: one tab per region, one page per customer, one dashboard per tenant. It shares the parent's indexes and costs milliseconds, not a rebuild. It behaves exactly like a dashboard built with the predicate as a fixed filter: `TotalCount`, total counts, "Other" and metric shares are against the subset, and a value no row in the subset has is not listed. Range and date buckets stay the parent's, so every scope has the same axes. The scope is not a selection: nothing shows it and JSON does not carry it. The same `Selections` and the same `Serializer` work for every scope, and scopes compose. `ScopeTo(selections)` scopes in the facets' own terms, so the current view or a saved bookmark can become a dashboard of its own: it starts with nothing selected, its facets list only the values in scope, and a relative date preset is frozen at that moment. Give the scoped dashboard to `DashboardView` as its `Dashboard`; switching the parameter recalculates every component inside with the same selections. Keep the scoped dashboards you switch between, since each caches its own states.
 
 ## The components
 
@@ -194,13 +194,13 @@ These are decisions from the concept, not options.
 - **Buckets are fixed at build.** Only their counts change. A bucket click selects exactly its interval.
 - **Searching within a facet is not a selection.** It narrows the list shown, nothing else.
 - **Metrics skip null.** Averages divide by rows that have a value. Distinct counts non-null values.
-- **The data is fixed at creation.** New data means a new dashboard; selections carry over through JSON. A subset of the data is not new data: `dashboard.Where(...)` scopes without a rebuild.
+- **The data is fixed at creation.** New data means a new dashboard; selections carry over through JSON. A subset of the data is not new data: `dashboard.ScopeTo(...)` scopes without a rebuild.
 - **A text facet is the one expensive operation.** A new text calls your predicate once per row. Keep it cheap and pure; it may run on several threads.
 
 ## Mistakes to avoid
 
 - Counting or filtering in the UI. Everything comes from the state.
-- Creating a dashboard per request or per user. Build once; register a singleton. Per-user or per-tenant subsets are scopes of it, `dashboard.Where(...)`, kept and reused.
+- Creating a dashboard per request or per user. Build once; register a singleton. Per-user or per-tenant subsets are scopes of it, `dashboard.ScopeTo(...)`, kept and reused.
 - Discarding the result of a `Selections` method. Every call returns a new instance. `==` compares two instances by value.
 - Using a `TextFacet` to search a value list. `ValueFacet` with `Searchable()` does that without a scan.
 - Mutating the source collection after `Create`. The dashboard indexed a snapshot.

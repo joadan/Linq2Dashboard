@@ -28,7 +28,7 @@ public partial class Home
             if (!scopes.TryGetValue(scope, out Dashboard<SampleOrder>? scoped))
             {
                 string country = scope;
-                scoped = Dashboard.Where(x => x.Country == country);
+                scoped = Dashboard.ScopeTo(x => x.Country == country);
                 scopes[scope] = scoped;
             }
 
@@ -44,7 +44,7 @@ public partial class Home
     /// <summary>"Make this view my dashboard": the current selections become the scope of a new dashboard, which starts with nothing selected (concept §4.10).</summary>
     private void Pin()
     {
-        pinned = Scoped.Where(selections);
+        pinned = Scoped.ScopeTo(selections);
         selections = Selections.Empty;
         scope = PinnedScope;
     }

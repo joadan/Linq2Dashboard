@@ -39,7 +39,7 @@ public class ScopeTests
 
     private static readonly Dashboard<Order> Parent = Dashboard.Create(TestData.Orders(), Configure);
 
-    private static readonly Dashboard<Order> Active = Parent.Where(x => x.IsActive);
+    private static readonly Dashboard<Order> Active = Parent.ScopeTo(x => x.IsActive);
 
     private static readonly Dashboard<Order> RebuiltActive = Dashboard.Create(TestData.Orders(), b =>
     {
@@ -162,7 +162,7 @@ public class ScopeTests
     [Fact]
     public void Other_is_measured_against_the_scope()
     {
-        var scoped = Parent.Where(x => x.Country is not "DK").Calculate(); // SE 3, NO 2, null 2; Top(2) leaves null as Other
+        var scoped = Parent.ScopeTo(x => x.Country is not "DK").Calculate(); // SE 3, NO 2, null 2; Top(2) leaves null as Other
 
         var country = Values(scoped, "Country");
         Assert.Equal(7, scoped.TotalCount);
@@ -194,7 +194,7 @@ public class ScopeTests
             b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm);
         });
         var parentState = parent.Calculate();
-        var scopedState = parent.Where(x => x.OrderDate.Month == 2).Calculate(); // rows 1 and 2: 250 and 500, both February
+        var scopedState = parent.ScopeTo(x => x.OrderDate.Month == 2).Calculate(); // rows 1 and 2: 250 and 500, both February
 
         var parentAmount = (RangeFacetState)parentState.Facet("Amount");
         var scopedAmount = (RangeFacetState)scopedState.Facet("Amount");
@@ -235,8 +235,8 @@ public class ScopeTests
     [Fact]
     public void Scopes_compose()
     {
-        var twice = Active.Where(x => x.Country is not null && x.Country.Equals("SE", StringComparison.OrdinalIgnoreCase));
-        var once = Parent.Where(x => x.IsActive && x.Country is not null && x.Country.Equals("SE", StringComparison.OrdinalIgnoreCase));
+        var twice = Active.ScopeTo(x => x.Country is not null && x.Country.Equals("SE", StringComparison.OrdinalIgnoreCase));
+        var once = Parent.ScopeTo(x => x.IsActive && x.Country is not null && x.Country.Equals("SE", StringComparison.OrdinalIgnoreCase));
 
         Assert.Equal(3, twice.TotalCount);
         foreach (Selections selections in SelectionSets)
@@ -259,7 +259,7 @@ public class ScopeTests
     public void Scoping_leaves_the_parent_unchanged()
     {
         var before = Snapshot(Parent.Calculate());
-        _ = Parent.Where(x => x.IsActive).Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));
+        _ = Parent.ScopeTo(x => x.IsActive).Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));
 
         Assert.Equal(8, Parent.TotalCount);
         Assert.Equal(before, Snapshot(Parent.Calculate()));
@@ -280,7 +280,7 @@ public class ScopeTests
     [Fact]
     public void An_empty_scope_is_a_dashboard_with_no_rows()
     {
-        var state = Parent.Where(_ => false).Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));
+        var state = Parent.ScopeTo(_ => false).Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));
 
         Assert.Equal(0, state.TotalCount);
         Assert.Equal(0, state.MatchingCount);
@@ -307,7 +307,7 @@ public class ScopeTests
     public void A_scoped_dashboard_shares_the_parents_row_set_cache()
     {
         var parent = Dashboard.Create(TestData.Orders(), Configure);
-        var scoped = parent.Where(x => x.IsActive);
+        var scoped = parent.ScopeTo(x => x.IsActive);
         Selections selections = Selections.Empty.With("Status", ValueSelection.Of("Open"));
 
         scoped.Calculate(selections);
@@ -336,8 +336,8 @@ public class ScopeTests
 
         foreach ((Selections scope, Func<Order, bool> predicate) in forms)
         {
-            Dashboard<Order> bySelections = Parent.Where(scope);
-            Dashboard<Order> byPredicate = Parent.Where(predicate);
+            Dashboard<Order> bySelections = Parent.ScopeTo(scope);
+            Dashboard<Order> byPredicate = Parent.ScopeTo(predicate);
             Assert.Equal(byPredicate.TotalCount, bySelections.TotalCount);
             foreach (Selections selections in SelectionSets)
             {
@@ -349,7 +349,7 @@ public class ScopeTests
     [Fact]
     public void A_scope_from_selections_starts_with_nothing_selected_and_shows_only_the_values_in_scope()
     {
-        var state = Parent.Where(Selections.Empty.With("Country", ValueSelection.Of("SE"))).Calculate();
+        var state = Parent.ScopeTo(Selections.Empty.With("Country", ValueSelection.Of("SE"))).Calculate();
 
         Assert.True(state.Selections.IsEmpty);
         Assert.Equal(3, state.TotalCount);
@@ -362,7 +362,7 @@ public class ScopeTests
     [Fact]
     public void A_selection_on_a_scoped_facet_narrows_further()
     {
-        var nordic = Parent.Where(Selections.Empty.With("Country", ValueSelection.Of("SE", "NO")));
+        var nordic = Parent.ScopeTo(Selections.Empty.With("Country", ValueSelection.Of("SE", "NO")));
 
         Assert.Equal(5, nordic.TotalCount);
         Assert.Equal(3, nordic.Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE"))).MatchingCount);
@@ -381,7 +381,7 @@ public class ScopeTests
             b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth);
             b.UseTimeProvider(clock);
         });
-        var thisMonth = parent.Where(Selections.Empty.With("OrderDate", DateSelection.Relative(DatePreset.ThisMonth)));
+        var thisMonth = parent.ScopeTo(Selections.Empty.With("OrderDate", DateSelection.Relative(DatePreset.ThisMonth)));
         Assert.Equal(3, thisMonth.TotalCount); // March: rows 3, 4 and 5
 
         clock.Now = TestData.Instant("2026-04-20T10:00:00Z");
@@ -391,16 +391,16 @@ public class ScopeTests
     }
 
     [Fact]
-    public void Where_with_selections_rejects_unknown_keys_and_null()
+    public void ScopeTo_with_selections_rejects_unknown_keys_and_null()
     {
-        Assert.Throws<ArgumentNullException>(() => Parent.Where((Selections)null!));
-        var e = Assert.Throws<ArgumentException>(() => Parent.Where(Selections.Empty.With("Nope", ValueSelection.Of(1))));
+        Assert.Throws<ArgumentNullException>(() => Parent.ScopeTo((Selections)null!));
+        var e = Assert.Throws<ArgumentException>(() => Parent.ScopeTo(Selections.Empty.With("Nope", ValueSelection.Of(1))));
         Assert.Contains("Nope", e.Message);
     }
 
     [Fact]
-    public void Where_rejects_a_null_predicate()
+    public void ScopeTo_rejects_a_null_predicate()
     {
-        Assert.Throws<ArgumentNullException>(() => Parent.Where((Func<Order, bool>)null!));
+        Assert.Throws<ArgumentNullException>(() => Parent.ScopeTo((Func<Order, bool>)null!));
     }
 }

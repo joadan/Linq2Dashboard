@@ -47,7 +47,7 @@ public class CreateBenchmarks
 
     /// <summary>A scoped dashboard over about four fifths of the rows (concept §4.10): one predicate pass plus one count per facet and metric, against a full Create.</summary>
     [Benchmark]
-    public Dashboard<BenchmarkOrder> Where() => dashboard.Where(x => x.IsActive == true);
+    public Dashboard<BenchmarkOrder> ScopeTo() => dashboard.ScopeTo(x => x.IsActive == true);
 
     /// <summary>Only the 100k-value customer facet.</summary>
     [Benchmark]

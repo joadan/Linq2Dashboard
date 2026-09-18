@@ -94,14 +94,14 @@ public class ConcurrencyTests
     {
         var parent = Build();
         var open = Selections.Empty.With("Status", ValueSelection.Of("Open"));
-        int expectedNordic = Build().Where(o => o.Country is "SE" or "NO" or "se").Calculate(open).MatchingCount;
+        int expectedNordic = Build().ScopeTo(o => o.Country is "SE" or "NO" or "se").Calculate(open).MatchingCount;
         int expectedAll = Build().Calculate(open).MatchingCount;
 
         Parallel.For(0, 500, i =>
         {
             if (i % 2 == 0)
             {
-                Assert.Equal(expectedNordic, parent.Where(o => o.Country is "SE" or "NO" or "se").Calculate(open).MatchingCount);
+                Assert.Equal(expectedNordic, parent.ScopeTo(o => o.Country is "SE" or "NO" or "se").Calculate(open).MatchingCount);
             }
             else
             {

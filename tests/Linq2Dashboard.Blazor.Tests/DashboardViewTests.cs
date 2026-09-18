@@ -201,7 +201,7 @@ public class DashboardViewTests : BunitContext
         // The sample's scope switch (concept §4.10): the same view, the same components, a scoped dashboard. Metrics,
         // counts and facets must all follow, although none of them re-renders for a parameter of its own.
         var dashboard = BuildDashboard();
-        var scoped = dashboard.Where(Selections.Empty.With("Country", ValueSelection.Of("SE")));
+        var scoped = dashboard.ScopeTo(Selections.Empty.With("Country", ValueSelection.Of("SE")));
         DashboardState<Order>? raised = null;
         var cut = RenderView(dashboard, onStateChanged: s => raised = s);
         DashboardContext<Order> context = cut.Instance.Context;

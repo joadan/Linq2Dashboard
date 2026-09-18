@@ -182,7 +182,7 @@ public class UrlSyncTests : BunitContext
         var dashboard = BuildDashboard();
         var cut = RenderView(dashboard);
 
-        cut.Render(parameters => parameters.Add(p => p.Dashboard, dashboard.Where(x => x.Amount < 500)));
+        cut.Render(parameters => parameters.Add(p => p.Dashboard, dashboard.ScopeTo(x => x.Amount < 500)));
 
         Assert.Equal("1", Matching(cut));
         Assert.Equal("http://localhost/page?o.Country=SE", Navigation.Uri);

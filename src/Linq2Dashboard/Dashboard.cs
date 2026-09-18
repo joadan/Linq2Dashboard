@@ -96,7 +96,7 @@ public sealed class Dashboard<T>
     /// not a build. The scope is not a selection: it is invisible to the UI and to serialised selections.
     /// Scopes compose, so a scoped dashboard can be scoped again. This dashboard is unchanged.
     /// </summary>
-    public Dashboard<T> Where(Func<T, bool> predicate)
+    public Dashboard<T> ScopeTo(Func<T, bool> predicate)
     {
         ArgumentNullException.ThrowIfNull(predicate);
         var builder = new RowSetBuilder(items.Length);
@@ -119,7 +119,7 @@ public sealed class Dashboard<T>
     /// own-facet exclusion a selection gets (concept §4.2); a relative date preset is resolved now and
     /// stays fixed. An unknown facet key is an error, as in <see cref="Calculate(Selections)"/>.
     /// </summary>
-    public Dashboard<T> Where(Selections selections)
+    public Dashboard<T> ScopeTo(Selections selections)
     {
         ArgumentNullException.ThrowIfNull(selections);
         RowSet scope = All;

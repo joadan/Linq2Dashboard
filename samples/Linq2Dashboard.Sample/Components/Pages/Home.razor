@@ -22,7 +22,7 @@
     </select>
     </label>
     <button type="button" class="sample-pin" disabled="@(!CanPin)" title="Make the current selections the scope of a new dashboard" @onclick="Pin">Scope to selection</button>
-    <span class="sample-scope-note">The same dashboard over a subset of the rows, through <code>Dashboard.Where</code>. Totals follow the scope; selections carry over. <code>Where(selections)</code> turns the current view into a dashboard of its own.</span>
+    <span class="sample-scope-note">The same dashboard over a subset of the rows, through <code>Dashboard.ScopeTo</code>. Totals follow the scope; selections carry over. <code>ScopeTo(selections)</code> turns the current view into a dashboard of its own.</span>
 </div>
 
 <DashboardView T="SampleOrder" Dashboard="Scoped" SyncUrl="true" @bind-Selections="selections">

@@ -356,7 +356,7 @@ public class CalculateTests
             Assert.Equal((double)state.MatchingCount / state.TotalCount, state.Metric("orders").Share);
         }
 
-        var scoped = Build().Where(x => x.Country is "SE" or "NO").Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));
+        var scoped = Build().ScopeTo(x => x.Country is "SE" or "NO").Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));
         Assert.Equal(scoped.MatchingCount, scoped.Metric("orders").Value);
         Assert.Equal((double)scoped.MatchingCount / scoped.TotalCount, scoped.Metric("orders").Share);
     }
