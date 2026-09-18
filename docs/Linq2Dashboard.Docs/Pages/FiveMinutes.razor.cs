@@ -68,8 +68,9 @@ public partial class FiveMinutes
                     });
                 }, Options);
 
-            // Call this when the orders change; the next GetAsync builds a new dashboard.
-            public ValueTask InvalidateAsync() => cache.RemoveAsync(Key);
+            // The entry expires on its own after ten minutes and the next GetAsync loads fresh rows and builds a new
+            // dashboard. Call this to drop it sooner, for example from the code that changes the orders.
+            public ValueTask ClearAsync() => cache.RemoveAsync(Key);
 
             private static async Task<IReadOnlyList<Order>> LoadOrdersAsync(CancellationToken cancellationToken)
             {
