@@ -115,7 +115,7 @@ public partial class FiveMinutes
                     </aside>
                     <main>
                         <div style="display: flex; gap: 0.5rem;">
-                            <MatchingCount T="Order" />
+                            <Metric T="Order" Key="orders" />
                             <Metric T="Order" Key="revenue" />
                         </div>
                         <ActiveSelections T="Order" />

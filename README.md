@@ -106,7 +106,7 @@ The components are styled with scoped CSS, which Blazor bundles into the app's o
         <DateFacet  T="Order" Key="OrderDate" />          @* presets and periods *@
     </aside>
     <main>
-        <MatchingCount T="Order" />
+        <Metric T="Order" Key="orders" />
         <Metric T="Order" Key="revenue" />
         <ActiveSelections T="Order" />
         <Results T="Order" Layout="ResultsLayout.Table" PageSize="25">

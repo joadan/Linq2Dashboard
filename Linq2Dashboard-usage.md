@@ -26,7 +26,7 @@ Both are prerelease on NuGet while the API settles: `dotnet add package Linq2Das
 
 <DashboardView T="Order" Dashboard="Dashboard" @bind-Selections="selections">
     <ValueFacet T="Order" Key="Country" />
-    <MatchingCount T="Order" />
+    <Metric T="Order" Key="orders" />
     <Results T="Order" PageSize="25">
         <RowTemplate Context="order"><div>@order.Id</div></RowTemplate>
     </Results>
@@ -168,13 +168,12 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 | `DateFacet` | Presets with counts, one bar per period. | `Key`, `Name`, `Layout`, `ShowPresets` |
 | `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`, `DebounceMilliseconds`, `Placeholder`, `InputClass` |
 | `ActiveSelections` | One removable chip per selection, clear all. | `ShowFacetName`, `GroupValues` |
-| `Metric` | One tile by key with its share of the total; a dash when there is no value. | `Key`, `Name`, `MetricTemplate` |
-| `MatchingCount` | A tile with the matching row count and its share of all rows. | `Name`, `MetricTemplate` |
+| `Metric` | One tile by key with its share of the total; a dash when there is no value. A `Count` metric is the matching row count. | `Key`, `Name`, `MetricTemplate` |
 | `Results` | Matching rows through your template, paged or virtualised. | `RowTemplate`, `HeaderTemplate`, `EmptyTemplate`, `Layout`, `PageSize`, `Virtualize` |
 | `StateSummary` | Everything in the state as plain clickable lists: counts, metrics, every facet. The default content of `DashboardView`, for a first look before laying out a page. | the texts |
 
 - **Names.** The `Name` given in the builder is the default display name and travels with the state, so plain-C# consumers, `ActiveSelections` and `StateSummary` have a name for every key. Each facet component and `Metric` take a `Name` parameter that replaces it in that component only, for example with a localised string, so one dashboard serves every language.
-- **Tile templates.** `MetricTemplate` on `Metric` and `MatchingCount` receives a `MetricTileContent`: the formatted `Name`, `Value` and `Share` (null when the metric has none), `IsEmpty`, and the raw `Metric` state (null for the matching count). The template replaces the whole tile: the library renders no wrapping element, so your markup is the root and carries its own classes and hooks (`Class` and extra attributes apply to the default tile only). A Bootstrap `card` or any framework tile therefore has nothing of the library's to override.
+- **Tile templates.** `MetricTemplate` on `Metric` receives a `MetricTileContent`: the formatted `Name`, `Value` and `Share` (null when the metric has none), `IsEmpty`, and the raw `Metric` state. The template replaces the whole tile: the library renders no wrapping element, so your markup is the root and carries its own classes and hooks (`Class` and extra attributes apply to the default tile only). A Bootstrap `card` or any framework tile therefore has nothing of the library's to override.
 - **Formatting** goes through one `IDashboardFormatter` cascaded from `DashboardView`. Derive from `DefaultDashboardFormatter` to change culture, number formats, the null label, preset names or the order of labels when a facet sorts by label; culture enters the UI there and nowhere else, so the same page renders and sorts the same on every machine. Pass a fixed culture in tests.
 - **Styling** is plain CSS. Every `--l2d-*` custom property is declared on `.l2d-dashboard`; override them on that element or an ancestor. Every component takes `Class` and passes unknown attributes to its root element. The text input, the value facet's search box and the range slider's number inputs take `InputClass`: when set, it replaces the library's default input look (`l2d-input`) with your classes, so `InputClass="form-control"` gives a Bootstrap input with nothing to override; the hook classes `l2d-text-input`, `l2d-facet-search` and `l2d-slider-input-from`/`-to` stay. State classes `l2d-selected`, `l2d-zero`, `l2d-null`, `l2d-collapsed` and `l2d-metric-empty` are stable hooks.
 - **Narrow histograms.** A histogram bar drops its label and count when its column is narrower than `4rem`, leaving the bar and its tooltip, because part of a number reads as a smaller number. The facet never widens the column you put it in, however many buckets it has. For readable labels in a narrow column use `Layout="BucketLayout.List"`, which gives one row per bucket.

@@ -96,9 +96,10 @@ public class MetricTests : BunitContext
     }
 
     [Fact]
-    public void Matching_count_shows_its_share_of_all_rows()
+    public void A_count_metric_shows_the_matching_rows_and_their_share_of_all_rows()
     {
-        var cut = RenderWith<MatchingCount<Order>>(m => { }, Selections.Empty.With("Country", ValueSelection.Of("SE")));
+        // There is no matching-count component: a Count metric is the matching row count (design §9.5).
+        var cut = RenderWith<Metric<Order>>(m => m.Add(x => x.Key, "orders"), Selections.Empty.With("Country", ValueSelection.Of("SE")));
 
         Assert.Equal("3", cut.Find(".l2d-metric-value").TextContent);
         Assert.Equal("37.5 %", cut.Find(".l2d-metric-share").TextContent);
@@ -119,7 +120,7 @@ public class MetricTests : BunitContext
         var cut = RenderWith<Metric<Order>>(m =>
         {
             m.Add(x => x.Key, "revenue");
-            m.Add(x => x.MetricTemplate, tile => $"<b class='custom'>{tile.Metric!.Key}={tile.Value}</b>");
+            m.Add(x => x.MetricTemplate, tile => $"<b class='custom'>{tile.Metric.Key}={tile.Value}</b>");
         });
 
         var custom = cut.Find(".custom");
@@ -130,18 +131,7 @@ public class MetricTests : BunitContext
     }
 
     [Fact]
-    public void Matching_count_is_its_own_tile()
-    {
-        var cut = RenderWith<MatchingCount<Order>>(m => m.Add(x => x.Name, "Rows"), Selections.Empty.With("Country", ValueSelection.Of("NO")));
-
-        var tile = cut.Find(".l2d-metric");
-        Assert.Contains("l2d-metric-matching", tile.ClassName);
-        Assert.Equal("Rows", tile.QuerySelector(".l2d-metric-title")!.TextContent);
-        Assert.Equal("2", tile.QuerySelector(".l2d-metric-value")!.TextContent);
-    }
-
-    [Fact]
-    public void Matching_count_defaults_its_name_and_updates_on_click()
+    public void A_count_metric_updates_on_click()
     {
         var cut = Render<DashboardView<Order>>(parameters =>
         {
@@ -149,15 +139,16 @@ public class MetricTests : BunitContext
             parameters.Add(p => p.Formatter, new DefaultDashboardFormatter(CultureInfo.InvariantCulture));
             parameters.AddChildContent(builder =>
             {
-                builder.OpenComponent<MatchingCount<Order>>(0);
+                builder.OpenComponent<Metric<Order>>(0);
+                builder.AddComponentParameter(1, nameof(Metric<Order>.Key), "orders");
                 builder.CloseComponent();
-                builder.OpenComponent<ValueFacet<Order>>(1);
-                builder.AddComponentParameter(2, nameof(ValueFacet<Order>.Key), "Country");
+                builder.OpenComponent<ValueFacet<Order>>(2);
+                builder.AddComponentParameter(3, nameof(ValueFacet<Order>.Key), "Country");
                 builder.CloseComponent();
             });
         });
 
-        Assert.Equal("Matching", cut.Find(".l2d-metric-title").TextContent);
+        Assert.Equal("Orders", cut.Find(".l2d-metric-title").TextContent);
         Assert.Equal("8", cut.Find(".l2d-metric-value").TextContent);
 
         cut.FindAll("li.l2d-facet-value button").First(b => b.TextContent.Contains("SE")).Click();
@@ -178,8 +169,8 @@ public class MetricTests : BunitContext
         Assert.NotNull(seen);
         Assert.Equal("Revenue", seen.Name);
         var formatter = new DefaultDashboardFormatter(CultureInfo.InvariantCulture);
-        Assert.Equal(formatter.FormatMetric(seen.Metric!), seen.Value);
-        Assert.Equal(formatter.FormatShare(seen.Metric!.Share!.Value), seen.Share);
+        Assert.Equal(formatter.FormatMetric(seen.Metric), seen.Value);
+        Assert.Equal(formatter.FormatShare(seen.Metric.Share!.Value), seen.Share);
         Assert.False(seen.IsEmpty);
         Assert.Equal(Aggregation.Sum, seen.Metric.Aggregation);
     }
@@ -201,28 +192,6 @@ public class MetricTests : BunitContext
         Assert.Null(seen.Share);
         Assert.True(seen.IsEmpty);
     }
-
-    [Fact]
-    public void Matching_count_takes_a_template_with_the_formatted_count_and_no_metric()
-    {
-        MetricTileContent? seen = null;
-        var cut = RenderWith<MatchingCount<Order>>(m =>
-        {
-            m.Add(x => x.Name, "Rows");
-            m.Add(x => x.MetricTemplate, tile => { seen = tile; return $"<i class='custom'>{tile.Value}</i>"; });
-        }, Selections.Empty.With("Country", ValueSelection.Of("NO")));
-
-        Assert.NotNull(seen);
-        Assert.Equal("Rows", seen.Name);
-        Assert.Equal("2", seen.Value);
-        Assert.Equal("25.0 %", seen.Share);
-        Assert.False(seen.IsEmpty);
-        Assert.Null(seen.Metric);
-        Assert.Equal("2", cut.Find(".custom").TextContent);
-        Assert.Empty(cut.FindAll(".l2d-metric"));
-        Assert.Empty(cut.FindAll(".l2d-metric-title"));
-    }
-
 
     [Fact]
     public void An_unknown_key_fails_clearly()

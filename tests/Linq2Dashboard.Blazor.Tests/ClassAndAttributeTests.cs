@@ -193,14 +193,6 @@ public class ClassAndAttributeTests : BunitContext
     }
 
     [Fact]
-    public void MatchingCount_keeps_its_own_class_beside_the_host_class()
-    {
-        var cut = RenderWith<MatchingCount<Order>>(AddStyling);
-
-        AssertStyled(cut.Find(".l2d-metric"), "l2d-metric", "l2d-metric-matching");
-    }
-
-    [Fact]
     public void StateSummary_takes_a_class_and_passes_attributes_to_its_root()
     {
         var cut = RenderWith<StateSummary<Order>>(AddStyling);

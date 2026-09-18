@@ -339,6 +339,29 @@ public class CalculateTests
     }
 
     [Fact]
+    public void A_count_metric_is_the_matching_row_count_and_its_share_of_the_total()
+    {
+        // The Blazor package has no matching-count component; it renders a Count metric instead, which
+        // only works because the two agree everywhere, scopes included (concept §4.4, design §9.5).
+        foreach (Selections selections in new[]
+        {
+            Selections.Empty,
+            Selections.Empty.With("Country", ValueSelection.Of("SE")),
+            Selections.Empty.With("Country", ValueSelection.Of("SE", "NO")),
+            Selections.Empty.With("Amount", RangeSelection.AtLeast(1_000_000)),
+        })
+        {
+            var state = Shared.Calculate(selections);
+            Assert.Equal(state.MatchingCount, state.Metric("orders").Value);
+            Assert.Equal((double)state.MatchingCount / state.TotalCount, state.Metric("orders").Share);
+        }
+
+        var scoped = Build().Where(x => x.Country is "SE" or "NO").Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));
+        Assert.Equal(scoped.MatchingCount, scoped.Metric("orders").Value);
+        Assert.Equal((double)scoped.MatchingCount / scoped.TotalCount, scoped.Metric("orders").Share);
+    }
+
+    [Fact]
     public void A_share_of_a_zero_total_is_undefined()
     {
         var empty = Dashboard.Create(Array.Empty<Order>(), b =>

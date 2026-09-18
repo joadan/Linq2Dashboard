@@ -4,15 +4,15 @@ using Microsoft.AspNetCore.Components;
 namespace Linq2Dashboard.Blazor;
 
 /// <summary>
-/// The default tile rendered by <see cref="Metric{T}"/> and <see cref="MatchingCount{T}"/> when they have no
-/// template, so both look the same and are styled once.
-/// A rendering detail of those two components, not part of the supported API: it is public only because Razor
+/// The default tile rendered by <see cref="Metric{T}"/> when it has no template, so every tile looks the
+/// same and is styled once.
+/// A rendering detail of that component, not part of the supported API: it is public only because Razor
 /// components cannot be internal, is hidden from IntelliSense, and may change without notice (design §9).
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public partial class MetricTile
 {
-    /// <summary>The metric key, written as <c>data-key</c> for styling and tests. Empty for the matching count.</summary>
+    /// <summary>The metric key, written as <c>data-key</c> for styling and tests.</summary>
     [Parameter]
     public string Key { get; set; } = string.Empty;
 

@@ -62,14 +62,14 @@
 }
 
 /* One hue per tile: the icon takes the colour, its panel a light tint of the same colour. */
-.demo-tile[data-key="matching"] { --demo-tile-color: #2563eb; }
+.demo-tile[data-key="orders"] { --demo-tile-color: #2563eb; }
 .demo-tile[data-key="revenue"] { --demo-tile-color: #16a34a; }
 .demo-tile[data-key="average"] { --demo-tile-color: #d97706; }
 .demo-tile[data-key="customers"] { --demo-tile-color: #7c3aed; }
 .demo-tile[data-key="perCustomer"] { --demo-tile-color: #0d9488; }
 
 @media (prefers-color-scheme: dark) {
-    .demo-tile[data-key="matching"] { --demo-tile-color: #60a5fa; }
+    .demo-tile[data-key="orders"] { --demo-tile-color: #60a5fa; }
     .demo-tile[data-key="revenue"] { --demo-tile-color: #4ade80; }
     .demo-tile[data-key="average"] { --demo-tile-color: #fbbf24; }
     .demo-tile[data-key="customers"] { --demo-tile-color: #a78bfa; }

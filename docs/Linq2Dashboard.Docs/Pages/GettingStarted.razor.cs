@@ -70,8 +70,8 @@ public partial class GettingStarted
                 <DateFacet  T="Order" Key="OrderDate" />
             </aside>
             <main>
-                <MatchingCount T="Order" />
-        <Metric T="Order" Key="revenue" />
+                <Metric T="Order" Key="orders" />
+                <Metric T="Order" Key="revenue" />
                 <ActiveSelections T="Order" />
                 <Results T="Order" Layout="ResultsLayout.Table" PageSize="25">
                     <HeaderTemplate><tr><th>Id</th><th>Country</th><th>Amount</th></tr></HeaderTemplate>
