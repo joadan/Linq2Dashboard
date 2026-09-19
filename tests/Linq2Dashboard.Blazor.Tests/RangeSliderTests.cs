@@ -32,7 +32,7 @@ public class RangeSliderTests : BunitContext
                 parameters.Add(p => p.SelectionsChanged, onChanged);
             }
 
-            parameters.AddChildContent<RangeFacet<Order>>(facet =>
+            parameters.AddContent<RangeFacet<Order>>(facet =>
             {
                 facet.Add(f => f.Key, "Amount");
                 facet.Add(f => f.ShowSlider, true);
@@ -52,7 +52,7 @@ public class RangeSliderTests : BunitContext
         var without = Render<DashboardView<Order>>(parameters =>
         {
             parameters.Add(p => p.Dashboard, BuildDashboard());
-            parameters.AddChildContent<RangeFacet<Order>>(f => f.Add(x => x.Key, "Amount"));
+            parameters.AddContent<RangeFacet<Order>>(f => f.Add(x => x.Key, "Amount"));
         });
 
         Assert.Empty(without.FindAll(".l2d-slider"));

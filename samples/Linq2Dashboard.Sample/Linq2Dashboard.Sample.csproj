@@ -3,6 +3,7 @@
   <ItemGroup>
     <ProjectReference Include="..\..\src\Linq2Dashboard.Blazor\Linq2Dashboard.Blazor.csproj" />
     <ProjectReference Include="..\Linq2Dashboard.SampleData\Linq2Dashboard.SampleData.csproj" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.QuickGrid" Version="10.0.11" />
   </ItemGroup>
 
   <PropertyGroup>

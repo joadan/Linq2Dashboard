@@ -11,7 +11,7 @@
 
 <h2>1. A new app and the two packages</h2>
 
-<p>A Blazor Web App with server interactivity, the two Linq2Dashboard packages and <code>HybridCache</code>, which the service in step 3 uses. The commands are the same on Windows, macOS and Linux.</p>
+<p>A Blazor Web App with server interactivity, the two Linq2Dashboard packages, QuickGrid for the rows and <code>HybridCache</code>, which the service in step 3 uses. The commands are the same on Windows, macOS and Linux.</p>
 
 <pre><code>@CreateAppExample</code></pre>
 
@@ -40,7 +40,7 @@
 
 <h2>4. The usings</h2>
 
-<p>Append two lines to <code>Components/_Imports.razor</code> so every page sees the engine and the components.</p>
+<p>Append three lines to <code>Components/_Imports.razor</code> so every page sees the engine, the components and the grid.</p>
 
 <pre><code>@ImportsExample</code></pre>
 
@@ -53,6 +53,13 @@
 </p>
 
 <pre><code>@PageExample</code></pre>
+
+<p>
+    The rows are QuickGrid's, Microsoft's grid for Blazor, and could be any other grid. <code>Context="dash"</code> names
+    the view's context in the markup, and <code>dash.Items</code> is one <code>IQueryable&lt;Order&gt;</code> per state:
+    its reference changes after every click, so the grid re-queries then and never in between, and it pages, sorts and
+    counts by itself over a list that is counted and indexable. The library renders no rows of its own.
+</p>
 
 <p>
     The template's <code>App.razor</code> already links <code>Shop.styles.css</code>, the app's scoped-CSS bundle. The components' styles
@@ -82,5 +89,5 @@
     <li><strong>The lifetime.</strong> Ten minutes is a placeholder. Make it as long as your data stays useful, and call <code>ClearAsync</code> from the code that changes the orders so the next request rebuilds at once. If a rebuild must not make anyone wait, build the next one in the background and swap it in when it is ready: <code>DashboardView</code> follows a new <code>Dashboard</code> parameter and keeps the selections.</li>
     <li><strong>More facets and metrics.</strong> The <a href="getting-started">getting started</a> page shows the whole builder: labels, top-N with search, date presets, text search, calculated metrics.</li>
     <li><strong>Layout and styling.</strong> Every component takes <code>Class</code> and every colour and size is a <code>--l2d-*</code> custom property. The <a href="usage">usage</a> guide lists them and the rules that surprise.</li>
-    <li><strong>A larger starting point.</strong> The <a href="https://github.com/joadan/Linq2Dashboard/tree/master/samples/Linq2Dashboard.Sample" target="_blank" rel="noopener">sample project</a> in the repository is the same wiring over 200 000 generated rows, with scopes, virtualised results and a custom formatter.</li>
+    <li><strong>A larger starting point.</strong> The <a href="https://github.com/joadan/Linq2Dashboard/tree/master/samples/Linq2Dashboard.Sample" target="_blank" rel="noopener">sample project</a> in the repository is the same wiring over 200 000 generated rows, with scopes, a virtualised QuickGrid and a custom formatter.</li>
 </ul>

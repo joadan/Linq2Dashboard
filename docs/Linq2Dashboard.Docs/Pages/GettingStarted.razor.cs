@@ -61,7 +61,7 @@ public partial class GettingStarted
     private const string BlazorExample = """
         @inject Dashboard<Order> Dashboard
 
-        <DashboardView T="Order" Dashboard="Dashboard" @bind-Selections="selections">
+        <DashboardView T="Order" Context="dash" Dashboard="Dashboard" @bind-Selections="selections">
             <aside>
                 <TextFacet  T="Order" Key="search" />
                 <ValueFacet T="Order" Key="Country" />
@@ -73,12 +73,11 @@ public partial class GettingStarted
                 <Metric T="Order" Key="orders" />
                 <Metric T="Order" Key="revenue" />
                 <ActiveSelections T="Order" />
-                <Results T="Order" Layout="ResultsLayout.Table" PageSize="25">
-                    <HeaderTemplate><tr><th>Id</th><th>Country</th><th>Amount</th></tr></HeaderTemplate>
-                    <RowTemplate Context="order">
-                        <tr><td>@order.Id</td><td>@order.Country</td><td>@order.Amount</td></tr>
-                    </RowTemplate>
-                </Results>
+                <QuickGrid Items="dash.Items" Virtualize="true">
+                    <PropertyColumn Property="o => o.Id" Sortable="true" />
+                    <PropertyColumn Property="o => o.Country" Sortable="true" />
+                    <PropertyColumn Property="o => o.Amount" Format="N2" Sortable="true" />
+                </QuickGrid>
             </main>
         </DashboardView>
 

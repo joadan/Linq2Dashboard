@@ -25,7 +25,7 @@
     <span class="sample-scope-note">The same dashboard over a subset of the rows, through <code>Dashboard.ScopeTo</code>. Totals follow the scope; selections carry over. <code>ScopeTo(selections)</code> turns the current view into a dashboard of its own.</span>
 </div>
 
-<DashboardView T="SampleOrder" Dashboard="Scoped" SyncUrl="true" @bind-Selections="selections">
+<DashboardView T="SampleOrder" Context="dash" Dashboard="Scoped" SyncUrl="true" @bind-Selections="selections">
     <div class="sample-layout">
         <aside class="sample-facets">
             <TextFacet T="SampleOrder" Key="search" Placeholder="Customer or category" />
@@ -53,28 +53,16 @@
                 <Metric T="SampleOrder" Key="perCustomer" />
             </div>
                         
-            <Results T="SampleOrder" Layout="ResultsLayout.Table" Virtualize="true" ItemSize="33">
-                <HeaderTemplate>
-                    <tr>
-                        <th>Id</th>
-                        <th>Date</th>
-                        <th>Country</th>
-                        <th>Status</th>
-                        <th>Customer</th>
-                        <th class="sample-number">Amount</th>
-                    </tr>
-                </HeaderTemplate>
-                <RowTemplate Context="order">
-                    <tr>
-                        <td>@order.Id</td>
-                        <td>@order.OrderDate?.ToString("yyyy-MM-dd")</td>
-                        <td>@order.Country</td>
-                        <td>@order.Status</td>
-                        <td>@(order.Customer ?? "–")</td>
-                        <td class="sample-number">@(order.Amount?.ToString("N2") ?? "–")</td>
-                    </tr>
-                </RowTemplate>
-            </Results>
+            <div class="sample-grid">
+                <QuickGrid Items="dash.Items" Virtualize="true" ItemSize="22">
+                    <PropertyColumn Property="o => o.Id" Sortable="true" />
+                    <PropertyColumn Property="o => o.OrderDate" Title="Date" Format="yyyy-MM-dd" Sortable="true" />
+                    <PropertyColumn Property="o => o.Country" Sortable="true" />
+                    <PropertyColumn Property="o => o.Status" Sortable="true" />
+                    <PropertyColumn Property="o => o.Customer" Sortable="true" />
+                    <PropertyColumn Property="o => o.Amount" Format="N2" Align="Align.Right" Sortable="true" />
+                </QuickGrid>
+            </div>
 
             <details>
                 <summary>Raw state</summary>

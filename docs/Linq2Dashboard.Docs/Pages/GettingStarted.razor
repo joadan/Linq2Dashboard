@@ -47,14 +47,13 @@ dotnet add package Linq2Dashboard.Blazor --prerelease</code></pre>
         <tr><th>Component</th><th>Renders</th><th>Notable options</th></tr>
     </thead>
     <tbody>
-        <tr><td><code>DashboardView</code></td><td>Owns selections and state; cascades them. Bindable <code>Selections</code>; <code>StateChanged</code> hands the page every new state, the initial one included, for charts of its own.</td><td><code>Formatter</code>, <code>StateChanged</code>, custom child content</td></tr>
+        <tr><td><code>DashboardView</code></td><td>Owns selections and state; cascades them. Bindable <code>Selections</code>; <code>StateChanged</code> hands the page every new state, the initial one included, for charts of its own.</td><td><code>Formatter</code>, <code>StateChanged</code>, <code>Context</code> for your own content and grid</td></tr>
         <tr><td><code>ValueFacet</code></td><td>Values with counts, the null value, "Other", search.</td><td><code>ShowTotals</code>, <code>HideZeroCounts</code>, <code>Collapsible</code>, templates</td></tr>
         <tr><td><code>RangeFacet</code></td><td>Fixed buckets as a histogram or list; optional slider.</td><td><code>ShowSlider</code>, <code>Layout</code>, <code>ShowBounds</code></td></tr>
         <tr><td><code>DateFacet</code></td><td>Presets with counts and periods as bars.</td><td><code>ShowPresets</code>, <code>Layout</code></td></tr>
         <tr><td><code>TextFacet</code></td><td>A debounced input whose text becomes a selection, matched by the function given in the builder.</td><td><code>DebounceMilliseconds</code>, <code>Placeholder</code></td></tr>
         <tr><td><code>ActiveSelections</code></td><td>One removable chip per selected value or interval, clear all.</td><td><code>ShowFacetName</code></td></tr>
         <tr><td><code>Metric</code></td><td>One metric tile by key, placed where you want it; a dash when no row contributed. Count, sum and distinct show their share of the total as a percentage, and a <code>Count</code> metric is the matching row count.</td><td><code>Name</code>, <code>MetricTemplate</code></td></tr>
-        <tr><td><code>Results</code></td><td>Matching rows through your row template, paged or virtualised.</td><td><code>Layout</code>, <code>PageSize</code>, <code>Virtualize</code></td></tr>
         <tr><td><code>StateSummary</code></td><td>Everything in the state as plain clickable lists: counts, metrics and every facet. The default content of <code>DashboardView</code>, for a first look before laying out a page.</td><td>the texts</td></tr>
     </tbody>
 </table>
@@ -76,7 +75,8 @@ dotnet add package Linq2Dashboard.Blazor --prerelease</code></pre>
     <li><strong>One formatter.</strong> An <code>IDashboardFormatter</code> cascades from <code>DashboardView</code>. Culture, number formats, the null label and preset names come from it, and from nowhere else. Derive from <code>DefaultDashboardFormatter</code> to change any of them. The one exception is a value facet with a <code>Label</code> selector: its labels come from the rows at creation and the formatter shows them as they are.</li>
     <li><strong>Custom properties.</strong> Every <code>--l2d-*</code> property is declared on <code>.l2d-dashboard</code>. Set them on that element or an ancestor to restyle without touching markup. Dark-scheme neutrals are built in.</li>
     <li><strong>Classes and attributes.</strong> Every component takes <code>Class</code>, rendered after its own <code>l2d-*</code> classes, and passes any other attribute (<code>id</code>, <code>style</code>, <code>data-*</code>) to its root element, so a page can target one facet or tile from its own stylesheet without a wrapper. State classes such as <code>l2d-selected</code>, <code>l2d-zero</code>, <code>l2d-null</code>, <code>l2d-metric-empty</code> and <code>l2d-collapsed</code> are stable hooks.</li>
-    <li><strong>Templates.</strong> <code>HeaderTemplate</code> and <code>ValueTemplate</code> on the facets, <code>MetricTemplate</code> on the tiles (it replaces the whole tile, so your markup is the root), <code>RowTemplate</code>, <code>HeaderTemplate</code> and <code>EmptyTemplate</code> on the results.</li>
+    <li><strong>Templates.</strong> <code>HeaderTemplate</code> and <code>ValueTemplate</code> on the facets, <code>MetricTemplate</code> on the tiles (it replaces the whole tile, so your markup is the root).</li>
+    <li><strong>Rows.</strong> The library renders no rows; they go to the grid you already use. <code>Context="dash"</code> names the view's context in your markup and <code>dash.Items</code> is one <code>IQueryable&lt;T&gt;</code> per state, so QuickGrid re-queries after every click and never in between. Behind it <code>state.Items</code> is a counted, indexable list, so paging, virtualising, sorting and counting cost the slice, not a pass over every row.</li>
 </ul>
 
 <h2>Bookmarks</h2>

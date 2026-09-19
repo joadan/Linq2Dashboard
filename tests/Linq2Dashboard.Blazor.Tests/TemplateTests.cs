@@ -28,7 +28,7 @@ public class TemplateTests : BunitContext
                 parameters.Add(p => p.Selections, selections);
             }
 
-            parameters.AddChildContent<TComponent>(configure);
+            parameters.AddContent<TComponent>(configure);
         });
 
     [Fact]
@@ -53,7 +53,7 @@ public class TemplateTests : BunitContext
             parameters.Add(p => p.Dashboard, BuildDashboard());
             parameters.Add(p => p.Formatter, new DefaultDashboardFormatter(CultureInfo.InvariantCulture));
             parameters.Add(p => p.SelectionsChanged, s => raised = s);
-            parameters.AddChildContent<ValueFacet<Order>>(f =>
+            parameters.AddContent<ValueFacet<Order>>(f =>
             {
                 f.Add(x => x.Key, "Country");
                 f.Add(x => x.ValueTemplate, value => $"<b class='custom-value'>{value.Value ?? "none"}={value.FilteredCount}</b>");

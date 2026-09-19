@@ -33,7 +33,7 @@
 }
 else
 {
-    <DashboardView T="SampleOrder" @ref="view" Dashboard="dashboard" Formatter="DemoFormatter.Instance" SyncUrl="true" Selections="selections" SelectionsChanged="OnSelectionsChanged" StateChanged="OnStateChanged">
+    <DashboardView T="SampleOrder" @ref="view" Context="dash" Dashboard="dashboard" Formatter="DemoFormatter.Instance" SyncUrl="true" Selections="selections" SelectionsChanged="OnSelectionsChanged" StateChanged="OnStateChanged">
         <div class="demo-layout">
             <aside class="demo-facets">
                 <TextFacet T="SampleOrder" Key="search" Placeholder="Customer or category" />
@@ -96,28 +96,17 @@ else
                         </div>
                     }
                 </section>
-                <Results T="SampleOrder" Layout="ResultsLayout.Table" Virtualize="true" ItemSize="33">
-                    <HeaderTemplate>
-                        <tr>
-                            <th>Id</th>
-                            <th>Date</th>
-                            <th>Country</th>
-                            <th>Status</th>
-                            <th>Customer</th>
-                            <th class="demo-number">Amount</th>
-                        </tr>
-                    </HeaderTemplate>
-                    <RowTemplate Context="order">
-                        <tr>
-                            <td>@order.Id</td>
-                            <td>@order.OrderDate?.ToString("yyyy-MM-dd")</td>
-                            <td>@order.Country</td>
-                            <td>@order.Status</td>
-                            <td>@(order.Customer ?? "–")</td>
-                            <td class="demo-number">@(order.Amount?.ToString("N2") ?? "–")</td>
-                        </tr>
-                    </RowTemplate>
-                </Results>
+                @* The rows go to a grid of the page's choosing, here QuickGrid: dash.Items is one IQueryable per state, so the grid re-queries exactly when the state changes. *@
+                <div class="demo-grid">
+                    <QuickGrid Items="dash.Items" Virtualize="true" ItemSize="22">
+                        <PropertyColumn Property="o => o.Id" Sortable="true" />
+                        <PropertyColumn Property="o => o.OrderDate" Title="Date" Format="yyyy-MM-dd" Sortable="true" />
+                        <PropertyColumn Property="o => o.Country" Sortable="true" />
+                        <PropertyColumn Property="o => o.Status" Sortable="true" />
+                        <PropertyColumn Property="o => o.Customer" Sortable="true" />
+                        <PropertyColumn Property="o => o.Amount" Format="N2" Align="Align.Right" Sortable="true" />
+                    </QuickGrid>
+                </div>
                 <details class="demo-json">
                     <summary>Selections as JSON and as the URL query</summary>
                     <pre>@dashboard.Serializer.ToJson(selections, indented: true)</pre>

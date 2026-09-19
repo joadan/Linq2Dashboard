@@ -59,9 +59,13 @@ public partial class DashboardView<T> : IDisposable
     [Parameter]
     public IDashboardFormatter? Formatter { get; set; }
 
-    /// <summary>The layout. Components inside receive the <see cref="DashboardContext{T}"/> as a cascading parameter. Defaults to <see cref="StateSummary{T}"/>.</summary>
+    /// <summary>
+    /// The layout: a template over the <see cref="DashboardContext{T}"/>, so the page can hand the matching rows to its own
+    /// grid (<c>Items="context.Items"</c>) and reach the state without a <c>@@ref</c>. Components inside also receive the
+    /// context as a cascading parameter. Defaults to <see cref="StateSummary{T}"/>.
+    /// </summary>
     [Parameter]
-    public RenderFragment? ChildContent { get; set; }
+    public RenderFragment<DashboardContext<T>>? ChildContent { get; set; }
 
     /// <summary>Extra classes for the root element, after <c>l2d-dashboard</c> (design §9).</summary>
     [Parameter]

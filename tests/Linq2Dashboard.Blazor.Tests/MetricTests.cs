@@ -30,7 +30,7 @@ public class MetricTests : BunitContext
                 parameters.Add(p => p.Selections, selections);
             }
 
-            parameters.AddChildContent<TComponent>(configure);
+            parameters.AddContent<TComponent>(configure);
         });
 
     [Fact]
@@ -137,7 +137,7 @@ public class MetricTests : BunitContext
         {
             parameters.Add(p => p.Dashboard, BuildDashboard());
             parameters.Add(p => p.Formatter, new DefaultDashboardFormatter(CultureInfo.InvariantCulture));
-            parameters.AddChildContent(builder =>
+            parameters.AddContent(builder =>
             {
                 builder.OpenComponent<Metric<Order>>(0);
                 builder.AddComponentParameter(1, nameof(Metric<Order>.Key), "orders");

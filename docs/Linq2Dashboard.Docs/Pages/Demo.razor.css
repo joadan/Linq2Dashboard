@@ -58,11 +58,6 @@
     min-width: 0;
 }
 
-.demo-main ::deep .demo-number {
-    text-align: right;
-    font-variant-numeric: tabular-nums;
-}
-
 .demo-json summary {
     cursor: pointer;
     color: var(--docs-muted);
@@ -216,7 +211,22 @@
     }
 }
 
-/* The demo uses the whole screen: results fill the viewport below the toolbar, metrics and chart. */
-.demo-layout {
-    --l2d-results-height: max(20rem, calc(100vh - 34rem));
+/* The demo uses the whole screen: the grid fills the viewport below the toolbar, metrics and chart, and scrolls inside. */
+.demo-grid {
+    height: max(20rem, calc(100vh - 34rem));
+    overflow-y: auto;
+    border: 1px solid var(--l2d-border);
+    border-radius: var(--l2d-radius);
+}
+
+.demo-grid ::deep td {
+    font-variant-numeric: tabular-nums;
+}
+
+/* QuickGrid has no sticky header of its own; the scroll container is ours, so the header is too. */
+.demo-grid ::deep thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: Canvas;
 }

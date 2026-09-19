@@ -23,7 +23,7 @@ public class FacetNameTests : BunitContext
         {
             parameters.Add(p => p.Dashboard, BuildDashboard());
             parameters.Add(p => p.Formatter, new DefaultDashboardFormatter(CultureInfo.InvariantCulture));
-            parameters.AddChildContent<TComponent>(configure);
+            parameters.AddContent<TComponent>(configure);
         });
 
     [Fact]
@@ -92,7 +92,7 @@ public class FacetNameTests : BunitContext
             parameters.Add(p => p.Dashboard, BuildDashboard());
             parameters.Add(p => p.Formatter, new DefaultDashboardFormatter(CultureInfo.InvariantCulture));
             parameters.Add(p => p.Selections, Selections.Empty.With("Country", ValueSelection.Of("SE")));
-            parameters.AddChildContent(builder =>
+            parameters.AddContent(builder =>
             {
                 builder.OpenComponent<ValueFacet<Order>>(0);
                 builder.AddComponentParameter(1, "Key", "Country");

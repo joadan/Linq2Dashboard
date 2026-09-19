@@ -36,7 +36,7 @@ public class TextFacetTests : BunitContext
                 parameters.Add(p => p.SelectionsChanged, onChanged);
             }
 
-            parameters.AddChildContent<TextFacet<Order>>(facet =>
+            parameters.AddContent<TextFacet<Order>>(facet =>
             {
                 facet.Add(f => f.Key, key);
                 facet.Add(f => f.DebounceMilliseconds, debounce);
@@ -45,7 +45,7 @@ public class TextFacetTests : BunitContext
 
             if (withChips)
             {
-                parameters.AddChildContent<ActiveSelections<Order>>();
+                parameters.AddContent<ActiveSelections<Order>>();
             }
         });
 

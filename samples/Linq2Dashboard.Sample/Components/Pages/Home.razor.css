@@ -36,9 +36,23 @@
     gap: 1rem;
 }
 
-.sample-main ::deep .sample-number {
-    text-align: right;
+.sample-grid {
+    height: 30rem;
+    overflow-y: auto;
+    border: 1px solid var(--l2d-border);
+    border-radius: var(--l2d-radius);
+}
+
+.sample-grid ::deep td {
     font-variant-numeric: tabular-nums;
+}
+
+/* QuickGrid has no sticky header of its own; the scroll container is ours, so the header is too. */
+.sample-grid ::deep thead th {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    background: Canvas;
 }
 
 .sample-metrics {

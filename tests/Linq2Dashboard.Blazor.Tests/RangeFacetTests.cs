@@ -34,7 +34,7 @@ public class RangeFacetTests : BunitContext
                 parameters.Add(p => p.SelectionsChanged, onChanged);
             }
 
-            parameters.AddChildContent<RangeFacet<Order>>(facet =>
+            parameters.AddContent<RangeFacet<Order>>(facet =>
             {
                 facet.Add(f => f.Key, key);
                 configure?.Invoke(facet);

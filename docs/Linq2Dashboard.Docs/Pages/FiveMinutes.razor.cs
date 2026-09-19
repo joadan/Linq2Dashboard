@@ -7,6 +7,7 @@ public partial class FiveMinutes
         cd Shop
         dotnet add package Linq2Dashboard --prerelease
         dotnet add package Linq2Dashboard.Blazor --prerelease
+        dotnet add package Microsoft.AspNetCore.Components.QuickGrid
         dotnet add package Microsoft.Extensions.Caching.Hybrid
         """;
 
@@ -90,6 +91,7 @@ public partial class FiveMinutes
     private const string ImportsExample = """
         @using Linq2Dashboard
         @using Linq2Dashboard.Blazor
+        @using Microsoft.AspNetCore.Components.QuickGrid
         """;
 
     private const string PageExample = """
@@ -105,7 +107,7 @@ public partial class FiveMinutes
         }
         else
         {
-            <DashboardView T="Order" Dashboard="dashboard" @bind-Selections="selections" SyncUrl="true">
+            <DashboardView T="Order" Context="dash" Dashboard="dashboard" @bind-Selections="selections" SyncUrl="true">
                 <div style="display: grid; grid-template-columns: 16rem 1fr; gap: 1rem;">
                     <aside>
                         <ValueFacet T="Order" Key="Country" />
@@ -119,18 +121,14 @@ public partial class FiveMinutes
                             <Metric T="Order" Key="revenue" />
                         </div>
                         <ActiveSelections T="Order" />
-                        <Results T="Order" Layout="ResultsLayout.Table" PageSize="10">
-                            <HeaderTemplate><tr><th>Id</th><th>Country</th><th>Status</th><th>Amount</th><th>Date</th></tr></HeaderTemplate>
-                            <RowTemplate Context="order">
-                                <tr>
-                                    <td>@order.Id</td>
-                                    <td>@(order.Country ?? "-")</td>
-                                    <td>@order.Status</td>
-                                    <td>@order.Amount</td>
-                                    <td>@order.OrderDate.ToShortDateString()</td>
-                                </tr>
-                            </RowTemplate>
-                        </Results>
+                        <QuickGrid Items="dash.Items" Pagination="pagination">
+                            <PropertyColumn Property="o => o.Id" Sortable="true" />
+                            <PropertyColumn Property="o => o.Country" Sortable="true" />
+                            <PropertyColumn Property="o => o.Status" Sortable="true" />
+                            <PropertyColumn Property="o => o.Amount" Format="N2" Sortable="true" />
+                            <PropertyColumn Property="o => o.OrderDate" Title="Date" Format="d" Sortable="true" />
+                        </QuickGrid>
+                        <Paginator State="pagination" />
                     </main>
                 </div>
             </DashboardView>
@@ -139,6 +137,7 @@ public partial class FiveMinutes
         @code {
             private Dashboard<Order>? dashboard;
             private Selections selections = Selections.Empty;
+            private readonly PaginationState pagination = new() { ItemsPerPage = 10 };
 
             protected override async Task OnInitializedAsync()
             {

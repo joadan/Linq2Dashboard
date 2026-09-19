@@ -35,7 +35,7 @@ public class DateFacetTests : BunitContext
                 parameters.Add(p => p.SelectionsChanged, onChanged);
             }
 
-            parameters.AddChildContent<DateFacet<Order>>(facet =>
+            parameters.AddContent<DateFacet<Order>>(facet =>
             {
                 facet.Add(f => f.Key, key);
                 configure?.Invoke(facet);

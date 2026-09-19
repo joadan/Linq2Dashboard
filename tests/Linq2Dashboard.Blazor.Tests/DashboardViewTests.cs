@@ -241,13 +241,60 @@ public class DashboardViewTests : BunitContext
         var dashboard = BuildDashboard();
         var cut = Render<DashboardView<Order>>(parameters => parameters
             .Add(p => p.Dashboard, dashboard)
-            .AddChildContent<Probe>());
+            .AddContent<Probe>());
 
         Assert.Equal("8 matching", cut.Find(".probe").TextContent);
 
         cut.Render(parameters => parameters.Add(p => p.Selections, Selections.Empty.With("Country", ValueSelection.Of("DK"))));
 
         Assert.Equal("1 matching", cut.Find(".probe").TextContent);
+    }
+
+    /// <summary>The child content is a template over the context, so a page hands its own grid the rows without a @ref (design §9).</summary>
+    [Fact]
+    public void Child_content_is_a_template_over_the_context_and_follows_every_click()
+    {
+        var cut = Render<DashboardView<Order>>(parameters => parameters
+            .Add(p => p.Dashboard, BuildDashboard())
+            .Add(p => p.ChildContent, (RenderFragment<DashboardContext<Order>>)(dash => builder =>
+            {
+                builder.OpenComponent<ValueFacet<Order>>(0);
+                builder.AddComponentParameter(1, nameof(ValueFacet<Order>.Key), "Country");
+                builder.CloseComponent();
+                builder.OpenElement(2, "span");
+                builder.AddAttribute(3, "class", "rows");
+                builder.AddContent(4, $"{dash.Items.Count()} rows");
+                builder.CloseElement();
+            })));
+
+        Assert.Equal("8 rows", cut.Find(".rows").TextContent);
+
+        cut.FindAll("section[data-key='Country'] button.l2d-facet-value-button").Single(b => b.TextContent.Contains("SE")).Click();
+
+        Assert.Equal("3 rows", cut.Find(".rows").TextContent);
+    }
+
+    /// <summary>A grid re-queries when its source reference changes, so the context hands out one queryable per state and the same one until then (design §9).</summary>
+    [Fact]
+    public void The_context_hands_a_grid_one_queryable_per_state()
+    {
+        var cut = RenderView(BuildDashboard());
+        DashboardContext<Order> context = cut.Instance.Context;
+        IQueryable<Order> before = context.Items;
+
+        Assert.Equal(8, before.Count());
+        Assert.Same(before, context.Items);
+        cut.Render();
+        Assert.Same(before, context.Items);
+
+        ValueButton(cut, "Country", "SE").Click();
+
+        IQueryable<Order> after = context.Items;
+        Assert.NotSame(before, after);
+        Assert.Same(after, context.Items);
+        Assert.Equal(3, after.Count());
+        Assert.Equal(context.State.Items, after);
+        Assert.Equal([1, 4, 6], after.OrderBy(o => o.Id).Select(o => o.Id));
     }
 
     [Fact]

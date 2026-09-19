@@ -9,6 +9,7 @@ public sealed class DashboardContext<T>
 {
     private readonly Func<Selections, Task> onSelectionsChanged;
     private readonly Func<DashboardState<T>, Task> onStateChanged;
+    private IQueryable<T>? items;
 
     internal DashboardContext(
         Dashboard<T> dashboard,
@@ -36,6 +37,14 @@ public sealed class DashboardContext<T>
 
     /// <summary>The state for <see cref="Selections"/>. Always consistent with it.</summary>
     public DashboardState<T> State { get; private set; }
+
+    /// <summary>
+    /// <see cref="DashboardState{T}.Items"/> as one <see cref="IQueryable{T}"/> per state, for a data grid's items
+    /// parameter (design §9). The reference changes exactly when the state does, so a grid that re-queries when its
+    /// source changes, QuickGrid among them, does so once per calculation and not on every render of the page. The
+    /// list behind it is counted and indexable, so the grid's count, page, viewport and sort stay cheap (design §4.7).
+    /// </summary>
+    public IQueryable<T> Items => items ??= State.Items.AsQueryable();
 
     /// <summary>Raised after <see cref="State"/> changed. Components re-render on it; the host listens through <see cref="DashboardView{T}.StateChanged"/>.</summary>
     public event Action? StateChanged;
@@ -98,6 +107,7 @@ public sealed class DashboardContext<T>
     {
         Selections = selections;
         State = TimedCalculate(selections);
+        items = null;
         StateChanged?.Invoke();
     }
 

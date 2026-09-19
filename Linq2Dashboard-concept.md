@@ -297,7 +297,7 @@ Is usable on its own from a console app, a test, or a background job.
 
 ### The Blazor library
 
-Understands: how to render a state, how to turn a click into a new selection, templates, layout, virtualisation, formatting.
+Understands: how to render a state, how to turn a click into a new selection, templates, layout, formatting. It renders facets, metrics and selections; the matching rows it hands to the application's own grid.
 
 Does not understand: how counts are calculated. It never counts anything itself.
 
@@ -356,7 +356,7 @@ Because facets are identified by string keys and selections are serialisable, a 
 
 - One dashboard component consuming a state.
 - One component per facet kind.
-- Metric display, result list with paging, basic layout, basic templates.
+- Metric display, basic layout, basic templates. The rows go to the application's grid.
 
 ### Later
 
@@ -405,4 +405,4 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **Free text is a facet kind, matched by an application function.** A text facet has no values and carries only its text; it joins the AND across facets and rides every key-addressed path (selections, state, active selections, JSON). The function `(row, text) => bool` is the primitive and owns the matching semantics; it must be pure and thread-safe. Whitespace-only text clears. Search within a facet (§4.5) stays a UI operation and keeps the word "search". Decided 2026-09-14. See §5.
 - **Range buckets are fixed at initialisation.** Either application-defined or derived once from the dataset, never from the current selections. See §5.
 - **"Other" is measured against the facet's own counting context.** Not against the matching rows. See §6.
-- **The matching rows are a list, not pages.** The state exposes them counted and indexable in the application-defined order. Paging, virtualisation and display sorting belong to the grid that shows them; the core never tries to be that grid, and offers no page API. Decided 2026-09-19. See §3, §4.4.
+- **The matching rows are a list, not pages.** The state exposes them counted and indexable in the application-defined order. Paging, virtualisation and display sorting belong to the grid that shows them; the core never tries to be that grid and offers no page API, and the Blazor package renders no rows either: it hands them to the application's grid. Decided 2026-09-19. See §3, §4.4, §7.

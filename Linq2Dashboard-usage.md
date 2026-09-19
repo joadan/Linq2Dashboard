@@ -17,19 +17,19 @@ Both are prerelease on NuGet while the API settles: `dotnet add package Linq2Das
 
 1. **Build once.** `Dashboard.Create(rows, b => { ... })` indexes the collection. Facets, metrics and sort order are fixed here. It takes about a second per million rows, synchronously and without cancellation: run it on a background thread or in a hosted service if startup must stay responsive.
 2. **Register as a singleton.** The dashboard is immutable and thread-safe; one instance serves every user. Either the dashboard itself, `builder.Services.AddSingleton<Dashboard<Order>>(_ => Dashboard.Create(...))`, or a singleton service that loads the rows and builds it on first request and caches the instance. `Dashboard<T>` is marked `[ImmutableObject(true)]`, so `HybridCache` stores the instance itself; set `HybridCacheEntryFlags.DisableDistributedCache`, since a dashboard cannot be serialised. The [five-minute walkthrough](https://joadan.github.io/Linq2Dashboard/five-minutes) shows such a service.
-3. **Add both usings** to `_Imports.razor`: `@using Linq2Dashboard` and `@using Linq2Dashboard.Blazor`.
+3. **Add both usings** to `_Imports.razor`: `@using Linq2Dashboard` and `@using Linq2Dashboard.Blazor`, plus your grid's (`@using Microsoft.AspNetCore.Components.QuickGrid` below).
 4. **Reference the app's scoped-CSS bundle** in the host page, `YourApp.styles.css`. The components' styles are bundled into it. No other stylesheet or script is needed.
-5. **Wrap the page in `DashboardView`**, inject the dashboard, bind `Selections`, and place components inside. Every component takes `T`, the row type, and a `Key` from the builder.
+5. **Wrap the page in `DashboardView`**, inject the dashboard, bind `Selections`, name the context and place components inside. Every component takes `T`, the row type, and a `Key` from the builder. The rows go to your grid through `dash.Items`.
 
 ```razor
 @inject Dashboard<Order> Dashboard
 
-<DashboardView T="Order" Dashboard="Dashboard" @bind-Selections="selections">
+<DashboardView T="Order" Context="dash" Dashboard="Dashboard" @bind-Selections="selections">
     <ValueFacet T="Order" Key="Country" />
     <Metric T="Order" Key="orders" />
-    <Results T="Order" PageSize="25">
-        <RowTemplate Context="order"><div>@order.Id</div></RowTemplate>
-    </Results>
+    <QuickGrid Items="dash.Items" Virtualize="true">   @* any grid; dash.Items is one IQueryable<T> per state *@
+        <PropertyColumn Property="o => o.Id" Sortable="true" />
+    </QuickGrid>
 </DashboardView>
 
 @code {
@@ -161,16 +161,16 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 
 | Component | Renders | Notable parameters |
 |---|---|---|
-| `DashboardView` | Owns selections and state, cascades them. | `Dashboard`, `@bind-Selections`, `StateChanged`, `Formatter`, `Key`, `SyncUrl` |
+| `DashboardView` | Owns selections and state, cascades them; its content is a template over the context. | `Dashboard`, `Context`, `@bind-Selections`, `StateChanged`, `Formatter`, `Key`, `SyncUrl` |
 | `ValueFacet` | Values with counts, the null value, "Other", search. | `Key`, `Name`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate`, `InputClass` |
 | `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Name`, `Layout`, `ShowSlider`, `ShowSliderInputs`, `SliderStep`, `ShowBounds`, `InputClass` |
 | `DateFacet` | Presets with counts, one bar per period. | `Key`, `Name`, `Layout`, `ShowPresets` |
 | `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`, `DebounceMilliseconds`, `Placeholder`, `InputClass` |
 | `ActiveSelections` | One removable chip per selection, clear all. | `ShowFacetName`, `GroupValues` |
 | `Metric` | One tile by key with its share of the total; a dash when there is no value. A `CountMetric` is the matching row count. | `Key`, `Name`, `MetricTemplate` |
-| `Results` | Matching rows through your template, paged or virtualised. | `RowTemplate`, `HeaderTemplate`, `EmptyTemplate`, `Layout`, `PageSize`, `Virtualize` |
 | `StateSummary` | Everything in the state as plain clickable lists: counts, metrics, every facet. The default content of `DashboardView`, for a first look before laying out a page. | the texts |
 
+- **Rows.** The library renders no rows; they go to the grid you already use. `Context="dash"` names the view's context in your markup and `dash.Items` is one `IQueryable<T>` per state: its reference changes exactly when the state does, so QuickGrid re-queries after every click and never in between. Behind it `state.Items` is a counted, indexable list, so paging, virtualising, sorting and counting cost the slice, not a pass over every row; a grid that takes a list gets `dash.State.Items`. The view re-renders its content after every click, so no callback is needed. Naming the context is required only when a template inside would otherwise reuse the implicit `context`.
 - **Names.** The `Name` given in the builder is the default display name and travels with the state, so plain-C# consumers, `ActiveSelections` and `StateSummary` have a name for every key. Each facet component and `Metric` take a `Name` parameter that replaces it in that component only, for example with a localised string, so one dashboard serves every language.
 - **Tile templates.** `MetricTemplate` on `Metric` receives a `MetricTileContent`: the formatted `Name`, `Value` and `Share` (null when the metric has none), `IsEmpty`, and the raw `Metric` state. The template replaces the whole tile: the library renders no wrapping element, so your markup is the root and carries its own classes and hooks (`Class` and extra attributes apply to the default tile only). A Bootstrap `card` or any framework tile therefore has nothing of the library's to override.
 - **Formatting** goes through one `IDashboardFormatter` cascaded from `DashboardView`. Derive from `DefaultDashboardFormatter` to change culture, number formats, the null label, preset names or the order of labels when a facet sorts by label; culture enters the UI there and nowhere else, so the same page renders and sorts the same on every machine. Pass a fixed culture in tests.

@@ -35,7 +35,7 @@ public class ValueFacetTests : BunitContext
                 parameters.Add(p => p.SelectionsChanged, onChanged);
             }
 
-            parameters.AddChildContent<ValueFacet<Order>>(facet =>
+            parameters.AddContent<ValueFacet<Order>>(facet =>
             {
                 facet.Add(f => f.Key, key);
                 configure?.Invoke(facet);
@@ -319,7 +319,7 @@ public class LabelSortCultureTests : BunitContext
         {
             parameters.Add(p => p.Dashboard, Dashboard.Create(Towns, b => b.ValueFacet(x => x.Name)));
             parameters.Add(p => p.Formatter, new DefaultDashboardFormatter(culture));
-            parameters.AddChildContent<ValueFacet<Town>>(facet =>
+            parameters.AddContent<Town, ValueFacet<Town>>(facet =>
             {
                 facet.Add(f => f.Key, "Name");
                 facet.Add(f => f.Sort, FacetSort.Label);
@@ -346,7 +346,7 @@ public class ValueFacetAccessibilityTests : BunitContext
         {
             parameters.Add(p => p.Dashboard, Dashboard.Create(TestData.Orders(), b => b.ValueFacet(x => x.Status).Name("Order status").Searchable()));
             parameters.Add(p => p.Formatter, new DefaultDashboardFormatter(CultureInfo.InvariantCulture));
-            parameters.AddChildContent<ValueFacet<Order>>(facet => facet.Add(f => f.Key, "Status"));
+            parameters.AddContent<ValueFacet<Order>>(facet => facet.Add(f => f.Key, "Status"));
         });
 
         Assert.Equal("Order status", cut.Find(".l2d-facet-search").GetAttribute("aria-label"));

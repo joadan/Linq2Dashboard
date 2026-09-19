@@ -24,7 +24,7 @@ public class StateSummaryTests : BunitContext
                 parameters.Add(p => p.Selections, selections);
             }
 
-            parameters.AddChildContent<StateSummary<Order>>(summary => configure?.Invoke(summary));
+            parameters.AddContent<StateSummary<Order>>(summary => configure?.Invoke(summary));
         });
 
     [Fact]

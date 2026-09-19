@@ -28,13 +28,6 @@ public class ClassAndAttributeTests : BunitContext
             b.OrderBy(x => x.Id);
         });
 
-    private static readonly RenderFragment<Order> Row = order => builder =>
-    {
-        builder.OpenElement(0, "div");
-        builder.AddContent(1, order.Id);
-        builder.CloseElement();
-    };
-
     private IRenderedComponent<DashboardView<Order>> RenderWith<TComponent>(Action<ComponentParameterCollectionBuilder<TComponent>> configure, Selections? selections = null, bool searchable = false)
         where TComponent : IComponent =>
         Render<DashboardView<Order>>(parameters =>
@@ -46,7 +39,7 @@ public class ClassAndAttributeTests : BunitContext
                 parameters.Add(p => p.Selections, selections);
             }
 
-            parameters.AddChildContent<TComponent>(configure);
+            parameters.AddContent<TComponent>(configure);
         });
 
     private static void AddStyling<TComponent>(ComponentParameterCollectionBuilder<TComponent> component)
@@ -139,22 +132,6 @@ public class ClassAndAttributeTests : BunitContext
         });
 
         AssertStyled(cut.Find(".l2d-date-facet"), "l2d-facet", "l2d-date-facet");
-    }
-
-    [Fact]
-    public void Results_takes_a_class_and_passes_attributes_to_its_root()
-    {
-        var cut = RenderWith<Results<Order>>(results =>
-        {
-            results.Add(r => r.RowTemplate, Row);
-            results.Add(r => r.Class, "host-class");
-            results.AddUnmatched("id", "host-id");
-            results.AddUnmatched("style", "grid-area: side");
-            results.AddUnmatched("data-host", "yes");
-            results.AddUnmatched("title", "host tooltip");
-        });
-
-        AssertStyled(cut.Find(".l2d-results"), "l2d-results");
     }
 
     [Fact]

@@ -26,7 +26,7 @@ public class CollapseTests : BunitContext
                 parameters.Add(p => p.Selections, selections);
             }
 
-            parameters.AddChildContent<TComponent>(configure);
+            parameters.AddContent<TComponent>(configure);
         });
 
     [Fact]
@@ -96,7 +96,7 @@ public class CollapseTests : BunitContext
         Assert.Empty(cut.FindAll("li.l2d-facet-value"));
         Assert.Single(cut.FindAll(".l2d-facet-title"));
 
-        cut.Render(parameters => parameters.AddChildContent<ValueFacet<Order>>(f =>
+        cut.Render(parameters => parameters.AddContent<ValueFacet<Order>>(f =>
         {
             f.Add(x => x.Key, "Country");
             f.Add(x => x.Collapsible, false);

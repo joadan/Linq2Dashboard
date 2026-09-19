@@ -31,7 +31,7 @@ public class ActiveSelectionsTests : BunitContext
                 parameters.Add(p => p.SelectionsChanged, onChanged);
             }
 
-            parameters.AddChildContent<ActiveSelections<Order>>(chips => configure?.Invoke(chips));
+            parameters.AddContent<ActiveSelections<Order>>(chips => configure?.Invoke(chips));
         });
 
     private static IReadOnlyList<IElement> Chips(IRenderedComponent<DashboardView<Order>> cut) => cut.FindAll("li.l2d-chip");
