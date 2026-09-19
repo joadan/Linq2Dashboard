@@ -35,6 +35,15 @@
     font-style: italic;
 }
 
+/* The null value sits beside the buckets, not inside them (concept §4.8), so it must not read as one more
+   interval at the end of the axis: its filled bar is striped in the bar colour rather than solid, and the
+   column or row is set apart by a gap. Stripes rather than a second hue because a grey bar reads as inactive,
+   and the null rows are real rows that count toward the total; the label alone cannot carry this, since a
+   narrow histogram column hides it. */
+.l2d-null .l2d-bucket-bar-filtered {
+    background: var(--l2d-bar-null, repeating-linear-gradient(135deg, var(--l2d-bar, #2563eb) 0 3px, transparent 3px 6px));
+}
+
 .l2d-bucket-bar {
     position: relative;
     display: block;
@@ -84,6 +93,10 @@
     min-width: 0;
     container-type: inline-size;
     container-name: l2d-bucket;
+}
+
+.l2d-buckets-histogram .l2d-null {
+    margin-left: var(--l2d-gap, 0.375rem);
 }
 
 .l2d-buckets-histogram .l2d-bucket-button {
@@ -136,6 +149,10 @@
 .l2d-buckets-list {
     display: flex;
     flex-direction: column;
+}
+
+.l2d-buckets-list .l2d-null {
+    margin-top: var(--l2d-gap, 0.375rem);
 }
 
 .l2d-buckets-list .l2d-bucket-button {

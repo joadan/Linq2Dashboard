@@ -32,6 +32,7 @@
     --l2d-selected-color: inherit;
     --l2d-bar: #2563eb;
     --l2d-bar-total: rgba(0, 0, 0, 0.08);
+    --l2d-bar-null: repeating-linear-gradient(135deg, var(--l2d-bar) 0 3px, transparent 3px 6px);
     --l2d-bar-track: transparent;
     --l2d-input-background: transparent;
     --l2d-metric-background: transparent;
