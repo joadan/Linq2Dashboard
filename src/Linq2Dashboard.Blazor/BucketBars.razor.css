@@ -41,7 +41,7 @@
    and the null rows are real rows that count toward the total; the label alone cannot carry this, since a
    narrow histogram column hides it. */
 .l2d-null .l2d-bucket-bar-filtered {
-    background: var(--l2d-bar-null, repeating-linear-gradient(135deg, var(--l2d-bar, #2563eb) 0 3px, transparent 3px 6px));
+    background: var(--l2d-bar-null, repeating-linear-gradient(135deg, var(--l2d-bar, #2563eb) 0 1px, color-mix(in srgb, var(--l2d-bar, #2563eb) 35%, transparent) 1px 6px));
 }
 
 .l2d-bucket-bar {
