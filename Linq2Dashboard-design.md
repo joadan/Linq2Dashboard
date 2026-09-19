@@ -169,8 +169,8 @@ sealed class DashboardState<T>
     IReadOnlyList<MetricState> Metrics { get; }
     MetricState Metric(string key);
 
-    ResultPage<T> GetPage(int pageIndex, int pageSize);
-    IEnumerable<T> Items { get; }           // all matching rows in sort order, lazy; for export
+    IReadOnlyList<T> GetItems(long skip, int take);   // a slice of the matching rows
+    IReadOnlyList<T> Items { get; }         // all matching rows in sort order; counted and indexable, for a grid or export
 }
 ```
 
@@ -225,7 +225,6 @@ sealed record DateBucket(DateTimeOffset From, DateTimeOffset To, DateTime Period
 sealed record PresetState(DatePreset Preset, DateTimeOffset From, DateTimeOffset To, int TotalCount, int FilteredCount, bool Selected);
 sealed record MetricState(string Key, string Name, Aggregation Aggregation, double? Value, double? Share);   // null = no value; Share = Value / total, count, sum and distinct only (§C4.4)
 readonly struct MetricValues { double? this[string key]; double? Value(string key); double? Share(string key); }   // what a Calculated formula reads: earlier metrics by key
-sealed record ResultPage<T>(IReadOnlyList<T> Items, int PageIndex, int PageSize, int MatchingCount);
 ```
 
 `Value` is `object?` on purpose. The UI formats it; the core does not know about cultures, which is also why buckets carry bounds rather than label strings. The one string the core carries is the application's own label for a value facet's value (§C5), supplied by the builder's `Label` selector: it is data read from the rows, not formatting, and it is on `FacetValue.Label` for presented values and behind `LabelOf` for any value, so the chip for a selected value can be named from the selection alone. The default formatter shows it when present and formats the value otherwise. Boolean facets reuse `ValueFacetState`. `FacetKind` has `Value`, `Boolean`, `Range` and `Date` in the first version, and `Text` since 2026-09-14.
@@ -281,7 +280,7 @@ Selections restored = dashboard.Serializer.FromJson(json);
 source  --Where(fixed filters)-->  T[] _items      row id = array index, 0..N-1
 ```
 
-Rows that fail a fixed filter are dropped at build time, so ids are dense over the dataset and every count in the system is relative to the dataset (§C4.3). A scoped dashboard (§C4.10) keeps the same array and ids and carries a `RowSet` naming the rows in scope; its counts are relative to that set. The dashboard keeps `_items` for paging and export only. Nothing else touches the objects after build.
+Rows that fail a fixed filter are dropped at build time, so ids are dense over the dataset and every count in the system is relative to the dataset (§C4.3). A scoped dashboard (§C4.10) keeps the same array and ids and carries a `RowSet` naming the rows in scope; its counts are relative to that set. The dashboard keeps `_items` for `Items` only, the rows a grid shows or an export walks. Nothing else touches the objects after build.
 
 ### 3.2 Row sets
 
@@ -454,15 +453,18 @@ One pass over `M.Rows()` per metric column, accumulating sum, count-of-values, m
 
 **Calculated (§C4.4, added 2026-09-14).** Metrics are presented in definition order into one `MetricState[]`; a calculated metric receives a `MetricValues` over the states filled so far (a struct holding the array and the count, no allocation) and applies its formula. Lifted nullable arithmetic gives null-in-null-out for free; the result is then kept only if `double.IsFinite`, so division by zero and NaN become `null`. No column, no row work, no share. A formula that throws propagates: it is application code with a bug, not data.
 
-### 4.7 Result page
+### 4.7 Matching rows
 
 ```csharp
-ResultPage<T> GetPage(int pageIndex, int pageSize)
+IReadOnlyList<T> Items { get; }
+IReadOnlyList<T> GetItems(long skip, int take)
 ```
 
-Walk `sortedRows` in order, test membership in `M`, skip `pageIndex × pageSize` hits, take `pageSize`. Worst case one pass over `N` bit tests, about 1 ms at 1 M rows. Page requests are answered from the state without touching the dashboard. `Items` does the same walk lazily without skipping.
+The rows are shaped for a data grid, since that is what shows them (§C3, §C8): the grid pages, virtualises and sorts, and the state must not make each of those a pass over `N`. `Items` is a read-only list (`MatchingItems<T>`, internal) whose `Count` is `M.Count` and whose indexer reads the item at the `i`-th ordered matching row. The ordered row indexes, an `int[]` of `M.Count`, are built on first indexed access or enumeration and kept for the life of the state: one walk over `sortedRows` testing membership in `M`, or over `M.Rows()` when `sortedRows` is identity: 4 bytes per matching row and, at 1 M rows with 437 000 matching, 4 to 8 ms (§8). Two threads racing on the first access build equal arrays and the last one wins, which is harmless. The count needs no materialisation, so a state that is never shown as rows never pays.
 
-When `sortedRows` is identity, `M.Rows()` is enumerated directly instead.
+The list also implements `IList<T>`, read-only, because that is what LINQ's fast paths check for: `Count()` reads the count, `Skip` and `Take` index into the list instead of walking, and `OrderBy(...).Skip(...).Take(...)` buffers through `CopyTo` and selects rather than fully sorting. A grid given `Items.AsQueryable()` runs those very calls through `EnumerableQuery`, so a page, a viewport or a sorted slice costs the slice plus, for a sort, one pass over the matching rows. `GetItems(skip, take)` is the same slice as a named method, for a host that pages by hand or over HTTP. Rows are answered from the state without touching the dashboard's state, of which there is none (§5).
+
+Sorting for display is the grid's, over the matching rows it was given; the core's order is the application's `OrderBy` from the builder and nothing else (§C4.9).
 
 ### 4.8 Cost model at the target
 
@@ -489,7 +491,7 @@ Roughly 20 to 30 ms single-threaded, before any parallel gains. This is the numb
 - **Selection row-set cache:** `(facetKey, Selection) → RowSet`, bounded LRU, default 256 entries, inside the dashboard. Selections are records with value equality, so they are their own cache keys. Toggling a value in one facet re-uses every other facet's cached set. A scoped dashboard shares this cache with its parent, since the rows a selection matches do not depend on the scope; only the AND with the scope is per dashboard.
 - **State cache:** `Selections → DashboardState<T>`, bounded LRU, default 8 entries. Covers back/forward and "undo last click" for free. Per dashboard: a scope has its own, so switching between kept scopes returns cached states.
 - Both caches are safe for concurrent readers and writers. A miss computed twice is harmless because results are immutable and equal.
-- **States are immutable** and hold their own arrays. Rendering one state while the next is calculated is safe. A state keeps a reference to the dashboard for `GetPage` and `Search`; it never mutates it.
+- **States are immutable** and hold their own arrays. Rendering one state while the next is calculated is safe. A state keeps a reference to the dashboard for `Items` and `Search`; it never mutates it.
 - **Scratch memory** during `Calculate` comes from `ArrayPool<T>` and is returned before the state is published. Arrays that the state keeps (`counts` for searchable facets, `M`) are allocated for it.
 
 ---
@@ -565,7 +567,7 @@ selections = selections.Clear("Amount");
 
 // every click ends the same way
 state = dashboard.Calculate(selections);
-Render(state);                                  // Facets, Metrics, MatchingCount, GetPage(...)
+Render(state);                                  // Facets, Metrics, MatchingCount, Items
 bookmark = dashboard.Serializer.ToJson(selections);
 ```
 
@@ -619,7 +621,7 @@ The benchmark project is part of the first version, not an afterthought. It gene
 3. `Calculate` after toggling one value in Country (1, 3, 5 active facets).
 4. `Calculate` with a range and a date interval active.
 5. `Search("acme")` on Customer.
-6. `GetPage` first, middle and last page.
+6. `Items`: the first slice of a fresh state (the order is materialised), a slice at the end, and a sorted slice through `AsQueryable`, which is what a grid does per fetch.
 7. Everything above with parallel counting on and off.
 
 **Targets**: `Create` under 2 s. Warm `Calculate` under 50 ms in every scenario. Peak managed memory reported per facet kind. If a scenario misses its target, the per-facet timings say whether per-value bitmaps (§3.4) would help before any are added.
@@ -649,7 +651,9 @@ The short job's error bars are wide, so treat differences under about ten per ce
 | A click: 3 facets cold, then one value toggled | 35.0 ms | 26.0 ms | ✓ (the click alone is the difference, ~13 ms) |
 | `Search` over 100 000 customer labels | 5.6 ms | | |
 | `Calculate`, new text in a text facet, cold (two `Contains` per row) | 76.6 ms | 19.7 ms | see below |
-| `GetPage`, first / middle / last of 2 200 pages | 0.002 / 2.0 / 4.6 ms | | |
+| `Items`, first slice of a fresh state, `Calculate` included (replaces `GetPage`, 2026-09-19) | 18.3 ms | 8.8 ms | 4 to 8 ms above the warm `Calculate` to materialise the order; 1.7 MB for 437 000 matching rows |
+| `Items`, a slice at the start / at the end, order materialised | 0.16 / 0.24 µs | | |
+| `Items.AsQueryable().OrderBy(…).Skip(…).Take(50)`, a grid's fetch with a sort column | 12.8 ms | | one pass over the matching rows, 4 MB; without a sort column a fetch is the slice alone |
 
 | Memory above the 7.8 MB row array | |
 |---|---|
@@ -776,6 +780,7 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 - **There is no matching-count component; a `Count` metric is the matching row count.** The engine already returns `matching.Count` with its share for a count metric, so a second component only saved one builder line and forced a nullable `MetricState` into the shared template context. Decided 2026-09-18. See §9.5.
 - **Every metric builder method carries a `Metric` suffix.** `b.Sum("revenue", …)` and `b.Count("orders")` read as LINQ operators over the builder, not as declarations; the facet methods had said what they defined since the start, and metrics were the one group that did not. `CountMetric`, `SumMetric`, `AverageMetric`, `MinMetric`, `MaxMetric`, `DistinctMetric` and `CalculatedMetric` restore the symmetry. A grouping property (`b.Metrics.Sum`) and a key-first entry point (`b.Metric("revenue").Sum(…)`) were both considered and dropped: the first has no facet counterpart, the second costs a second object per metric. Breaking, with no shim, as the `Title`→`Name` rename was. Decided 2026-09-18. See §2.1.
 - **An empty date preset can be left out of the state, through `SkipEmptyPresets` on the facet.** A preset is declared rather than discovered, so it is the one facet entry that can carry a total of zero; value facets already drop those, and this gives date presets the same rule where the count is computed, in `Present`. Off by default, since a dashboard rebuilt over live data legitimately shows "Today (0)" before the first row of the day arrives. A selected empty preset is dropped as well, matching the value facet, and stays clearable through the facet header and the active selections. Decided 2026-09-19. See §4.5, §C5.
-- **Scoping a built dashboard is `ScopeTo`, not `Where`.** Every document calls the result a scope, so the usage guide had to translate the method name into the domain word on each mention ("`dashboard.Where(...)` scopes without a rebuild"). `Where` also promises LINQ: a lazy sequence, free until enumerated, whereas this does a pass over the rows plus a count per facet and metric and returns an object the host keeps and caches. `DashboardState<T>.Items` is an `IEnumerable<T>`, so `dashboard.Where(x => …)` and `state.Items.Where(x => …)` could sit in one page meaning different things. The builder's fixed filter keeps `Where`: it configures rather than returning a thing, and there the LINQ echo is honest. Breaking, with no shim. Decided 2026-09-18. See §2.1, §3.1.
+- **Scoping a built dashboard is `ScopeTo`, not `Where`.** Every document calls the result a scope, so the usage guide had to translate the method name into the domain word on each mention ("`dashboard.Where(...)` scopes without a rebuild"). `Where` also promises LINQ: a lazy sequence, free until enumerated, whereas this does a pass over the rows plus a count per facet and metric and returns an object the host keeps and caches. `DashboardState<T>.Items` is a list, so `dashboard.Where(x => …)` and `state.Items.Where(x => …)` could sit in one page meaning different things. The builder's fixed filter keeps `Where`: it configures rather than returning a thing, and there the LINQ echo is honest. Breaking, with no shim. Decided 2026-09-18. See §2.1, §3.1.
 - **The null bar in a histogram or bucket list is striped and set apart by a gap.** The concept places null beside the buckets, and a solid column at the end read as the highest interval. Stripes in the bar colour through `--l2d-bar-null`, not grey (reads as inactive) and not a second hue (fights the host's theme); a host overrides the one property for a solid fill. Decided 2026-09-19. See §9 (`RangeFacet`).
 - **A slider handle at the end of its travel means no bound on that side.** The selection is built from the other handle alone, so the open-ended end buckets light up and chips and URLs read "≤ 500" instead of "1.47 – 500"; the upper end counts within one step because the native input's grid starts at the minimum. The core's cover rule stays data-independent. Decided 2026-09-19. See §9 (`RangeFacet`, slider).
+- **The state serves the matching rows as a read-only list; `GetPage`, `PageCount` and `ResultPage` are gone.** A competent grid pages, virtualises and sorts by itself and asks its source for a count, a slice and an order through LINQ, so the source has to be a list for those to be cheap; a lazy enumerable made every scroll tick a pass over the matching rows, and a page API duplicated what the grid does. `Items` is `IReadOnlyList<T>` and `IList<T>` over an ordered row-index array built once per state, `GetItems` stays as the named slice. Breaking, with no shim. Decided 2026-09-19. See §2.4, §4.7, §C3.

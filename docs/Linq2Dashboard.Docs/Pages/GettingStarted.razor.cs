@@ -52,7 +52,7 @@ public partial class GettingStarted
         var amount = (RangeFacetState)state.Facet("Amount");
         selections = selections.With("Amount", amount.Buckets[1].ToSelection());   // a bucket click
 
-        ResultPage<Order> page = state.GetPage(pageIndex: 0, pageSize: 50);
+        IReadOnlyList<Order> rows = state.Items;      // counted and indexable: hand it to your grid
 
         string bookmark = dashboard.Serializer.ToJson(selections);
         Selections restored = dashboard.Serializer.FromJson(bookmark);

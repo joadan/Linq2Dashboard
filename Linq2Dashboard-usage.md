@@ -4,7 +4,7 @@ A short guide for using the library in another project. It is written so it can 
 
 ## What it is
 
-Interactive exploration of a large in-memory collection: facets with counts, metrics and paged results that all update together on every selection. The faceted search of an e-commerce site, applied to any `IEnumerable<T>`.
+Interactive exploration of a large in-memory collection: facets with counts, metrics and the matching rows that all update together on every selection. The faceted search of an e-commerce site, applied to any `IEnumerable<T>`.
 
 | Package | Namespace | Contents |
 |---|---|---|
@@ -140,9 +140,8 @@ amount.Buckets[1].ToSelection();                  // exactly the interval a clic
 var date = (DateFacetState)state.Facet("OrderDate");
 date.Presets[0].ToSelection();                    // DateSelection.Relative(preset)
 
-state.GetPage(pageIndex: 0, pageSize: 50);        // ResultPage<T>: Items, PageCount, HasNext
-state.GetItems(skip: 200, take: 50);              // a slice, for virtualisation
-state.Items;                                      // every matching row, lazily, for export
+state.Items;                                      // IReadOnlyList<T>: every matching row in order, counted and indexable; give it, or Items.AsQueryable(), to your grid
+state.GetItems(skip: 200, take: 50);              // a slice, the same rows as Items.Skip(200).Take(50)
 ```
 
 Cast `state.Facet(key)` by the facet's kind: `ValueFacetState` for value and boolean facets, `RangeFacetState`, `DateFacetState`, `TextFacetState`. `FacetState.Kind` says which.

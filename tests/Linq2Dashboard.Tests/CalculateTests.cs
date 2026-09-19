@@ -517,40 +517,37 @@ public class CalculateTests
     private sealed record Tagged(int Id, string? Tag);
 
     [Fact]
-    public void Pages_follow_the_application_order()
+    public void Items_follow_the_application_order()
     {
         var state = Shared.Calculate();
 
-        Assert.Equal(3, state.PageCount(3));
-        Assert.Equal([6, 5, 4], state.GetPage(0, 3).Items.Select(o => o.Id));
-        Assert.Equal([3, 2, 1], state.GetPage(1, 3).Items.Select(o => o.Id));
-        var last = state.GetPage(2, 3);
-        Assert.Equal([8, 7], last.Items.Select(o => o.Id));
-        Assert.Equal((2, 3, 8, 3, true, false), (last.PageIndex, last.PageSize, last.MatchingCount, last.PageCount, last.HasPrevious, last.HasNext));
-        Assert.Empty(state.GetPage(3, 3).Items);
+        Assert.Equal(8, state.Items.Count);
         Assert.Equal([6, 5, 4, 3, 2, 1, 8, 7], state.Items.Select(o => o.Id));
+        Assert.Equal(6, state.Items[0].Id);
+        Assert.Equal(7, state.Items[7].Id);
+        Assert.Throws<ArgumentOutOfRangeException>(() => state.Items[8]);
+        Assert.Throws<ArgumentOutOfRangeException>(() => state.Items[-1]);
     }
 
     [Fact]
-    public void Pages_contain_only_matching_rows()
+    public void Items_contain_only_matching_rows()
     {
         var state = Shared.Calculate(Selections.Empty.With("Country", ValueSelection.Of("SE")));
 
-        Assert.Equal([6, 4], state.GetPage(0, 2).Items.Select(o => o.Id));
-        Assert.Equal([1], state.GetPage(1, 2).Items.Select(o => o.Id));
+        Assert.Equal(3, state.Items.Count);
         Assert.Equal([6, 4, 1], state.Items.Select(o => o.Id));
-        Assert.Equal(2, state.PageCount(2));
+        Assert.Equal(1, state.Items[2].Id);
     }
 
     [Fact]
-    public void Without_a_sort_order_pages_follow_row_order()
+    public void Without_a_sort_order_items_follow_row_order()
     {
         var unsorted = Dashboard.Create(TestData.Orders(), b => b.ValueFacet(x => x.Country));
 
         var state = unsorted.Calculate(Selections.Empty.With("Country", ValueSelection.Of("NO", null)));
 
         Assert.Equal([2, 3, 7, 8], state.Items.Select(o => o.Id));
-        Assert.Equal([2, 3], state.GetPage(0, 2).Items.Select(o => o.Id));
+        Assert.Equal(7, state.Items[2].Id);
     }
 
     [Fact]
@@ -563,19 +560,51 @@ public class CalculateTests
         Assert.Equal([7], state.GetItems(7, 5).Select(o => o.Id));
         Assert.Empty(state.GetItems(8, 5));
         Assert.Empty(state.GetItems(3, 0));
-        Assert.Equal(state.GetPage(1, 3).Items, state.GetItems(3, 3));
+        Assert.Equal(state.Items.Skip(3).Take(3), state.GetItems(3, 3));
         Assert.Throws<ArgumentOutOfRangeException>(() => state.GetItems(-1, 1));
         Assert.Throws<ArgumentOutOfRangeException>(() => state.GetItems(0, -1));
     }
 
+    /// <summary>
+    /// A data grid pages, virtualises, sorts and counts through LINQ, often over <c>AsQueryable()</c>;
+    /// the list fast paths it relies on need <c>IList&lt;T&gt;</c>, and the list must refuse writes (design §4.7).
+    /// </summary>
     [Fact]
-    public void Page_arguments_are_validated()
+    public void Items_is_a_read_only_list_that_LINQ_and_a_grid_can_index()
     {
         var state = Shared.Calculate();
 
-        Assert.Throws<ArgumentOutOfRangeException>(() => state.GetPage(-1, 10));
-        Assert.Throws<ArgumentOutOfRangeException>(() => state.GetPage(0, 0));
-        Assert.Throws<ArgumentOutOfRangeException>(() => state.PageCount(0));
+        var list = Assert.IsAssignableFrom<IList<Order>>(state.Items);
+        Assert.True(list.IsReadOnly);
+        Assert.Equal(8, list.Count);
+        Assert.Equal(3, list.IndexOf(state.Items[3]));
+        Assert.Contains(state.Items[5], list);
+        Assert.Throws<NotSupportedException>(() => list.Add(state.Items[0]));
+        Assert.Throws<NotSupportedException>(() => list[0] = state.Items[1]);
+        Assert.Throws<NotSupportedException>(() => list.RemoveAt(0));
+        Assert.Throws<NotSupportedException>(list.Clear);
+
+        var copy = new Order[10];
+        list.CopyTo(copy, 2);
+        Assert.Equal(state.Items, copy.Skip(2));
+        Assert.Throws<ArgumentOutOfRangeException>(() => list.CopyTo(new Order[7], 0));
+
+        IQueryable<Order> query = state.Items.AsQueryable();
+        Assert.Equal(8, query.Count());
+        Assert.Equal([3, 2], query.Skip(3).Take(2).Select(o => o.Id));
+        Assert.Equal([1, 2, 3], query.OrderBy(o => o.Id).Skip(0).Take(3).Select(o => o.Id));
+        Assert.Equal([5, 4], query.OrderByDescending(o => o.Id).Skip(3).Take(2).Select(o => o.Id));
+    }
+
+    [Fact]
+    public void Items_are_empty_when_nothing_matches()
+    {
+        var state = Shared.Calculate(Selections.Empty.With("Country", ValueSelection.Of("XX")));
+
+        Assert.Empty(state.Items.AsQueryable());
+        Assert.Empty(state.Items);
+        Assert.Empty(state.GetItems(0, 10));
+        Assert.Equal(0, state.Items.AsQueryable().Count());
     }
 
     [Fact]
@@ -742,6 +771,6 @@ public class CalculateTests
         Assert.Single(((DateFacetState)state.Facet("OrderDate")).Presets);
         Assert.Equal(0, state.Metric("orders").Value);
         Assert.Null(state.Metric("revenue").Value);
-        Assert.Empty(state.GetPage(0, 10).Items);
+        Assert.Empty(state.Items);
     }
 }

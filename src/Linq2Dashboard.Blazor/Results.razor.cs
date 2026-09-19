@@ -123,12 +123,21 @@ public partial class Results<T>
         return ValueTask.FromResult(new ItemsProviderResult<T>(items, State.MatchingCount));
     }
 
-    private ResultPage<T> CurrentPage()
+    private sealed record Page(IReadOnlyList<T> Items, int PageIndex, int PageSize, int MatchingCount)
+    {
+        public int PageCount => (MatchingCount + PageSize - 1) / PageSize;
+
+        public bool HasPrevious => PageIndex > 0;
+
+        public bool HasNext => PageIndex + 1 < PageCount;
+    }
+
+    private Page CurrentPage()
     {
         pageSelections = State.Selections;
-        int last = Math.Max(0, State.PageCount(PageSize) - 1);
+        int last = Math.Max(0, (State.MatchingCount + PageSize - 1) / PageSize - 1);
         pageIndex = Math.Clamp(pageIndex, 0, last);
-        return State.GetPage(pageIndex, PageSize);
+        return new Page(State.GetItems((long)pageIndex * PageSize, PageSize), pageIndex, PageSize, State.MatchingCount);
     }
 
     private Task GoTo(int index)

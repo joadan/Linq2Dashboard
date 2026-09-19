@@ -4,7 +4,7 @@
 [![NuGet](https://img.shields.io/nuget/v/Linq2Dashboard.svg?label=Linq2Dashboard)](https://www.nuget.org/packages/Linq2Dashboard/)
 [![NuGet](https://img.shields.io/nuget/v/Linq2Dashboard.Blazor.svg?label=Linq2Dashboard.Blazor)](https://www.nuget.org/packages/Linq2Dashboard.Blazor/)
 
-Interactive exploration of large in-memory collections for .NET: facets with counts, metrics, and paged results that all update together on every click. The faceted-search experience of an e-commerce site, applied to any collection, with a LINQ-flavoured API.
+Interactive exploration of large in-memory collections for .NET: facets with counts, metrics, and the matching rows that all update together on every click. The faceted-search experience of an e-commerce site, applied to any collection, with a LINQ-flavoured API.
 
 The core library has no UI dependency. A Blazor package renders it. **Docs and a live demo:** [joadan.github.io/Linq2Dashboard](https://joadan.github.io/Linq2Dashboard/), a Blazor WebAssembly site that builds the dashboard in your browser.
 
@@ -69,7 +69,7 @@ foreach (FacetValue value in country.Values)             // SE is selected and s
 var amount = (RangeFacetState)state.Facet("Amount");
 selections = selections.With("Amount", amount.Buckets[1].ToSelection());   // a bucket click
 
-ResultPage<Order> page = state.GetPage(pageIndex: 0, pageSize: 50);
+IReadOnlyList<Order> rows = state.Items;                 // counted and indexable: hand it to your grid
 
 string bookmark = dashboard.Serializer.ToJson(selections);   // store and restore later
 Selections restored = dashboard.Serializer.FromJson(bookmark);

@@ -1,10 +1,11 @@
 using Linq2Dashboard.Indexing;
+using Linq2Dashboard.State;
 
 namespace Linq2Dashboard;
 
 /// <summary>
 /// An immutable snapshot of the dashboard for one set of selections (concept §4.7, design §2.4).
-/// Everything here was calculated from the same selections at the same moment. Pages and items
+/// Everything here was calculated from the same selections at the same moment. The matching rows
 /// are served from the snapshot without touching the dashboard's mutable state, of which there is none.
 /// </summary>
 public sealed class DashboardState<T>
@@ -13,6 +14,7 @@ public sealed class DashboardState<T>
     private readonly RowSet matching;
     private readonly Dictionary<string, FacetState> facetsByKey;
     private readonly Dictionary<string, MetricState> metricsByKey;
+    private readonly MatchingItems<T> items;
 
     internal DashboardState(Dashboard<T> dashboard, Selections selections, RowSet matching, FacetState[] facets, MetricState[] metrics)
     {
@@ -23,6 +25,7 @@ public sealed class DashboardState<T>
         Metrics = metrics;
         facetsByKey = facets.ToDictionary(f => f.Key, StringComparer.Ordinal);
         metricsByKey = metrics.ToDictionary(m => m.Key, StringComparer.Ordinal);
+        items = new MatchingItems<T>(dashboard, matching);
     }
 
     /// <summary>The selections this state was calculated from.</summary>
@@ -55,92 +58,26 @@ public sealed class DashboardState<T>
             ? metric
             : throw new ArgumentException($"Unknown metric key '{key}'.", nameof(key));
 
-    /// <summary>Number of pages of <paramref name="pageSize"/> needed for all matching rows.</summary>
-    public int PageCount(int pageSize)
-    {
-        ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
-        return (MatchingCount + pageSize - 1) / pageSize;
-    }
-
-    /// <summary>
-    /// Matching rows <c>pageIndex * pageSize</c> to <c>(pageIndex + 1) * pageSize</c> in the
-    /// application-defined order (design §4.7). A page beyond the end is empty, not an error.
-    /// </summary>
-    public ResultPage<T> GetPage(int pageIndex, int pageSize)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegative(pageIndex);
-        ArgumentOutOfRangeException.ThrowIfLessThan(pageSize, 1);
-
-        return new ResultPage<T>(GetItems((long)pageIndex * pageSize, pageSize), pageIndex, pageSize, MatchingCount);
-    }
-
     /// <summary>
     /// Matching rows <paramref name="skip"/> to <paramref name="skip"/> + <paramref name="take"/> in the
-    /// application-defined order. The slice a virtualised list asks for (design §9); a slice beyond
-    /// the end is empty.
+    /// application-defined order (design §4.7): the slice a paged or virtualised grid asks for. A slice
+    /// beyond the end is empty, not an error. The same rows as <c>Items.Skip(skip).Take(take)</c>.
     /// </summary>
     public IReadOnlyList<T> GetItems(long skip, int take)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(skip);
         ArgumentOutOfRangeException.ThrowIfNegative(take);
 
-        if (take == 0 || skip >= MatchingCount)
-        {
-            return [];
-        }
-
-        var items = new List<T>((int)Math.Min(take, MatchingCount - skip));
-        foreach (int row in OrderedMatchingRows())
-        {
-            if (skip > 0)
-            {
-                skip--;
-                continue;
-            }
-
-            items.Add(dashboard.ItemAt(row));
-            if (items.Count == take)
-            {
-                break;
-            }
-        }
-
-        return items;
+        return items.Slice(skip, take);
     }
 
-    /// <summary>All matching rows in the application-defined order, lazily. For export and iteration.</summary>
-    public IEnumerable<T> Items
-    {
-        get
-        {
-            foreach (int row in OrderedMatchingRows())
-            {
-                yield return dashboard.ItemAt(row);
-            }
-        }
-    }
+    /// <summary>
+    /// All matching rows in the application-defined order (concept §3, design §4.7), as a read-only list:
+    /// counted, indexable and enumerable, so a data grid given it, or <c>Items.AsQueryable()</c>, pages,
+    /// virtualises, sorts and counts without walking the whole set on every request. The order is
+    /// materialised on first use, four bytes per matching row; enumeration for export costs no more.
+    /// </summary>
+    public IReadOnlyList<T> Items => items;
 
     internal RowSet Matching => matching;
-
-    private IEnumerable<int> OrderedMatchingRows()
-    {
-        int[]? sorted = dashboard.SortedRows;
-        if (sorted is null)
-        {
-            return matching.Rows();
-        }
-
-        return Walk(sorted, matching);
-
-        static IEnumerable<int> Walk(int[] sorted, RowSet matching)
-        {
-            foreach (int row in sorted)
-            {
-                if (matching.Contains(row))
-                {
-                    yield return row;
-                }
-            }
-        }
-    }
 }

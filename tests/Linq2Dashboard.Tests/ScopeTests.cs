@@ -65,9 +65,9 @@ public class ScopeTests
     {
         var text = new StringBuilder();
         var culture = CultureInfo.InvariantCulture;
-        text.AppendLine(culture, $"total {state.TotalCount} matching {state.MatchingCount} pages {state.PageCount(2)}");
+        text.AppendLine(culture, $"total {state.TotalCount} matching {state.MatchingCount} count {state.Items.Count}");
         text.AppendLine(culture, $"items {string.Join(",", state.Items.Select(o => o.Id))}");
-        text.AppendLine(culture, $"page1 {string.Join(",", state.GetPage(1, 2).Items.Select(o => o.Id))}");
+        text.AppendLine(culture, $"slice {string.Join(",", state.GetItems(2, 2).Select(o => o.Id))}");
         foreach (FacetState facet in state.Facets)
         {
             text.AppendLine(culture, $"{facet.Key} context {facet.ContextCount} selected {facet.HasSelection}");
@@ -273,7 +273,8 @@ public class ScopeTests
         var state = Active.Calculate();
 
         Assert.Equal([6, 4, 2, 1, 8], state.Items.Select(o => o.Id)); // amount descending, inactive rows gone
-        Assert.Equal([2, 1], state.GetPage(1, 2).Items.Select(o => o.Id));
+        Assert.Equal([2, 1], state.GetItems(2, 2).Select(o => o.Id));
+        Assert.Equal(5, state.Items.Count);
         Assert.Equal([8], state.GetItems(4, 10).Select(o => o.Id));
     }
 

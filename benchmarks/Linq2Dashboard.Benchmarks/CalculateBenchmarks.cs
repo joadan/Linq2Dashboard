@@ -95,12 +95,18 @@ public class CalculateBenchmarks
     public IReadOnlyList<FacetValue> Search_Customer() =>
         ((ValueFacetState)threeSelections.Facet("Customer")).Search("Customer 0042");
 
+    /// <summary>A grid's first request on a fresh state: the order is materialised (design §4.7), then the slice is copied.</summary>
     [Benchmark]
-    public ResultPage<BenchmarkOrder> Page_First() => threeSelections.GetPage(0, 50);
+    public IReadOnlyList<BenchmarkOrder> Items_First_Cold() => dashboard.CalculateUncached(DashboardFactory.Scenarios.Three).GetItems(0, 50);
 
     [Benchmark]
-    public ResultPage<BenchmarkOrder> Page_Middle() => threeSelections.GetPage(threeSelections.PageCount(50) / 2, 50);
+    public IReadOnlyList<BenchmarkOrder> Items_First() => threeSelections.GetItems(0, 50);
 
     [Benchmark]
-    public ResultPage<BenchmarkOrder> Page_Last() => threeSelections.GetPage(threeSelections.PageCount(50) - 1, 50);
+    public IReadOnlyList<BenchmarkOrder> Items_Last() => threeSelections.GetItems(Math.Max(0, threeSelections.Items.Count - 50), 50);
+
+    /// <summary>What a data grid does per fetch with a sort column active, through <c>AsQueryable()</c>.</summary>
+    [Benchmark]
+    public List<BenchmarkOrder> Items_Sorted_Slice() =>
+        threeSelections.Items.AsQueryable().OrderBy(o => o.Amount).Skip(threeSelections.Items.Count / 2).Take(50).ToList();
 }

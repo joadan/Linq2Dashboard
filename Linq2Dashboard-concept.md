@@ -47,7 +47,7 @@ It is the faceted-search experience of an e-commerce site, applied to any .NET c
         |
         +----> Facet counts       (per facet, per value)
         +----> Metrics            (count, sum, average, ...)
-        +----> Result page        (the rows themselves, paged)
+        +----> Result rows        (the rows themselves, in order, for a grid)
         |
         v
   Dashboard state                (one immutable snapshot of all of the above)
@@ -71,10 +71,9 @@ The engine is a function: **(dataset, selections) → state**. The UI is a loop:
 | **Selection** | What the user has chosen within one facet. Dynamic. Small and serialisable. |
 | **Fixed filter** | A predicate the application applies before the user sees anything. Defines the dataset. Never shown, never removable by the user. |
 | **Scoped dashboard** | A dashboard narrowed to the rows passing a predicate, sharing the parent's definitions and indexes. Behaves like the parent with one more fixed filter. |
-| **Matching rows** | The rows in the dataset that satisfy every current selection. |
+| **Matching rows** | The rows in the dataset that satisfy every current selection. The state serves them as a counted, indexable list in the application-defined order. |
 | **Metric** | A named summary number over the matching rows. |
-| **Result page** | A slice of the matching rows, in a chosen order, for display. |
-| **State** | An immutable snapshot: counts, facet values, selections, metrics, and access to the result rows, all calculated from the same selections at the same moment. |
+| **State** | An immutable snapshot: counts, facet values, selections, metrics, and the matching rows, all calculated from the same selections at the same moment. |
 | **Row selection** | Rows the user has marked in a grid for an action. An application concern, outside the library; unrelated to filtering. |
 
 ---
@@ -121,7 +120,7 @@ Total is calculated *after* fixed filters. The user never sees numbers from rows
 
 A value whose filtered count is zero is still a facet value. The core always includes it in the state with its total count and a filtered count of 0. Whether such values are shown, greyed out or hidden is a presentation choice made by the UI.
 
-### 4.4 Metrics and the result page reflect all selections
+### 4.4 Metrics and the result rows reflect all selections
 
 Unlike facet counts, metrics and results have no "own selection" to exclude. They always reflect the full set of matching rows.
 
@@ -143,7 +142,7 @@ A **text facet** (§5) is the other thing typing can do: its text is a selection
 
 ### 4.6 Row selection is not filtering
 
-Ticking rows in a result grid marks them for an action (export, bulk edit, navigation). It has no effect on facets, metrics, or paging. The library offers no row selection of its own: the result rows are the application's objects, so marking them, and acting on the marks, is the application's concern. This section states the boundary so that no future feature blurs it.
+Ticking rows in a result grid marks them for an action (export, bulk edit, navigation). It has no effect on facets, metrics or the matching rows. The library offers no row selection of its own: the result rows are the application's objects, so marking them, and acting on the marks, is the application's concern. This section states the boundary so that no future feature blurs it.
 
 ### 4.7 The state is a consistent snapshot
 
@@ -174,7 +173,7 @@ The consequence is that facet counts always add up: for a value facet, the sum o
 A dashboard is created from a collection once. After that, the data cannot be added to, removed from, or replaced.
 
 - The dashboard reads the source exactly once, at creation, and keeps its own copy. Later changes to the original collection are not seen.
-- Facet definitions, metric definitions and fixed filters are also part of initialisation. Only selections, paging and sorting change during the dashboard's life.
+- Facet definitions, metric definitions and fixed filters are also part of initialisation. Only selections change during the dashboard's life; paging and display sorting belong to the grid and never reach the dashboard.
 - New data means a new dashboard. Selections are serialisable (§7), so an application that wants "same view, fresh data" creates a new dashboard and applies the saved selections to it.
 
 This keeps the engine a pure function of (dataset, selections) and means total counts are computed once and never invalidated.
@@ -290,7 +289,7 @@ A facet may expose a search over its values. The result is a filtered list of va
 
 ### The core library
 
-Understands: data, facets, selections, fixed filters, counts, metrics, paging, sorting, state.
+Understands: data, facets, selections, fixed filters, counts, metrics, ordering, state.
 
 Does not understand: rendering, layout, formatting, colours, click handling, Blazor, HTML.
 
@@ -349,7 +348,7 @@ Because facets are identified by string keys and selections are serialisable, a 
 - Text facets: a user-typed text matched by an application function. Added 2026-09-14; see §5.
 - Scoped dashboards: the same definitions over a subset of the dataset, without a rebuild. Added 2026-09-15; see §4.10.
 - Metrics: count, sum, average, min, max.
-- Result paging with application-defined sorting.
+- The matching rows as a list in application-defined order, for any grid to page, virtualise and sort.
 - Immutable state snapshot with a UI-friendly facet model.
 - Selections as serialisable, key-addressed objects.
 
@@ -406,3 +405,4 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **Free text is a facet kind, matched by an application function.** A text facet has no values and carries only its text; it joins the AND across facets and rides every key-addressed path (selections, state, active selections, JSON). The function `(row, text) => bool` is the primitive and owns the matching semantics; it must be pure and thread-safe. Whitespace-only text clears. Search within a facet (§4.5) stays a UI operation and keeps the word "search". Decided 2026-09-14. See §5.
 - **Range buckets are fixed at initialisation.** Either application-defined or derived once from the dataset, never from the current selections. See §5.
 - **"Other" is measured against the facet's own counting context.** Not against the matching rows. See §6.
+- **The matching rows are a list, not pages.** The state exposes them counted and indexable in the application-defined order. Paging, virtualisation and display sorting belong to the grid that shows them; the core never tries to be that grid, and offers no page API. Decided 2026-09-19. See §3, §4.4.
