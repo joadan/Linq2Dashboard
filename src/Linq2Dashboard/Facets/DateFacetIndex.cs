@@ -270,8 +270,12 @@ internal static class DatePresets
             DatePreset.Last7Days => (today.AddDays(-6), today.AddDays(1)),
             DatePreset.Last30Days => (today.AddDays(-29), today.AddDays(1)),
             DatePreset.ThisWeek => Period(today, DateGranularity.Week),
+            DatePreset.LastWeek => PreviousPeriod(today, DateGranularity.Week),
             DatePreset.ThisMonth => Period(today, DateGranularity.Month),
+            DatePreset.LastMonth => PreviousPeriod(today, DateGranularity.Month),
             DatePreset.ThisYear => Period(today, DateGranularity.Year),
+            DatePreset.LastYear => PreviousPeriod(today, DateGranularity.Year),
+            DatePreset.YearToDate => (DateColumn.PeriodStart(today, DateGranularity.Year), today.AddDays(1)),
             _ => throw new ArgumentOutOfRangeException(nameof(preset)),
         };
 
@@ -282,5 +286,13 @@ internal static class DatePresets
     {
         DateTime start = DateColumn.PeriodStart(day, granularity);
         return (start, DateColumn.NextPeriodStart(start, granularity));
+    }
+
+    private static (DateTime From, DateTime To) PreviousPeriod(DateTime day, DateGranularity granularity)
+    {
+        DateTime start = DateColumn.PeriodStart(day, granularity);
+
+        // The day before this period starts is the last day of the previous one.
+        return (DateColumn.PeriodStart(start.AddDays(-1), granularity), start);
     }
 }

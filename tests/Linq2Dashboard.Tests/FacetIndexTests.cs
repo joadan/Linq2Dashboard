@@ -135,6 +135,58 @@ public class FacetIndexTests
     }
 
     [Fact]
+    public void This_and_last_period_presets_are_adjacent_calendar_periods()
+    {
+        // Now is Sunday 15 March 2026. LastWeek = 2-8 March, LastMonth = February, LastYear = the whole of 2025.
+        Assert.Empty(Rows("OrderDate", DateSelection.Relative(DatePreset.LastWeek)));
+        Assert.Equal([1, 2], Rows("OrderDate", DateSelection.Relative(DatePreset.LastMonth)));
+        Assert.Empty(Rows("OrderDate", DateSelection.Relative(DatePreset.LastYear)));
+
+        var index = Assert.IsType<DateFacetIndex>(Dashboard.FacetIndex("OrderDate"));
+        Assert.Equal(
+            (TestData.Instant("2026-03-02T00:00:00+01:00"), TestData.Instant("2026-03-09T00:00:00+01:00")),
+            index.ResolvePreset(DatePreset.LastWeek));
+        Assert.Equal(
+            (TestData.Instant("2026-02-01T00:00:00+01:00"), TestData.Instant("2026-03-01T00:00:00+01:00")),
+            index.ResolvePreset(DatePreset.LastMonth));
+        Assert.Equal(
+            (TestData.Instant("2025-01-01T00:00:00+01:00"), TestData.Instant("2026-01-01T00:00:00+01:00")),
+            index.ResolvePreset(DatePreset.LastYear));
+
+        // Each ends exactly where its "this" counterpart begins.
+        Assert.Equal(index.ResolvePreset(DatePreset.ThisWeek).From, index.ResolvePreset(DatePreset.LastWeek).To);
+        Assert.Equal(index.ResolvePreset(DatePreset.ThisMonth).From, index.ResolvePreset(DatePreset.LastMonth).To);
+        Assert.Equal(index.ResolvePreset(DatePreset.ThisYear).From, index.ResolvePreset(DatePreset.LastYear).To);
+    }
+
+    [Fact]
+    public void Year_to_date_ends_with_today_rather_than_with_the_year()
+    {
+        // Now is Sunday 15 March 2026. YearToDate = [1 Jan, 16 Mar), so the later rows of 2026 fall outside it.
+        Assert.Equal([0, 1, 2, 3, 4], Rows("OrderDate", DateSelection.Relative(DatePreset.YearToDate)));
+        Assert.Equal([0, 1, 2, 3, 4, 5, 6, 7], Rows("OrderDate", DateSelection.Relative(DatePreset.ThisYear)));
+
+        var index = Assert.IsType<DateFacetIndex>(Dashboard.FacetIndex("OrderDate"));
+        Assert.Equal(
+            (TestData.Instant("2026-01-01T00:00:00+01:00"), TestData.Instant("2026-03-16T00:00:00+01:00")),
+            index.ResolvePreset(DatePreset.YearToDate));
+
+        // It starts with the year and ends with today.
+        Assert.Equal(index.ResolvePreset(DatePreset.ThisYear).From, index.ResolvePreset(DatePreset.YearToDate).From);
+        Assert.Equal(index.ResolvePreset(DatePreset.Today).To, index.ResolvePreset(DatePreset.YearToDate).To);
+    }
+
+    [Fact]
+    public void Last_month_across_a_dst_change_carries_both_offsets()
+    {
+        var clock = new FixedTimeProvider(TestData.Instant("2026-04-15T10:00:00Z"));
+        var (from, to) = DatePresets.Resolve(DatePreset.LastMonth, clock.GetUtcNow(), TestData.Stockholm);
+
+        Assert.Equal(TestData.Instant("2026-03-01T00:00:00+01:00"), from);
+        Assert.Equal(TestData.Instant("2026-04-01T00:00:00+02:00"), to);
+    }
+
+    [Fact]
     public void Preset_across_a_dst_change_carries_both_offsets()
     {
         var clock = new FixedTimeProvider(TestData.Instant("2026-03-30T10:00:00Z")); // Monday after DST start

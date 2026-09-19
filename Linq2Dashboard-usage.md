@@ -75,7 +75,7 @@ Rules of the builder:
 - Range facets accept any numeric type or its nullable form. Date facets accept `DateTime`, `DateTimeOffset`, `DateOnly` or their nullable forms.
 - Value facet options: `Name`, `Top(n)` with an "Other" remainder, `RankBy(RankMode.TotalCount)` for a stable list, `Searchable()`, `Label(row => text)`, `Comparer(...)`, `Serialize(format, parse)` for value types JSON cannot round-trip by default.
 - Range facet options: `Name`, `Buckets(cuts...)` strictly ascending, or `AutoBuckets(count)` for equal widths.
-- Date facet options: `Name`, `TimeZone`, `Granularity` (Year, Month, ISO Week, Day), `Presets` (Today, Yesterday, Last7Days, Last30Days, ThisWeek, ThisMonth, ThisYear).
+- Date facet options: `Name`, `TimeZone`, `Granularity` (Year, Month, ISO Week, Day), `Presets` (Today, Yesterday, Last7Days, Last30Days, ThisWeek, LastWeek, ThisMonth, LastMonth, ThisYear, LastYear, YearToDate).
 - `CalculatedMetric` reads earlier metrics by key through `m["key"]`. It gives no value when any input has none or the result is not finite. Define its inputs before it.
 - `UseTimeProvider` supplies "now" for relative presets, for tests.
 - Mistakes surface inside `Create`, not at first use: an unknown metric key in a formula, a non-numeric range selector, non-ascending cuts, a duplicate key.

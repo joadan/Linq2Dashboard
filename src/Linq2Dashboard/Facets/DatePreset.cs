@@ -22,9 +22,21 @@ public enum DatePreset
     /// <summary>The ISO week containing today, Monday to Sunday.</summary>
     ThisWeek,
 
+    /// <summary>The ISO week before the one containing today, Monday to Sunday.</summary>
+    LastWeek,
+
     /// <summary>The calendar month containing today.</summary>
     ThisMonth,
 
+    /// <summary>The calendar month before the one containing today.</summary>
+    LastMonth,
+
     /// <summary>The calendar year containing today.</summary>
     ThisYear,
+
+    /// <summary>The calendar year before the one containing today.</summary>
+    LastYear,
+
+    /// <summary>The calendar year containing today, up to and including today: [start of the year, start of tomorrow).</summary>
+    YearToDate,
 }

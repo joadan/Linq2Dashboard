@@ -90,8 +90,12 @@ public class DefaultDashboardFormatter : IDashboardFormatter
         DatePreset.Last7Days => "Last 7 days",
         DatePreset.Last30Days => "Last 30 days",
         DatePreset.ThisWeek => "This week",
+        DatePreset.LastWeek => "Last week",
         DatePreset.ThisMonth => "This month",
+        DatePreset.LastMonth => "Last month",
         DatePreset.ThisYear => "This year",
+        DatePreset.LastYear => "Last year",
+        DatePreset.YearToDate => "Year to date",
         _ => preset.ToString(),
     };
 
