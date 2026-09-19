@@ -26,6 +26,8 @@ internal sealed class DateFacetDefinition<T, TDate> : FacetDefinition<T>
 
     public DatePreset[] Presets { get; set; } = [];
 
+    public bool SkipEmptyPresets { get; set; }
+
     public override FacetIndex Build(T[] items, TimeProvider timeProvider, bool parallel)
     {
         TimeZoneInfo zone = Zone;
@@ -36,7 +38,7 @@ internal sealed class DateFacetDefinition<T, TDate> : FacetDefinition<T>
             return read.HasValue;
         }, zone, Granularity);
 
-        return new DateFacetIndex(Key, Name, column, Presets, timeProvider);
+        return new DateFacetIndex(Key, Name, column, Presets, SkipEmptyPresets, timeProvider);
     }
 }
 

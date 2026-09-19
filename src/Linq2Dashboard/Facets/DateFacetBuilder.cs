@@ -7,6 +7,7 @@ public sealed class DateFacetBuilder<T>
     private readonly Action<TimeZoneInfo> setZone;
     private readonly Action<DateGranularity> setGranularity;
     private readonly Action<DatePreset[]> setPresets;
+    private readonly Action<bool> setSkipEmptyPresets;
     private readonly Action ensureMutable;
 
     internal DateFacetBuilder(
@@ -15,6 +16,7 @@ public sealed class DateFacetBuilder<T>
         Action<TimeZoneInfo> setZone,
         Action<DateGranularity> setGranularity,
         Action<DatePreset[]> setPresets,
+        Action<bool> setSkipEmptyPresets,
         Action ensureMutable)
     {
         Key = key;
@@ -22,6 +24,7 @@ public sealed class DateFacetBuilder<T>
         this.setZone = setZone;
         this.setGranularity = setGranularity;
         this.setPresets = setPresets;
+        this.setSkipEmptyPresets = setSkipEmptyPresets;
         this.ensureMutable = ensureMutable;
     }
 
@@ -73,6 +76,19 @@ public sealed class DateFacetBuilder<T>
 
         ensureMutable();
         setPresets(presets.Distinct().ToArray());
+        return this;
+    }
+
+    /// <summary>
+    /// Leave a preset out of the state when no row in the dataset falls in it, the way a value no
+    /// row has is not a facet value (concept §5). Off by default. Resolved at each calculation, so
+    /// a preset whose interval moves onto rows comes back; a selected preset is left out too, and
+    /// clearing the facet still removes it.
+    /// </summary>
+    public DateFacetBuilder<T> SkipEmptyPresets(bool skip = true)
+    {
+        ensureMutable();
+        setSkipEmptyPresets(skip);
         return this;
     }
 }

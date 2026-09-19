@@ -102,6 +102,7 @@ public sealed class DashboardBuilder<T>
             zone => definition.Zone = zone,
             granularity => definition.Granularity = granularity,
             presets => definition.Presets = presets,
+            skip => definition.SkipEmptyPresets = skip,
             EnsureMutable);
     }
 

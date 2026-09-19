@@ -46,7 +46,8 @@ var dashboard = Dashboard.Create(orders, b =>
     b.DateFacet(x => x.OrderDate)
      .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
      .Granularity(DateGranularity.Month)
-     .Presets(DatePreset.Today, DatePreset.Last7Days, DatePreset.ThisYear);
+     .Presets(DatePreset.Today, DatePreset.Last7Days, DatePreset.ThisYear)
+     .SkipEmptyPresets();                                     // leave out a preset no row falls in (§C5)
 
     b.TextFacet("search", (x, text) =>                          // free text, matched by the application (§C5)
         x.CustomerName.Contains(text, StringComparison.OrdinalIgnoreCase)
@@ -441,7 +442,7 @@ Selecting the top `N` from `V = 100 000` counts is a partial sort, `O(V)` expect
 
 ### 4.5 Range and date facets
 
-Buckets are counted through `bucketCodes` exactly like value facets. Each `Bucket` gets `Selected = true` when the current interval fully covers it. `Null` reports `counts[0]`. For date facets, each configured preset is resolved and counted against `C_f` as well, so the UI can show "Last 7 days (312)" without a round trip.
+Buckets are counted through `bucketCodes` exactly like value facets. Each `Bucket` gets `Selected = true` when the current interval fully covers it. `Null` reports `counts[0]`. For date facets, each configured preset is resolved and counted against `C_f` as well, so the UI can show "Last 7 days (312)" without a round trip. With `SkipEmptyPresets`, a preset whose total over the dataset (or the scope) is zero is not added to the state at all, selected or not, which is the presets' counterpart of the `totals[code] > 0` gate the value facet already applies; it is re-decided here on every calculation, since the interval follows the clock, and it saves no work because the scan is what discovers the count.
 
 ### 4.6 Metrics
 
@@ -773,4 +774,5 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 - **A component never sets a floor under the host's layout, and a bar too narrow for its text shows no text.** The histogram's columns are contained in the inline axis so the bucket count cannot push the host's column, and the same declaration makes each column a query container that drops its label and count below `4rem`. Nothing is better than part of a number. Decided 2026-09-18. See §9.6.
 - **There is no matching-count component; a `Count` metric is the matching row count.** The engine already returns `matching.Count` with its share for a count metric, so a second component only saved one builder line and forced a nullable `MetricState` into the shared template context. Decided 2026-09-18. See §9.5.
 - **Every metric builder method carries a `Metric` suffix.** `b.Sum("revenue", …)` and `b.Count("orders")` read as LINQ operators over the builder, not as declarations; the facet methods had said what they defined since the start, and metrics were the one group that did not. `CountMetric`, `SumMetric`, `AverageMetric`, `MinMetric`, `MaxMetric`, `DistinctMetric` and `CalculatedMetric` restore the symmetry. A grouping property (`b.Metrics.Sum`) and a key-first entry point (`b.Metric("revenue").Sum(…)`) were both considered and dropped: the first has no facet counterpart, the second costs a second object per metric. Breaking, with no shim, as the `Title`→`Name` rename was. Decided 2026-09-18. See §2.1.
+- **An empty date preset can be left out of the state, through `SkipEmptyPresets` on the facet.** A preset is declared rather than discovered, so it is the one facet entry that can carry a total of zero; value facets already drop those, and this gives date presets the same rule where the count is computed, in `Present`. Off by default, since a dashboard rebuilt over live data legitimately shows "Today (0)" before the first row of the day arrives. A selected empty preset is dropped as well, matching the value facet, and stays clearable through the facet header and the active selections. Decided 2026-09-19. See §4.5, §C5.
 - **Scoping a built dashboard is `ScopeTo`, not `Where`.** Every document calls the result a scope, so the usage guide had to translate the method name into the domain word on each mention ("`dashboard.Where(...)` scopes without a rebuild"). `Where` also promises LINQ: a lazy sequence, free until enumerated, whereas this does a pass over the rows plus a count per facet and metric and returns an object the host keeps and caches. `DashboardState<T>.Items` is an `IEnumerable<T>`, so `dashboard.Where(x => …)` and `state.Items.Where(x => …)` could sit in one page meaning different things. The builder's fixed filter keeps `Where`: it configures rather than returning a thing, and there the LINQ echo is honest. Breaking, with no shim. Decided 2026-09-18. See §2.1, §3.1.

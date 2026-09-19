@@ -10,16 +10,17 @@ internal sealed class DateFacetIndex : FacetIndex
     private readonly int[] totals;
     private readonly RowSet? scope;
 
-    public DateFacetIndex(string key, string name, DateColumn column, IReadOnlyList<DatePreset> presets, TimeProvider timeProvider)
-        : this(key, name, column, presets, timeProvider, column.TotalCountsArray, null)
+    public DateFacetIndex(string key, string name, DateColumn column, IReadOnlyList<DatePreset> presets, bool skipEmptyPresets, TimeProvider timeProvider)
+        : this(key, name, column, presets, skipEmptyPresets, timeProvider, column.TotalCountsArray, null)
     {
     }
 
-    private DateFacetIndex(string key, string name, DateColumn column, IReadOnlyList<DatePreset> presets, TimeProvider timeProvider, int[] totals, RowSet? scope)
+    private DateFacetIndex(string key, string name, DateColumn column, IReadOnlyList<DatePreset> presets, bool skipEmptyPresets, TimeProvider timeProvider, int[] totals, RowSet? scope)
         : base(key, name, FacetKind.Date, scope?.Count ?? column.RowCount)
     {
         Column = column;
         Presets = presets;
+        SkipEmptyPresets = skipEmptyPresets;
         TimeProvider = timeProvider;
         this.totals = totals;
         this.scope = scope;
@@ -28,6 +29,8 @@ internal sealed class DateFacetIndex : FacetIndex
     public DateColumn Column { get; }
 
     public IReadOnlyList<DatePreset> Presets { get; }
+
+    public bool SkipEmptyPresets { get; }
 
     public TimeProvider TimeProvider { get; }
 
@@ -61,17 +64,23 @@ internal sealed class DateFacetIndex : FacetIndex
             buckets[i] = new DateBucket(from, to, Column.BucketStart(i), totals[i + 1], counts[i + 1], selected);
         }
 
-        var presets = new PresetState[Presets.Count];
-        for (int i = 0; i < presets.Length; i++)
+        var presets = new List<PresetState>(Presets.Count);
+        foreach (DatePreset preset in Presets)
         {
-            DatePreset preset = Presets[i];
             (DateTimeOffset from, DateTimeOffset to) = ResolvePreset(preset);
             RowSet rows = Column.RowsInInterval(from, to);
             int total = scope is null ? rows.Count : rows.And(scope).Count;
+            if (SkipEmptyPresets && total == 0)
+            {
+                // A preset no row falls in is not offered, the way a value no row has is not a
+                // facet value (concept §5). Being selected does not bring it back.
+                continue;
+            }
+
             // Selected when the selection is this preset, or an absolute interval that is exactly the preset's interval
             // (a click on the March bar lights "This month"). Coverage would light every preset inside a wide selection.
             bool selected = date?.Preset == preset || (hasInterval && date?.Preset is null && selectedFrom == from && selectedTo == to);
-            presets[i] = new PresetState(preset, from, to, total, rows.And(context).Count, selected);
+            presets.Add(new PresetState(preset, from, to, total, rows.And(context).Count, selected));
         }
 
         var nullValue = new FacetValue(null, totals[0], counts[0], date is { IncludeNull: true });
@@ -83,7 +92,7 @@ internal sealed class DateFacetIndex : FacetIndex
     {
         var scoped = new int[Column.BucketCount + 1];
         Column.CountInto(scope, scoped);
-        return new DateFacetIndex(Key, Name, Column, Presets, TimeProvider, scoped, scope);
+        return new DateFacetIndex(Key, Name, Column, Presets, SkipEmptyPresets, TimeProvider, scoped, scope);
     }
 
     /// <summary>Design §2.5: <c>from</c>/<c>to</c> as ISO 8601 instants, or <c>preset</c> in camelCase; <c>{ "onlyNull": true }</c> for the null rows alone.</summary>

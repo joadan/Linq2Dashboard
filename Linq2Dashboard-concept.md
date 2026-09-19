@@ -224,6 +224,7 @@ The property is a point in time: order date, created, last login.
 
 - Values: buckets by calendar period (year, month, week, day), with counts. Optionally a set of relative presets (today, last 7 days, this year).
 - Selection: a continuous `[from, to]` interval, like the range facet, or a named relative preset that resolves to an interval at calculation time.
+- A preset no row falls in can be left out of the state, the way a value no row has is not a facet value (§4.10). This is a facet definition choice and is off by default; the zero-count rule of §4.3 is about filtered counts and is unchanged. Because a preset's interval moves with the clock, it is decided at each calculation, so a preset comes back once its interval reaches a row. A selected preset is left out on the same terms: the selection still applies, still matches, still shows among the active selections and still clears.
 
 **Starting position on dates** (to be revisited once the first version is in use):
 
@@ -396,6 +397,7 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **The name in the definition is a default display name; the UI may override it.** A display name is presentation, but the state is consumed outside Blazor too, so the core carries one string per facet and metric and every consumer has a name for every key. A component replaces it for its own rendering only, for example with a localised string, so one dashboard serves every language without a rebuild. Nothing else (state, chips, JSON) sees the override. It is called `Name`, not `Title`, since `title` is an HTML attribute the components pass through and a parameter of that name would swallow it. Decided 2026-09-15. See §7.
 - **Metrics are over all matching rows only.** Per-facet-value metrics belong to grouping, later. See §4.4 and §8.
 - **Zero-count values stay in the state.** The core always includes them; hiding or greying them out is a UI choice. See §4.3.
+- **A date preset no row falls in can be left out of the state.** Off by default, per facet. A preset is declared rather than discovered, so unlike a value it can name an interval the dataset has nothing in; a facet that asks is not offered one, selected or not. Decided 2026-09-19. See §5.
 - **Metrics skip null.** Sum, average, min and max use rows with a value; average divides by that number. Count is unaffected. See §4.4.
 - **Every metric carries its share of the total.** A fraction of the same aggregation over all rows after fixed filters, on the state itself rather than as a separate metric kind. Defined for count, sum and distinct count; "no value" for the other aggregations, for a metric without a value and for a zero total. Added 2026-09-14. See §4.4.
 - **Distinct count is a metric aggregation.** Different non-null values among the matching rows, with value facet equality (case-insensitive strings by default). Exact, never approximate; per-facet-value breakdowns stay with grouping. Added 2026-09-14. See §4.4.

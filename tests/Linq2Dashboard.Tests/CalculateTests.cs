@@ -35,6 +35,9 @@ public class CalculateTests
 
     private static ValueFacetState Values(DashboardState<Order> state, string key) => (ValueFacetState)state.Facet(key);
 
+    private static IEnumerable<DatePreset> Presets(DashboardState<Order> state, string key) =>
+        ((DateFacetState)state.Facet(key)).Presets.Select(p => p.Preset);
+
     private static (object? Value, int Total, int Filtered, bool Selected)[] Flatten(IEnumerable<FacetValue> values) =>
         values.Select(v => (v.Value, v.TotalCount, v.FilteredCount, v.Selected)).ToArray();
 
@@ -290,6 +293,58 @@ public class CalculateTests
 
         var clicked = Shared.Calculate(Selections.Empty.With("OrderDate", dates.Buckets[1].ToSelection()));
         Assert.Equal([2, 3], clicked.Items.Select(o => o.Id).Order());
+    }
+
+    [Fact]
+    public void Empty_presets_are_left_out_only_when_the_facet_asks_for_it()
+    {
+        var dashboard = Build(b =>
+        {
+            b.DateFacet("Lean", x => x.OrderDate).TimeZone(TestData.Stockholm)
+                .Presets(DatePreset.Today, DatePreset.ThisMonth).SkipEmptyPresets();
+            b.DateFacet("Full", x => x.OrderDate).TimeZone(TestData.Stockholm)
+                .Presets(DatePreset.Today, DatePreset.ThisMonth);
+        });
+        var state = dashboard.Calculate();
+
+        // Today is Sunday 15 March and no order falls on it, so only March is offered.
+        Assert.Equal([DatePreset.ThisMonth], Presets(state, "Lean"));
+
+        // Off by default: the preset stays, with a total of zero (concept §4.3).
+        var full = (DateFacetState)state.Facet("Full");
+        Assert.Equal([DatePreset.Today, DatePreset.ThisMonth], full.Presets.Select(p => p.Preset));
+        Assert.Equal([(0, 0), (3, 3)], full.Presets.Select(p => (p.TotalCount, p.FilteredCount)));
+    }
+
+    [Fact]
+    public void A_selected_empty_preset_is_left_out_too_and_stays_clearable()
+    {
+        var dashboard = Build(b => b.DateFacet("Lean", x => x.OrderDate).TimeZone(TestData.Stockholm)
+            .Presets(DatePreset.Today, DatePreset.ThisMonth).SkipEmptyPresets());
+        var state = dashboard.Calculate(Selections.Empty.With("Lean", DateSelection.Relative(DatePreset.Today)));
+        var lean = (DateFacetState)state.Facet("Lean");
+
+        // Being selected does not bring it back, the way a selected value no row has does not come back.
+        Assert.Equal([DatePreset.ThisMonth], lean.Presets.Select(p => p.Preset));
+        Assert.All(lean.Presets, p => Assert.False(p.Selected));
+
+        // The selection still applies and the facet still reports it, so clearing works.
+        Assert.Equal(0, state.MatchingCount);
+        Assert.True(lean.HasSelection);
+        Assert.Equal(DateSelection.Relative(DatePreset.Today), lean.Selection);
+    }
+
+    [Fact]
+    public void A_preset_a_scope_empties_is_left_out_of_that_scope_alone()
+    {
+        var dashboard = Build(b => b.DateFacet("Lean", x => x.OrderDate).TimeZone(TestData.Stockholm)
+            .Presets(DatePreset.Last7Days, DatePreset.ThisMonth).SkipEmptyPresets());
+
+        // Last7Days is 9 to 15 March, which holds only row 4, a DK order.
+        Assert.Equal([DatePreset.Last7Days, DatePreset.ThisMonth], Presets(dashboard.Calculate(), "Lean"));
+
+        var swedish = dashboard.ScopeTo(Selections.Empty.With("Country", ValueSelection.Of("SE")));
+        Assert.Equal([DatePreset.ThisMonth], Presets(swedish.Calculate(), "Lean"));
     }
 
     [Fact]
