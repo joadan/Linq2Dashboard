@@ -184,17 +184,20 @@ public sealed record FacetCount(int TotalCount, int FilteredCount);
 
 /// <summary>
 /// One bucket of a range facet, covering <c>[From, To)</c>; the last bucket also includes
-/// <c>To</c>. Bounds may be infinite. <see cref="Selected"/> is true when the current interval
-/// fully covers the bucket.
+/// <c>To</c>. Bounds may be infinite. <see cref="Selected"/> is true when one of the selected
+/// intervals fully covers the bucket.
 /// </summary>
 public sealed record RangeBucket(double From, double To, int TotalCount, int FilteredCount, bool Selected)
 {
-    /// <summary>The selection a click on this bucket produces (design §2.2).</summary>
-    public RangeSelection ToSelection() => new(
+    /// <summary>The interval a click on this bucket toggles (design §2.2): <c>[From, To)</c>, unbounded where the bucket is open-ended.</summary>
+    public RangeInterval ToInterval() => new(
         double.IsInfinity(From) ? null : From,
         double.IsInfinity(To) ? null : To,
         fromInclusive: true,
         toInclusive: false);
+
+    /// <summary>A selection of this bucket's interval alone.</summary>
+    public RangeSelection ToSelection() => new([ToInterval()]);
 }
 
 /// <summary>
@@ -203,13 +206,19 @@ public sealed record RangeBucket(double From, double To, int TotalCount, int Fil
 /// </summary>
 public sealed record DateBucket(DateTimeOffset From, DateTimeOffset To, DateTime PeriodStart, int TotalCount, int FilteredCount, bool Selected)
 {
-    /// <summary>The selection a click on this bucket produces (design §2.2).</summary>
-    public DateSelection ToSelection() => DateSelection.Between(From, To);
+    /// <summary>The part a click on this bucket toggles (design §2.2): the absolute interval <c>[From, To)</c>.</summary>
+    public DateInterval ToInterval() => DateInterval.Between(From, To);
+
+    /// <summary>A selection of this bucket's interval alone.</summary>
+    public DateSelection ToSelection() => new([ToInterval()]);
 }
 
 /// <summary>A relative preset resolved as of this calculation (concept §5), with its counts.</summary>
 public sealed record PresetState(DatePreset Preset, DateTimeOffset From, DateTimeOffset To, int TotalCount, int FilteredCount, bool Selected)
 {
-    /// <summary>The selection a click on this preset produces: relative, so it follows the clock (design §2.2).</summary>
-    public DateSelection ToSelection() => DateSelection.Relative(Preset);
+    /// <summary>The part a click on this preset toggles: relative, so it follows the clock (design §2.2).</summary>
+    public DateInterval ToInterval() => DateInterval.Relative(Preset);
+
+    /// <summary>A selection of this preset alone.</summary>
+    public DateSelection ToSelection() => new([ToInterval()]);
 }

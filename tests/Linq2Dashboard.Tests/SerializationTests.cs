@@ -100,6 +100,46 @@ public class SerializationTests
         }
     }
 
+    /// <summary>Design §2.5: several intervals write an array of the flat objects; one interval keeps the flat form.</summary>
+    [Fact]
+    public void Range_selections_with_several_intervals_write_an_array_and_round_trip()
+    {
+        var low = new RangeInterval(null, 100, toInclusive: false);
+        var high = RangeInterval.AtLeast(1000);
+        var two = Selections.Empty.With("Amount", new RangeSelection([low, high]));
+        var twoAndNull = Selections.Empty.With("Amount", new RangeSelection([low, high], includeNull: true));
+
+        Assert.Equal("""{"Amount":{"intervals":[{"to":100,"toInclusive":false},{"from":1000}]}}""", Serializer.ToJson(two));
+        Assert.Equal("""{"Amount":{"intervals":[{"to":100,"toInclusive":false},{"from":1000}],"includeNull":true}}""", Serializer.ToJson(twoAndNull));
+        Assert.Equal(two, Serializer.FromJson(Serializer.ToJson(two)));
+        Assert.Equal(twoAndNull, Serializer.FromJson(Serializer.ToJson(twoAndNull)));
+
+        // Reading is lenient: an interval that cannot be read is dropped, the rest stays; an explicit unbounded interval is every value.
+        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.AtLeast(1000)),
+            Serializer.FromJson("""{ "Amount": { "intervals": [ { "from": 5, "to": 1 }, "text", { "from": 1000 } ] } }"""));
+        Assert.Equal(Selections.Empty.With("Amount", new RangeSelection([new RangeInterval(null, null)])),
+            Serializer.FromJson("""{ "Amount": { "intervals": [ {} ] } }"""));
+        Assert.True(Serializer.FromJson("""{ "Amount": { "intervals": [] } }""").IsEmpty);
+        Assert.True(Serializer.FromJson("""{ "Amount": { "intervals": 5 } }""").IsEmpty);
+        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.OnlyNull),
+            Serializer.FromJson("""{ "Amount": { "intervals": [], "includeNull": true } }"""));
+    }
+
+    [Fact]
+    public void Date_selections_with_several_parts_write_an_array_and_round_trip()
+    {
+        var march = DateInterval.Between(TestData.Instant("2026-03-01T00:00:00+01:00"), TestData.Instant("2026-04-01T00:00:00+02:00"));
+        var recent = DateInterval.Relative(DatePreset.Last7Days);
+        var mixed = Selections.Empty.With("OrderDate", new DateSelection([march, recent], includeNull: true));
+
+        Assert.Equal(
+            """{"OrderDate":{"intervals":[{"from":"2026-03-01T00:00:00.0000000+01:00","to":"2026-04-01T00:00:00.0000000+02:00"},{"preset":"last7Days"}],"includeNull":true}}""",
+            Serializer.ToJson(mixed));
+        Assert.Equal(mixed, Serializer.FromJson(Serializer.ToJson(mixed)));
+        Assert.Equal(Selections.Empty.With("OrderDate", DateSelection.Relative(DatePreset.Last7Days)),
+            Serializer.FromJson("""{ "OrderDate": { "intervals": [ { "preset": "nextWeek" }, { "preset": "last7Days" } ] } }"""));
+    }
+
     [Fact]
     public void Date_selections_write_instants_or_camel_case_presets_and_round_trip()
     {
@@ -121,7 +161,7 @@ public class SerializationTests
         }
 
         var restored = (DateSelection)Serializer.FromJson(Serializer.ToJson(absolute))["OrderDate"]!;
-        Assert.Equal(TimeSpan.FromHours(1), restored.From!.Value.Offset);
+        Assert.Equal(TimeSpan.FromHours(1), restored.Intervals[0].From!.Value.Offset);
     }
 
     [Fact]
@@ -197,7 +237,9 @@ public class SerializationTests
         Assert.True(restored.IsEmpty);
 
         Assert.True(Serializer.FromJson("""{ "Amount": {} }""").IsEmpty);
-        Assert.Equal(Selections.Empty.With("Amount", new RangeSelection(null, null, includeNull: true)),
+
+        // The flat form without a bound carries no interval, so with the null flag it is the null rows alone.
+        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.OnlyNull),
             Serializer.FromJson("""{ "Amount": { "includeNull": true } }"""));
         Assert.True(Serializer.FromJson("""{ "Amount": { "from": 1, "toInclusive": "yes" } }""").IsEmpty);
     }

@@ -230,6 +230,37 @@ public class CalculateTests
         Assert.All(partial.Buckets, b => Assert.False(b.Selected));
     }
 
+    /// <summary>Concept §5: bars toggle like values. Two bucket clicks select both buckets' rows and light both bars, and the null value joins as one more part.</summary>
+    [Fact]
+    public void Range_buckets_toggle_like_values_and_light_every_selected_bucket()
+    {
+        var amount = (RangeFacetState)Shared.Calculate().Facet("Amount");
+
+        var selections = Selections.Empty
+            .ToggleInterval("Amount", amount.Buckets[0].ToInterval())
+            .ToggleInterval("Amount", amount.Buckets[3].ToInterval());
+        var state = Shared.Calculate(selections);
+        var clicked = (RangeFacetState)state.Facet("Amount");
+
+        Assert.Equal(4, state.MatchingCount);
+        Assert.Equal([true, false, false, true], clicked.Buckets.Select(b => b.Selected));
+        Assert.Equal([2, 2, 2, 2], clicked.Buckets.Select(b => b.FilteredCount)); // the facet's own selection is excluded from its own counts
+        Assert.False(clicked.Null.Selected);
+
+        // Clicking the first bar again leaves the last bucket alone; clicking that too clears the facet.
+        var one = Shared.Calculate(selections.ToggleInterval("Amount", amount.Buckets[0].ToInterval()));
+        Assert.Equal([false, false, false, true], ((RangeFacetState)one.Facet("Amount")).Buckets.Select(b => b.Selected));
+        Assert.True(one.Selections.ToggleInterval("Amount", amount.Buckets[3].ToInterval()).IsEmpty);
+
+        // The null value toggles beside the buckets: with a bucket it adds its rows, alone it is the null rows only.
+        var discount = (RangeFacetState)Shared.Calculate().Facet("Discount");
+        var withNull = Shared.Calculate(Selections.Empty.With("Discount", discount.Buckets[0].ToSelection().ToggleNull()));
+        var withNullDiscount = (RangeFacetState)withNull.Facet("Discount");
+        Assert.True(withNullDiscount.Null.Selected);
+        Assert.True(withNullDiscount.Buckets[0].Selected);
+        Assert.Equal(discount.Buckets[0].TotalCount + discount.Null.TotalCount, withNull.MatchingCount);
+    }
+
     [Fact]
     public void Range_facet_null_value_is_counted_and_selectable()
     {
@@ -293,6 +324,37 @@ public class CalculateTests
 
         var clicked = Shared.Calculate(Selections.Empty.With("OrderDate", dates.Buckets[1].ToSelection()));
         Assert.Equal([2, 3], clicked.Items.Select(o => o.Id).Order());
+    }
+
+    /// <summary>Concept §5: period bars and presets toggle like values; every selected part lights its bar or pill.</summary>
+    [Fact]
+    public void Date_buckets_and_presets_toggle_like_values_and_light_every_selected_part()
+    {
+        var dates = (DateFacetState)Shared.Calculate().Facet("OrderDate");
+
+        var selections = Selections.Empty
+            .ToggleInterval("OrderDate", dates.Buckets[0].ToInterval())
+            .ToggleInterval("OrderDate", dates.Buckets[3].ToInterval());
+        var state = Shared.Calculate(selections);
+        var two = (DateFacetState)state.Facet("OrderDate");
+
+        Assert.Equal(3, state.MatchingCount); // January (1) and April (2)
+        Assert.Equal([true, false, false, true], two.Buckets.Select(b => b.Selected));
+        Assert.All(two.Presets, p => Assert.False(p.Selected));
+
+        // A preset joins as a part of its own: "Last 7 days" lights, its bar (March) does not, since a preset covers only part of a month.
+        var withPreset = (DateFacetState)Shared.Calculate(selections.ToggleInterval("OrderDate", dates.Presets[1].ToInterval())).Facet("OrderDate");
+        Assert.Equal([true, false, false, true], withPreset.Buckets.Select(b => b.Selected));
+        Assert.Equal([false, true], withPreset.Presets.Select(p => p.Selected));
+
+        // The March bar as a part lights "This month" as before, beside the other parts.
+        var withMarch = (DateFacetState)Shared.Calculate(selections.ToggleInterval("OrderDate", dates.Buckets[2].ToInterval())).Facet("OrderDate");
+        Assert.Equal([true, false, true, true], withMarch.Buckets.Select(b => b.Selected));
+        Assert.Equal([true, false], withMarch.Presets.Select(p => p.Selected));
+
+        // Toggling a part off removes it alone; the last one clears the facet.
+        Assert.Equal(dates.Buckets[3].ToSelection(), selections.ToggleInterval("OrderDate", dates.Buckets[0].ToInterval())["OrderDate"]);
+        Assert.True(selections.ToggleInterval("OrderDate", dates.Buckets[0].ToInterval()).ToggleInterval("OrderDate", dates.Buckets[3].ToInterval()).IsEmpty);
     }
 
     [Fact]

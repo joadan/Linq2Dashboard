@@ -94,12 +94,28 @@ public class QuerySerializationTests
         Assert.Equal(RangeSelection.AtLeast(100), ReadOne("Amount", "100.."));
         Assert.Equal(RangeSelection.AtMost(500), ReadOne("Amount", "..500"));
         Assert.Equal(new RangeSelection(100, 500, includeNull: true), ReadOne("Amount", "100..500,null"));
-        Assert.Equal(new RangeSelection(null, null, includeNull: true), ReadOne("Amount", "..,null"));
         Assert.Equal(RangeSelection.OnlyNull, ReadOne("Amount", "null"));
+        Assert.Equal(RangeSelection.OnlyNull, ReadOne("Amount", "null,null"));
         Assert.Equal(RangeSelection.Between(100, 100), ReadOne("Amount", "100"));
         Assert.Equal(RangeSelection.Between(-5, 5), ReadOne("Amount", "-5..5"));
         // A hand-written URL with a raw plus in an exponent decodes it as a space; the number is still read.
         Assert.Equal(RangeSelection.Between(0.5, 1e21), Read("Amount=0.5..1E+21")["Amount"]);
+    }
+
+    /// <summary>Design §2.5: the intervals of one facet are a comma-separated list, like the values of a value facet, with null as one more item.</summary>
+    [Fact]
+    public void Range_selections_with_several_intervals_write_a_comma_separated_list_and_read_back()
+    {
+        var low = new RangeInterval(null, 100, toInclusive: false);
+        var high = RangeInterval.AtLeast(1000);
+
+        Assert.Equal("[..100),1000..", Serializer.ToQuery(Selections.Empty.With("Amount", new RangeSelection([low, high])))["Amount"]);
+        Assert.Equal("[..100),1000..,null", Serializer.ToQuery(Selections.Empty.With("Amount", new RangeSelection([low, high], includeNull: true)))["Amount"]);
+
+        Assert.Equal(new RangeSelection([low, high]), ReadOne("Amount", "[..100),1000.."));
+        Assert.Equal(new RangeSelection([low, high], includeNull: true), ReadOne("Amount", "1000..,null,[..100)"));
+        Assert.Equal(new RangeSelection([RangeInterval.Between(5, 5), RangeInterval.Between(7, 7)]), ReadOne("Amount", "5,7"));
+        Assert.Equal(RangeSelection.Between(100, 500), ReadOne("Amount", "100..500,,100..500")); // duplicates and empty items collapse
     }
 
     [Fact]
@@ -108,8 +124,23 @@ public class QuerySerializationTests
         Assert.Null(ReadOne("Amount", "500..100"));
         Assert.Null(ReadOne("Amount", "abc..100"));
         Assert.Null(ReadOne("Amount", ".."));
+        Assert.Null(ReadOne("Amount", "..,null"));
         Assert.Null(ReadOne("Amount", "100..500,SE"));
+        Assert.Null(ReadOne("Amount", "100..500,abc..1"));
         Assert.Null(ReadOne("Amount", "NaN..1"));
+    }
+
+    [Fact]
+    public void Date_selections_with_several_parts_write_a_comma_separated_list_and_read_back()
+    {
+        var march = DateInterval.Between(TestData.Instant("2026-03-01T00:00:00+01:00"), TestData.Instant("2026-04-01T00:00:00+02:00"));
+        var recent = DateInterval.Relative(DatePreset.Last7Days);
+        var mixed = new DateSelection([march, recent], includeNull: true);
+
+        Assert.Equal("2026-03-01T00:00+01:00..2026-04-01T00:00+02:00,last7Days,null", Serializer.ToQuery(Selections.Empty.With("OrderDate", mixed))["OrderDate"]);
+        Assert.Equal(mixed, ReadOne("OrderDate", "last7Days,null,2026-03-01T00:00+01:00..2026-04-01T00:00+02:00"));
+        Assert.Equal(new DateSelection([DateInterval.Relative(DatePreset.Today), DateInterval.Relative(DatePreset.LastYear)]), ReadOne("OrderDate", "today,LASTYEAR"));
+        Assert.Null(ReadOne("OrderDate", "today,nextWeek"));
     }
 
     [Fact]

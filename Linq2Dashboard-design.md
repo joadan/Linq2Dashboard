@@ -99,7 +99,8 @@ var selections = Selections.Empty
     .With("OrderDate", DateSelection.Relative(DatePreset.Last30Days));
 
 // convenience for the click case
-selections = selections.Toggle("Country", "DK");     // add if absent, remove if present
+selections = selections.Toggle("Country", "DK");                        // add if absent, remove if present
+selections = selections.ToggleInterval("Amount", bucket.ToInterval());  // the same for a bar
 selections = selections.Clear("Amount");
 ```
 
@@ -114,27 +115,38 @@ sealed record ValueSelection : Selection            // ValueSelection.Of("SE", n
     //  null in Values selects the null facet value (§C4.8)
 }
 
-sealed record RangeSelection(
+sealed record RangeInterval(
     double? From, double? To,
-    bool FromInclusive = true, bool ToInclusive = true,
-    bool IncludeNull = false) : Selection;
-//  null bound = unbounded on that side
-//  RangeSelection.Between / AtLeast / AtMost; RangeSelection.OnlyNull selects the null rows alone
+    bool FromInclusive = true, bool ToInclusive = true);
+//  null bound = unbounded on that side; RangeInterval.Between / AtLeast / AtMost
 
-sealed record DateSelection : Selection
+sealed record RangeSelection : Selection            // new RangeSelection([low, high]); RangeSelection.Between(100, 500) for one
 {
-    // exactly one form: absolute (From/To) or relative (Preset); built via factories
-    DateTimeOffset? From;    // inclusive        DateSelection.Between(from, to)
+    IReadOnlyList<RangeInterval> Intervals;         // a set, OR-ed (§C4.1): order does not matter for equality
+    bool IncludeNull;                               // the null rows as one more part (§C4.8)
+    //  Toggle(interval) / ToggleNull() for the click case; Empty, OnlyNull; IsEmpty clears the facet
+}
+
+sealed record DateInterval                          // one part: absolute (From/To) or relative (Preset); built via factories
+{
+    DateTimeOffset? From;    // inclusive        DateInterval.Between(from, to)
     DateTimeOffset? To;      // exclusive
-    DatePreset?     Preset;  // resolved with TimeProvider at Calculate (§C5)   DateSelection.Relative(preset)
+    DatePreset?     Preset;  // resolved with TimeProvider at Calculate (§C5)   DateInterval.Relative(preset)
+}
+
+sealed record DateSelection : Selection             // new DateSelection([march, recent]); DateSelection.Between / Relative for one
+{
+    IReadOnlyList<DateInterval> Intervals;          // a set, OR-ed, intervals and presets mixed
     bool IncludeNull;
-    //  DateSelection.OnlyNull selects the null rows alone
+    //  Toggle(interval) / ToggleNull(); Empty, OnlyNull; IsEmpty clears the facet
 }
 
 sealed record TextSelection(string Text) : Selection;   // trimmed; whitespace-only is empty and clears the facet (§C5)
 ```
 
-`Selections` is keyed by facet key, compares by value, and treats an empty `ValueSelection` or an empty `TextSelection` as "clear". `Toggle` uses default equality on the boxed value; the facet's comparer applies when values are mapped to codes, so `"se"` and `"SE"` may both sit in a selection and still select the same rows.
+`Selections` is keyed by facet key, compares by value, and treats an empty selection of any kind as "clear": no value, no text, or no interval without the null rows. `Toggle` uses default equality on the boxed value; the facet's comparer applies when values are mapped to codes, so `"se"` and `"SE"` may both sit in a selection and still select the same rows. `ToggleInterval` is the same click for a range or date facet: it adds or removes one `RangeInterval` or `DateInterval` in that facet's set, starting from `Empty` when the facet has no selection, and clears the facet when the last part goes unless the null rows stay selected. It is a separate name because `Toggle(key, null)` must keep meaning the null value of a value facet. A slider does not toggle; it replaces the set with its one interval through `With`.
+
+**Interval sets (2026-09-19).** Until then a range or date selection was one interval, and a second bar click replaced the first. The records now hold a set of parts (§C5), toggled like values, and the null rows are a flag beside the set rather than a third form; `OnlyNull` is the empty set with the flag on. The matching set is the union of the parts' row sets (§4.1), a bucket is selected when any part covers it (§4.5), and the JSON and query forms gained a list form while the one-interval forms stayed as they were (§2.5). Bucket identities never enter a selection, so a saved selection survives a change of bucket boundaries, and adjacent bars are not merged into one interval: each stays removable on its own.
 
 Selection values reaching a value facet are brought to the facet's value type: an exact type match passes through, and primitives, decimals, strings and enums are converted, so a value that arrived as `long` or as a string from JSON still selects an `int` or enum facet value. A value that does not occur in the dataset selects nothing rather than failing (a stale bookmark degrades to fewer rows). A value that cannot be converted is an error.
 
@@ -229,7 +241,7 @@ readonly struct MetricValues { double? this[string key]; double? Value(string ke
 
 `Value` is `object?` on purpose. The UI formats it; the core does not know about cultures, which is also why buckets carry bounds rather than label strings. The one string the core carries is the application's own label for a value facet's value (§C5), supplied by the builder's `Label` selector: it is data read from the rows, not formatting, and it is on `FacetValue.Label` for presented values and behind `LabelOf` for any value, so the chip for a selected value can be named from the selection alone. The default formatter shows it when present and formats the value otherwise. Boolean facets reuse `ValueFacetState`. `FacetKind` has `Value`, `Boolean`, `Range` and `Date` in the first version, and `Text` since 2026-09-14.
 
-A bucket is `Selected` when the current interval fully covers it, so a wide interval lights up several buckets and a partial one lights up none. A preset is `Selected` when the selection is that preset or an absolute interval exactly equal to the preset's interval (clicking the March bar lights "This month"); coverage would light every preset inside a wide selection, which reads wrong. `ToSelection()` on a bucket gives exactly the selection a click should produce, so the UI never constructs interval bounds itself.
+A bucket is `Selected` when one of the selected intervals fully covers it, so a wide interval lights up several buckets, a partial one lights up none, and two bar clicks light two bars. A preset is `Selected` when one part of the selection is that preset or an absolute interval exactly equal to the preset's interval (clicking the March bar lights "This month"); coverage would light every preset inside a wide selection, which reads wrong. `ToInterval()` on a bucket or preset gives exactly the part a click should toggle, and `ToSelection()` that part alone, so the UI never constructs interval bounds itself.
 
 ### 2.5 Serialising selections
 
@@ -242,7 +254,9 @@ Selections restored = dashboard.Serializer.FromJson(json);
 {
   "Country":   { "values": ["SE", "NO"] },
   "Amount":    { "from": 100, "to": 500, "toInclusive": false },
+  "Weight":    { "intervals": [ { "to": 1, "toInclusive": false }, { "from": 50 } ], "includeNull": true },
   "OrderDate": { "preset": "last30Days" },
+  "Created":   { "intervals": [ { "from": "2026-01-01T00:00:00.0000000+01:00", "to": "2026-02-01T00:00:00.0000000+01:00" }, { "preset": "last7Days" } ] },
   "Shipped":   { "from": "2026-03-01T00:00:00.0000000+01:00", "includeNull": true },
   "Discount":  { "onlyNull": true },
   "status":    { "values": [null, "Open"] },
@@ -257,8 +271,8 @@ Selections restored = dashboard.Serializer.FromJson(json);
   ```
 
   - A value facet is a comma-separated list; `null` is the null value. A backslash escapes the next character, so a literal comma or backslash is written `\,` and `\\`; the empty string is written `""`, and the literal texts `null` and `""` are written `\null` and `\""`. Values use the same text as the JSON form: strings as they are, numbers and booleans as their JSON text, enums by name, dates in ISO 8601, and the builder's `Serialize(format, parse)` when given.
-  - A range facet is `from..to`; an empty bound is unbounded (`100..`, `..500`). Both ends are inclusive without brackets; when an end is exclusive the interval is written in bracket notation, `[100..500)`, which is what a bucket click produces. A single number is the closed interval at that value. `,null` after the interval adds the null rows; `null` alone is only the null rows.
-  - A date facet is the preset name in camelCase (`last30Days`, read case-insensitively) or `from..to` in the shortest ISO 8601 text that round-trips: seconds and fraction only when present, `Z` for a zero offset. `,null` and `null` as for ranges.
+  - A range facet is a comma-separated list of intervals, like a value facet's list of values, each `from..to`; an empty bound is unbounded (`100..`, `..500`). Both ends are inclusive without brackets; when an end is exclusive the interval is written in bracket notation, `[100..500)`, which is what a bucket click produces. A single number is the closed interval at that value. `null` as an item adds the null rows (`[..100),1000..,null`); `null` alone is only the null rows. `..` with no bound is not an interval and drops the selection.
+  - A date facet is the same list of parts, each the preset name in camelCase (`last30Days`, read case-insensitively) or `from..to` in the shortest ISO 8601 text that round-trips: seconds and fraction only when present, `Z` for a zero offset. `null` as for ranges. Interval text never contains a comma, so no escaping is needed.
   - A text facet is the text itself.
   - Encoding keeps the URL readable: only `& = + # %`, space, quotes and non-ASCII are percent-encoded, so `,` `..` `:` `[` `]` and `/` stay as they are. Reading accepts a query string with or without `?`, or a whole URL, decodes `+` as a space, and forgives a hand-written `+` in an offset or exponent that arrived as a space.
   - Reading is as lenient as JSON: a parameter that is not a facet key is ignored, a value that does not parse drops that facet, an empty value clears it, and the last of several parameters with the same name wins.
@@ -267,6 +281,7 @@ Selections restored = dashboard.Serializer.FromJson(json);
   - The Blazor view's `SyncUrl` (§9.1) is a thin client of these methods; a host that owns its URL, or a non-Blazor host, calls them directly.
 - Each facet writes and reads its own shape. Value facets write values as JSON primitives: strings, booleans and numbers as themselves, enums by name, `Guid` and the date and time types as ISO 8601 strings. Reading brings a primitive back to the facet's value type, so `"5"` or `5.0` reads into an `int` facet and `"store"` into an enum facet; booleans and numbers do not convert into each other. The builder's `Serialize(format, parse)` replaces the default with an application-supplied string form for a facet.
 - Null in a value selection is JSON `null`. Omitted interval bounds mean unbounded. Omitted flags take the defaults from §2.2, so the common case reads cleanly. Presets are written in camelCase and read case-insensitively. Instants keep their offset.
+- A range or date selection with one part writes it flat, as above; with several it writes an `intervals` array of the same objects, `includeNull` beside it. Reading accepts either, drops an element that cannot be read and keeps the rest, and reads the flat form with no bound and no preset as nothing: `{ "includeNull": true }` alone is the null rows only, the same as `{ "onlyNull": true }`, which is still what nulls-only writes. An explicitly unbounded interval, "every row with a value", is `{ "intervals": [ {} ] }`.
 - Unknown facet keys, values that cannot be read, and shapes that do not fit the facet's kind are dropped, not thrown. A stale bookmark degrades to "fewer selections", never to an error page. Only text that is not JSON at all throws.
 - The serializer is built by the dashboard because parsing needs each facet's value type. It is otherwise stateless and exposed as `dashboard.Serializer`. `ToJsonObject` and `FromJsonObject` work on `System.Text.Json.Nodes` for callers that embed selections in a larger document.
 
@@ -383,8 +398,8 @@ Per-value bitmaps (one `RowSet` per distinct value, selection as an OR of sets, 
 For each facet `f` with a non-empty selection, produce `R_f`:
 
 - Value: scan `codes` and set a bit where `codes[row]` is in the selected code set. The selected codes are looked up in a `bool[V + 1]` mask built once per selection, so the inner loop is one array read and one branch per row.
-- Range: scan `values`; set a bit where the value is inside the interval. OR in `nulls` if `IncludeNull`.
-- Date: resolve preset to `[from, to)` ticks if needed; scan `ticks`. OR in `nulls` if `IncludeNull`.
+- Range: one scan of `values` per interval in the selection, setting a bit where the value is inside it, OR-ed together (§C4.1). OR in `nulls` if `IncludeNull`; no interval and the flag on is `nulls` alone.
+- Date: for each part, resolve a preset to `[from, to)` ticks if needed and scan `ticks`; OR the parts together. OR in `nulls` if `IncludeNull`. A selection of several bars costs one scan per bar, about 1 ms each at a million rows, and the union is a word-wise OR.
 - Text (§C5): scan `_items` and set a bit where the application's function returns true for `(items[row], text)`. The only scan that touches row objects and runs application code, so it is the one scan whose cost the library does not control. When parallel counting is enabled it is split across cores over word-aligned chunks of 64 rows, which the contract (pure, thread-safe) allows; otherwise it runs serially like the other scans, so the option keeps its meaning of "this dashboard may use several cores per click". The result is cached like any other row set, so retyping a text or removing and re-adding it costs nothing.
 
 Each `R_f` is cached by `(facetKey, selection)` (§5). The scans are `O(N)` with sequential access, roughly 1 ms per million rows. `ScopeTo(Selections)` (§C4.10) produces its scope from the same `R_f` sets through the same cache, so scoping by selections adds no scan of its own.
@@ -441,7 +456,7 @@ Selecting the top `N` from `V = 100 000` counts is a partial sort, `O(V)` expect
 
 ### 4.5 Range and date facets
 
-Buckets are counted through `bucketCodes` exactly like value facets. Each `Bucket` gets `Selected = true` when the current interval fully covers it. `Null` reports `counts[0]`. For date facets, each configured preset is resolved and counted against `C_f` as well, so the UI can show "Last 7 days (312)" without a round trip. With `SkipEmptyPresets`, a preset whose total over the dataset (or the scope) is zero is not added to the state at all, selected or not, which is the presets' counterpart of the `totals[code] > 0` gate the value facet already applies; it is re-decided here on every calculation, since the interval follows the clock, and it saves no work because the scan is what discovers the count.
+Buckets are counted through `bucketCodes` exactly like value facets. Each `Bucket` gets `Selected = true` when one of the selected intervals fully covers it, presets resolved first, so two bar clicks light two bars. `Null` reports `counts[0]`. For date facets, each configured preset is resolved and counted against `C_f` as well, so the UI can show "Last 7 days (312)" without a round trip. With `SkipEmptyPresets`, a preset whose total over the dataset (or the scope) is zero is not added to the state at all, selected or not, which is the presets' counterpart of the `totals[code] > 0` gate the value facet already applies; it is re-decided here on every calculation, since the interval follows the clock, and it saves no work because the scan is what discovers the count.
 
 ### 4.6 Metrics
 
@@ -576,7 +591,7 @@ What the UI reads from the state, per facet kind:
 | Kind | Renders | Click produces |
 |---|---|---|
 | `ValueFacetState` | `Values` (value, total, filtered, selected), `Other`, `Search(text)` | `Toggle(key, value.Value)` |
-| `RangeFacetState` | `Buckets` as a histogram, `Null` beside it, `Min`/`Max` for a slider | `bucket.ToSelection()`, or `new RangeSelection(from, to)` from a slider |
+| `RangeFacetState` | `Buckets` as a histogram, `Null` beside it, `Min`/`Max` for a slider | `ToggleInterval(key, bucket.ToInterval())`, or `new RangeSelection(from, to)` from a slider |
 | `DateFacetState` | `Buckets` per period, `Presets` with counts, `Null` | `bucket.ToSelection()`, `preset.ToSelection()` |
 | any | `ContextCount`, `HasSelection`, `Name` | `Clear(key)` |
 
@@ -781,6 +796,7 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 - **An empty date preset can be left out of the state, through `SkipEmptyPresets` on the facet.** A preset is declared rather than discovered, so it is the one facet entry that can carry a total of zero; value facets already drop those, and this gives date presets the same rule where the count is computed, in `Present`. Off by default, since a dashboard rebuilt over live data legitimately shows "Today (0)" before the first row of the day arrives. A selected empty preset is dropped as well, matching the value facet, and stays clearable through the facet header and the active selections. Decided 2026-09-19. See §4.5, §C5.
 - **Scoping a built dashboard is `ScopeTo`, not `Where`.** Every document calls the result a scope, so the usage guide had to translate the method name into the domain word on each mention ("`dashboard.Where(...)` scopes without a rebuild"). `Where` also promises LINQ: a lazy sequence, free until enumerated, whereas this does a pass over the rows plus a count per facet and metric and returns an object the host keeps and caches. `DashboardState<T>.Items` is a list, so `dashboard.Where(x => …)` and `state.Items.Where(x => …)` could sit in one page meaning different things. The builder's fixed filter keeps `Where`: it configures rather than returning a thing, and there the LINQ echo is honest. Breaking, with no shim. Decided 2026-09-18. See §2.1, §3.1.
 - **The null bar in a histogram or bucket list is striped and set apart by a gap.** The concept places null beside the buckets, and a solid column at the end read as the highest interval. Stripes in the bar colour through `--l2d-bar-null`, not grey (reads as inactive) and not a second hue (fights the host's theme); a host overrides the one property for a solid fill. Decided 2026-09-19. See §9 (`RangeFacet`).
+- **A range or date selection is a set of parts, OR-ed, with the null rows as a flag beside it.** `RangeInterval` and `DateInterval` are the parts; the records hold a set and the same `Toggle`/`ToggleNull` shape as values; `Selections.ToggleInterval` is the click, named apart from `Toggle` so `Toggle(key, null)` keeps meaning the null value. The row set is the union of the parts; a bucket lights when any part covers it; JSON and the query string gained a list form and kept the one-part forms. Adjacent bars are not merged. Decided 2026-09-19. See §2.2, §2.5, §4.1, §4.5 and §C5.
 - **A slider handle at the end of its travel means no bound on that side.** The selection is built from the other handle alone, so the open-ended end buckets light up and chips and URLs read "≤ 500" instead of "1.47 – 500"; the upper end counts within one step because the native input's grid starts at the minimum. The core's cover rule stays data-independent. Decided 2026-09-19. See §9 (`RangeFacet`, slider).
 - **The state serves the matching rows as a read-only list; `GetPage`, `PageCount` and `ResultPage` are gone.** A competent grid pages, virtualises and sorts by itself and asks its source for a count, a slice and an order through LINQ, so the source has to be a list for those to be cheap; a lazy enumerable made every scroll tick a pass over the matching rows, and a page API duplicated what the grid does. `Items` is `IReadOnlyList<T>` and `IList<T>` over an ordered row-index array built once per state, `GetItems` stays as the named slice. Breaking, with no shim. Decided 2026-09-19. See §2.4, §4.7, §C3.
 - **The Blazor package renders no rows: `Results<T>` is removed, the view's child content is a template over the context, and the context carries one `IQueryable<T>` per state.** A page shows its rows in the grid it already has, and a grid needs a list, a stable queryable and the context in the markup, not a component that pages by itself and stops at the first request for sorting. Chosen over growing `Results` toward a grid, and over an items-provider adapter, which would need a QuickGrid dependency and is a separate package if ever. Breaking, with no shim. Decided 2026-09-19. See §9 (component 4).

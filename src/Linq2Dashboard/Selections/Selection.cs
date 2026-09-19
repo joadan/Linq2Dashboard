@@ -1,3 +1,5 @@
+using System.Globalization;
+
 namespace Linq2Dashboard;
 
 /// <summary>
@@ -115,14 +117,14 @@ public sealed record ValueSelection : Selection
 }
 
 /// <summary>
-/// A numeric interval for a range facet. Null bounds are unbounded. Both ends are inclusive by
-/// default; a bucket click sets <see cref="ToInclusive"/> false so adjacent buckets never both claim
-/// their shared edge (design §2.2). Null rows are excluded unless <see cref="IncludeNull"/>.
+/// One numeric interval of a <see cref="RangeSelection"/>. Null bounds are unbounded. Both ends are
+/// inclusive by default; a bucket click sets <see cref="ToInclusive"/> false so adjacent buckets never
+/// both claim their shared edge (design §2.2).
 /// </summary>
-public sealed record RangeSelection : Selection
+public sealed record RangeInterval
 {
     /// <summary>Creates an interval. Throws when a bound is NaN or <paramref name="from"/> is after <paramref name="to"/>.</summary>
-    public RangeSelection(double? from, double? to, bool fromInclusive = true, bool toInclusive = true, bool includeNull = false)
+    public RangeInterval(double? from, double? to, bool fromInclusive = true, bool toInclusive = true)
     {
         if (from is double f && double.IsNaN(f))
         {
@@ -143,7 +145,6 @@ public sealed record RangeSelection : Selection
         To = to;
         FromInclusive = fromInclusive;
         ToInclusive = toInclusive;
-        IncludeNull = includeNull;
     }
 
     /// <summary>Lower bound; null means unbounded below.</summary>
@@ -158,8 +159,67 @@ public sealed record RangeSelection : Selection
     /// <summary>Whether a row equal to <see cref="To"/> matches. Default true; a bucket click sets it false.</summary>
     public bool ToInclusive { get; init; }
 
-    /// <summary>Whether rows without a value match in addition to the interval (concept §4.8).</summary>
+    /// <summary>Closed interval <c>[from, to]</c>.</summary>
+    public static RangeInterval Between(double from, double to) => new(from, to);
+
+    /// <summary>Interval <c>[from, ∞)</c>.</summary>
+    public static RangeInterval AtLeast(double from) => new(from, null);
+
+    /// <summary>Interval <c>(-∞, to]</c>.</summary>
+    public static RangeInterval AtMost(double to) => new(null, to);
+
+    /// <inheritdoc />
+    public override string ToString() =>
+        (FromInclusive ? "[" : "(")
+        + (From?.ToString(CultureInfo.InvariantCulture) ?? string.Empty)
+        + ".."
+        + (To?.ToString(CultureInfo.InvariantCulture) ?? string.Empty)
+        + (ToInclusive ? "]" : ")");
+}
+
+/// <summary>
+/// A set of numeric intervals for a range facet, combined as OR (concept §4.1, §5), with or without the
+/// null rows (concept §4.8). A bucket click toggles one <see cref="RangeInterval"/>; a slider replaces the
+/// set with one. Order is irrelevant to equality. With no interval and <see cref="IncludeNull"/> false the
+/// selection <see cref="IsEmpty"/> and clears the facet when applied.
+/// </summary>
+public sealed record RangeSelection : Selection
+{
+    private readonly RangeInterval[] intervals;
+
+    /// <summary>Creates a selection of <paramref name="intervals"/>, duplicates dropped, plus the null rows when <paramref name="includeNull"/>.</summary>
+    public RangeSelection(IEnumerable<RangeInterval> intervals, bool includeNull = false)
+    {
+        ArgumentNullException.ThrowIfNull(intervals);
+        this.intervals = intervals.Distinct().ToArray();
+        if (Array.IndexOf(this.intervals, null) >= 0)
+        {
+            throw new ArgumentException("An interval must not be null.", nameof(intervals));
+        }
+
+        IncludeNull = includeNull;
+    }
+
+    /// <summary>Creates a selection of one interval. Throws when a bound is NaN or <paramref name="from"/> is after <paramref name="to"/>.</summary>
+    public RangeSelection(double? from, double? to, bool fromInclusive = true, bool toInclusive = true, bool includeNull = false)
+        : this([new RangeInterval(from, to, fromInclusive, toInclusive)], includeNull)
+    {
+    }
+
+    /// <summary>The intervals, distinct, in no particular order.</summary>
+    public IReadOnlyList<RangeInterval> Intervals => intervals;
+
+    /// <summary>Whether rows without a value match in addition to the intervals (concept §4.8).</summary>
     public bool IncludeNull { get; init; }
+
+    /// <summary>True when nothing is selected, neither an interval nor the null rows; applying it clears the facet.</summary>
+    public bool IsEmpty => intervals.Length == 0 && !IncludeNull;
+
+    /// <summary>True when the selection is the null rows alone, with no interval.</summary>
+    public bool OnlyNulls => intervals.Length == 0 && IncludeNull;
+
+    /// <summary>No interval and no null rows: the starting point for toggling.</summary>
+    public static RangeSelection Empty { get; } = new([]);
 
     /// <summary>Closed interval <c>[from, to]</c>.</summary>
     public static RangeSelection Between(double from, double to) => new(from, to);
@@ -171,20 +231,82 @@ public sealed record RangeSelection : Selection
     public static RangeSelection AtMost(double to) => new(null, to);
 
     /// <summary>Selects only the null rows.</summary>
-    public static RangeSelection OnlyNull { get; } = new(null, null, includeNull: true) { OnlyNulls = true };
+    public static RangeSelection OnlyNull { get; } = new([], includeNull: true);
 
-    /// <summary>True when the selection is the null rows alone, with no interval.</summary>
-    public bool OnlyNulls { get; private init; }
+    /// <summary>True when <paramref name="interval"/> is one of the selected intervals, by value.</summary>
+    public bool Contains(RangeInterval interval) => Array.IndexOf(intervals, interval) >= 0;
+
+    /// <summary>A selection with <paramref name="interval"/> added; this instance when it is already present.</summary>
+    public RangeSelection Add(RangeInterval interval)
+    {
+        ArgumentNullException.ThrowIfNull(interval);
+        return Contains(interval) ? this : new(intervals.Append(interval), IncludeNull);
+    }
+
+    /// <summary>A selection with <paramref name="interval"/> removed; this instance when it is absent.</summary>
+    public RangeSelection Remove(RangeInterval interval) =>
+        Contains(interval) ? new(intervals.Where(i => !i.Equals(interval)), IncludeNull) : this;
+
+    /// <summary>The click on a bucket: <paramref name="interval"/> added if absent, removed if present.</summary>
+    public RangeSelection Toggle(RangeInterval interval) => Contains(interval) ? Remove(interval) : Add(interval);
+
+    /// <summary>The click on the null value: the null rows added if absent, removed if present.</summary>
+    public RangeSelection ToggleNull() => this with { IncludeNull = !IncludeNull };
+
+    /// <summary>Order-independent value equality: the same intervals and the same null flag.</summary>
+    public bool Equals(RangeSelection? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        if (IncludeNull != other.IncludeNull || intervals.Length != other.intervals.Length)
+        {
+            return false;
+        }
+
+        foreach (RangeInterval interval in intervals)
+        {
+            if (!other.Contains(interval))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        // Order-independent: XOR of element hashes, plus the count and the null flag.
+        int hash = intervals.Length * 2 + (IncludeNull ? 1 : 0);
+        foreach (RangeInterval interval in intervals)
+        {
+            hash ^= interval.GetHashCode();
+        }
+
+        return hash;
+    }
+
+    /// <inheritdoc />
+    public override string ToString() =>
+        $"RangeSelection({string.Join(", ", intervals.Select(i => i.ToString()).Concat(IncludeNull ? ["null"] : []))})";
 }
 
 /// <summary>
-/// A date interval for a date facet: either an absolute half-open instant interval
-/// <c>[From, To)</c> or a named relative preset resolved at calculation time (concept §5,
-/// design §2.2). Null rows are excluded unless <see cref="IncludeNull"/>.
+/// One part of a <see cref="DateSelection"/>: either an absolute half-open instant interval <c>[From, To)</c>
+/// or a named relative preset resolved at calculation time (concept §5, design §2.2).
 /// </summary>
-public sealed record DateSelection : Selection
+public sealed record DateInterval
 {
-    private DateSelection()
+    private DateInterval()
     {
     }
 
@@ -194,40 +316,150 @@ public sealed record DateSelection : Selection
     /// <summary>Exclusive end instant; null means unbounded.</summary>
     public DateTimeOffset? To { get; private init; }
 
-    /// <summary>The relative preset, when this selection is relative rather than absolute.</summary>
+    /// <summary>The relative preset, when this part is relative rather than absolute.</summary>
     public DatePreset? Preset { get; private init; }
-
-    /// <summary>Whether rows without a value match in addition to the interval (concept §4.8).</summary>
-    public bool IncludeNull { get; init; }
-
-    /// <summary>True when the selection is the null rows alone, with no interval.</summary>
-    public bool OnlyNulls { get; private init; }
 
     /// <summary>True when this is a preset resolved at each calculation rather than a fixed interval.</summary>
     public bool IsRelative => Preset is not null;
 
     /// <summary>Absolute interval <c>[from, to)</c>. Either bound may be null for unbounded.</summary>
-    public static DateSelection Between(DateTimeOffset? from, DateTimeOffset? to)
+    public static DateInterval Between(DateTimeOffset? from, DateTimeOffset? to)
     {
         if (from is DateTimeOffset f && to is DateTimeOffset t && f > t)
         {
             throw new ArgumentException($"Interval start {f:O} is after its end {t:O}.", nameof(from));
         }
 
-        return new DateSelection { From = from, To = to };
+        return new DateInterval { From = from, To = to };
     }
 
     /// <summary>A relative preset such as "last 30 days", resolved against the clock at each calculation (concept §5).</summary>
-    public static DateSelection Relative(DatePreset preset)
+    public static DateInterval Relative(DatePreset preset)
     {
         if (!Enum.IsDefined(preset))
         {
             throw new ArgumentOutOfRangeException(nameof(preset));
         }
 
-        return new DateSelection { Preset = preset };
+        return new DateInterval { Preset = preset };
     }
 
+    /// <inheritdoc />
+    public override string ToString() => Preset is DatePreset preset
+        ? preset.ToString()
+        : $"[{From?.ToString("O", CultureInfo.InvariantCulture)}..{To?.ToString("O", CultureInfo.InvariantCulture)})";
+}
+
+/// <summary>
+/// A set of date parts for a date facet, combined as OR (concept §4.1, §5), with or without the null rows
+/// (concept §4.8). Each <see cref="DateInterval"/> is an absolute interval or a relative preset; a bucket or
+/// preset click toggles one. Order is irrelevant to equality. With no part and <see cref="IncludeNull"/>
+/// false the selection <see cref="IsEmpty"/> and clears the facet when applied.
+/// </summary>
+public sealed record DateSelection : Selection
+{
+    private readonly DateInterval[] intervals;
+
+    /// <summary>Creates a selection of <paramref name="intervals"/>, duplicates dropped, plus the null rows when <paramref name="includeNull"/>.</summary>
+    public DateSelection(IEnumerable<DateInterval> intervals, bool includeNull = false)
+    {
+        ArgumentNullException.ThrowIfNull(intervals);
+        this.intervals = intervals.Distinct().ToArray();
+        if (Array.IndexOf(this.intervals, null) >= 0)
+        {
+            throw new ArgumentException("An interval must not be null.", nameof(intervals));
+        }
+
+        IncludeNull = includeNull;
+    }
+
+    /// <summary>The parts, distinct, in no particular order.</summary>
+    public IReadOnlyList<DateInterval> Intervals => intervals;
+
+    /// <summary>Whether rows without a value match in addition to the parts (concept §4.8).</summary>
+    public bool IncludeNull { get; init; }
+
+    /// <summary>True when nothing is selected, neither a part nor the null rows; applying it clears the facet.</summary>
+    public bool IsEmpty => intervals.Length == 0 && !IncludeNull;
+
+    /// <summary>True when the selection is the null rows alone, with no part.</summary>
+    public bool OnlyNulls => intervals.Length == 0 && IncludeNull;
+
+    /// <summary>No part and no null rows: the starting point for toggling.</summary>
+    public static DateSelection Empty { get; } = new([]);
+
+    /// <summary>One absolute interval <c>[from, to)</c>. Either bound may be null for unbounded.</summary>
+    public static DateSelection Between(DateTimeOffset? from, DateTimeOffset? to) => new([DateInterval.Between(from, to)]);
+
+    /// <summary>One relative preset such as "last 30 days", resolved against the clock at each calculation (concept §5).</summary>
+    public static DateSelection Relative(DatePreset preset) => new([DateInterval.Relative(preset)]);
+
     /// <summary>Selects only the null rows.</summary>
-    public static DateSelection OnlyNull { get; } = new() { OnlyNulls = true, IncludeNull = true };
+    public static DateSelection OnlyNull { get; } = new([], includeNull: true);
+
+    /// <summary>True when <paramref name="interval"/> is one of the selected parts, by value.</summary>
+    public bool Contains(DateInterval interval) => Array.IndexOf(intervals, interval) >= 0;
+
+    /// <summary>A selection with <paramref name="interval"/> added; this instance when it is already present.</summary>
+    public DateSelection Add(DateInterval interval)
+    {
+        ArgumentNullException.ThrowIfNull(interval);
+        return Contains(interval) ? this : new(intervals.Append(interval), IncludeNull);
+    }
+
+    /// <summary>A selection with <paramref name="interval"/> removed; this instance when it is absent.</summary>
+    public DateSelection Remove(DateInterval interval) =>
+        Contains(interval) ? new(intervals.Where(i => !i.Equals(interval)), IncludeNull) : this;
+
+    /// <summary>The click on a bucket or preset: <paramref name="interval"/> added if absent, removed if present.</summary>
+    public DateSelection Toggle(DateInterval interval) => Contains(interval) ? Remove(interval) : Add(interval);
+
+    /// <summary>The click on the null value: the null rows added if absent, removed if present.</summary>
+    public DateSelection ToggleNull() => this with { IncludeNull = !IncludeNull };
+
+    /// <summary>Order-independent value equality: the same parts and the same null flag.</summary>
+    public bool Equals(DateSelection? other)
+    {
+        if (other is null)
+        {
+            return false;
+        }
+
+        if (ReferenceEquals(this, other))
+        {
+            return true;
+        }
+
+        if (IncludeNull != other.IncludeNull || intervals.Length != other.intervals.Length)
+        {
+            return false;
+        }
+
+        foreach (DateInterval interval in intervals)
+        {
+            if (!other.Contains(interval))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /// <inheritdoc />
+    public override int GetHashCode()
+    {
+        // Order-independent: XOR of element hashes, plus the count and the null flag.
+        int hash = intervals.Length * 2 + (IncludeNull ? 1 : 0);
+        foreach (DateInterval interval in intervals)
+        {
+            hash ^= interval.GetHashCode();
+        }
+
+        return hash;
+    }
+
+    /// <inheritdoc />
+    public override string ToString() =>
+        $"DateSelection({string.Join(", ", intervals.Select(i => i.ToString()).Concat(IncludeNull ? ["null"] : []))})";
 }

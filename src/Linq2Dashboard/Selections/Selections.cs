@@ -38,13 +38,14 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
     /// <summary>True when the facet with <paramref name="key"/> has a selection.</summary>
     public bool Contains(string key) => map.ContainsKey(key);
 
-    /// <summary>Replaces the selection for <paramref name="key"/>. An empty value or text selection clears it instead.</summary>
+    /// <summary>Replaces the selection for <paramref name="key"/>. An empty selection of any kind clears it instead.</summary>
     public Selections With(string key, Selection selection)
     {
         ArgumentException.ThrowIfNullOrEmpty(key);
         ArgumentNullException.ThrowIfNull(selection);
 
-        if (selection is ValueSelection { IsEmpty: true } or TextSelection { IsEmpty: true })
+        if (selection is ValueSelection { IsEmpty: true } or TextSelection { IsEmpty: true }
+            or RangeSelection { IsEmpty: true } or DateSelection { IsEmpty: true })
         {
             return Clear(key);
         }
@@ -80,6 +81,48 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
         };
 
         return With(key, current.Contains(value) ? current.Remove(value) : current.Add(value));
+    }
+
+    /// <summary>
+    /// Adds <paramref name="interval"/> to the range selection for <paramref name="key"/>, or removes it
+    /// if already present. The click case for a range facet's bucket (concept §5); removing the last
+    /// interval clears the facet unless the null rows are selected too.
+    /// </summary>
+    public Selections ToggleInterval(string key, RangeInterval interval)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentNullException.ThrowIfNull(interval);
+
+        RangeSelection current = this[key] switch
+        {
+            null => RangeSelection.Empty,
+            RangeSelection range => range,
+            Selection other => throw new InvalidOperationException(
+                $"Facet '{key}' has a {other.GetType().Name}; a RangeInterval toggles a range selection only."),
+        };
+
+        return With(key, current.Toggle(interval));
+    }
+
+    /// <summary>
+    /// Adds <paramref name="interval"/> to the date selection for <paramref name="key"/>, or removes it
+    /// if already present. The click case for a date facet's bucket or preset (concept §5); removing
+    /// the last part clears the facet unless the null rows are selected too.
+    /// </summary>
+    public Selections ToggleInterval(string key, DateInterval interval)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentNullException.ThrowIfNull(interval);
+
+        DateSelection current = this[key] switch
+        {
+            null => DateSelection.Empty,
+            DateSelection date => date,
+            Selection other => throw new InvalidOperationException(
+                $"Facet '{key}' has a {other.GetType().Name}; a DateInterval toggles a date selection only."),
+        };
+
+        return With(key, current.Toggle(interval));
     }
 
     /// <summary>Value equality: the same keys with equal selections.</summary>

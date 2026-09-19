@@ -88,6 +88,7 @@ The UI owns the selections. The dashboard holds none. `Selections` is an immutab
 var s = Selections.Empty
     .Toggle("Country", "SE")                                  // add if absent, remove if present
     .With("Amount", RangeSelection.Between(100, 1000))        // replace the facet's selection
+    .ToggleInterval("Amount", RangeInterval.AtLeast(5000))    // add or remove one interval: the click on a bar
     .With("OrderDate", DateSelection.Relative(DatePreset.Last30Days))
     .With("search", new TextSelection("acme"))
     .Clear("Country");                                        // remove one facet's selection
@@ -96,8 +97,8 @@ var s = Selections.Empty
 | Facet kind | Selection type | Constructors |
 |---|---|---|
 | Value, Boolean | `ValueSelection` | `ValueSelection.Of(a, b)`, `.Add`, `.Remove`; a `null` value selects the null facet value |
-| Range | `RangeSelection` | `Between(from, to)`, `AtLeast(from)`, `AtMost(to)`, `OnlyNull`; `IncludeNull` adds the null rows |
-| Date | `DateSelection` | `Between(from, to)` half-open instants, `Relative(preset)`, `OnlyNull` |
+| Range | `RangeSelection` | a set of `RangeInterval`s, OR-ed: `new RangeSelection([a, b])`, `.Toggle(interval)`, `.ToggleNull()`; `Between(from, to)`, `AtLeast(from)`, `AtMost(to)` for one; `OnlyNull`; `IncludeNull` adds the null rows |
+| Date | `DateSelection` | a set of `DateInterval`s, OR-ed, each `DateInterval.Between(from, to)` (half-open instants) or `DateInterval.Relative(preset)`; `Between`, `Relative` for one; `OnlyNull` |
 | Text | `TextSelection` | `new TextSelection(text)`; whitespace-only clears |
 
 Bookmarks: `dashboard.Serializer.ToJson(selections)` and `FromJson(json)`. Reading is lenient. Unknown facets and unreadable values are dropped, so a stale bookmark gives fewer selections, never an error.
@@ -111,8 +112,8 @@ URLs: `ToQueryString(selections)` and `FromQueryString(query)` use one readable 
 | Facet kind | Form | Notes |
 |---|---|---|
 | Value, Boolean | `SE,NO,null` | `null` is the null value; `\,` a literal comma; `""` the empty string |
-| Range | `100..500`, `100..`, `..500`, `[100..500)` | inclusive without brackets; `(` or `)` marks an exclusive end; `,null` adds the null rows; `null` alone is only the null rows |
-| Date | `last30Days` or `2026-03-01T00:00+01:00..2026-04-01T00:00+02:00` | preset names as in `DatePreset`, case-insensitive; `,null` and `null` as for ranges |
+| Range | `100..500`, `100..`, `..500`, `[100..500)`, `[..100),1000..` | a comma-separated list of intervals; inclusive without brackets; `(` or `)` marks an exclusive end; `null` as an item adds the null rows; `null` alone is only the null rows |
+| Date | `last30Days`, `2026-03-01T00:00+01:00..2026-04-01T00:00+02:00`, `thisMonth,last7Days` | a comma-separated list of parts; preset names as in `DatePreset`, case-insensitive; `null` as for ranges |
 | Text | `acme` | the text itself |
 
 Both take a `prefix` so two dashboards on one page, or a page's own parameters, do not collide: `ToQueryString(selections, "o.")` writes `o.Country=SE`. `ToQueryString` also takes the existing query or URL and keeps every parameter in it that is not one of the dashboard's facets. `ToQuery` gives the parameters as a dictionary with `null` for unselected facets, the shape `NavigationManager.GetUriWithQueryParameters` takes. In Blazor, `SyncUrl` on `DashboardView` does all of this for you.
@@ -135,10 +136,10 @@ country.Other;                                    // counts Top N left out, or n
 country.Search("swe", max: 20);                   // a UI operation, not a selection
 
 var amount = (RangeFacetState)state.Facet("Amount");
-amount.Buckets[1].ToSelection();                  // exactly the interval a click on that bucket means
+amount.Buckets[1].ToInterval();                   // exactly the interval a click on that bar toggles; ToSelection() is that interval alone
 
 var date = (DateFacetState)state.Facet("OrderDate");
-date.Presets[0].ToSelection();                    // DateSelection.Relative(preset)
+date.Presets[0].ToInterval();                     // DateInterval.Relative(preset); buckets give their [From, To)
 
 state.Items;                                      // IReadOnlyList<T>: every matching row in order, counted and indexable; give it, or Items.AsQueryable(), to your grid
 state.GetItems(skip: 200, take: 50);              // a slice, the same rows as Items.Skip(200).Take(50)
@@ -184,13 +185,13 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 
 These are decisions from the concept, not options.
 
-- **OR within a facet, AND across facets.** Sweden or Norway, and status Open.
+- **OR within a facet, AND across facets.** Sweden or Norway, and status Open. The same for bars: January or March, and status Open.
 - **A facet's own selection is excluded from its own counts.** Under Country, with Sweden selected, Norway still shows what selecting it would add.
 - **Two counts per value.** `TotalCount` over the dataset, `FilteredCount` under the other facets' selections. Filtered counts always sum to the facet's `ContextCount`.
 - **Null is a value.** It is listed, counted and selectable. Never drop it.
 - **Zero-count values stay in the state.** Hiding them is the UI's choice (`HideZeroCounts`).
 - **Ranking picks the values, the UI orders them.** `RankBy` in the builder decides which values Top N presents; `Sort` on `ValueFacet` decides the order on screen: by rank (default), label or value, optionally reversed. Null stays last.
-- **Buckets are fixed at build.** Only their counts change. A bucket click selects exactly its interval.
+- **Buckets are fixed at build.** Only their counts change. A bucket click toggles exactly its interval, so bars select like values: "below 100 or 1 000 and above" is one selection, and the null bar toggles beside them.
 - **Searching within a facet is not a selection.** It narrows the list shown, nothing else.
 - **Metrics skip null.** Averages divide by rows that have a value. Distinct counts non-null values.
 - **The data is fixed at creation.** New data means a new dashboard; selections carry over through JSON. A subset of the data is not new data: `dashboard.ScopeTo(...)` scopes without a rebuild.

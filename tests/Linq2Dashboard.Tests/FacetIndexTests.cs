@@ -96,6 +96,36 @@ public class FacetIndexTests
         Assert.Equal([1, 4, 6], Rows("Discount", RangeSelection.OnlyNull));
     }
 
+    /// <summary>Concept §4.1, §5: the intervals of one range selection combine as OR, with the null rows as one more part.</summary>
+    [Fact]
+    public void Range_intervals_combine_as_or_within_the_facet()
+    {
+        // Discount: 10, null, 50, 0, null, 250, null, 5
+        var low = new RangeInterval(null, 10, toInclusive: false);   // 0, 5
+        var high = RangeInterval.AtLeast(50);                         // 50, 250
+        var overlapping = RangeInterval.Between(5, 50);               // 10, 50, 5
+
+        Assert.Equal([2, 3, 5, 7], Rows("Discount", new RangeSelection([low, high])));
+        Assert.Equal([2, 3, 5, 7], Rows("Discount", new RangeSelection([high, low])));
+        Assert.Equal([0, 2, 3, 5, 7], Rows("Discount", new RangeSelection([low, overlapping, high])));   // a row in two intervals counts once
+        Assert.Equal([1, 2, 3, 4, 5, 6, 7], Rows("Discount", new RangeSelection([low, high], includeNull: true)));
+        Assert.Empty(Rows("Discount", RangeSelection.Empty));
+    }
+
+    [Fact]
+    public void Date_parts_combine_as_or_and_a_preset_mixes_with_an_interval()
+    {
+        // Rows 0 to 2 are before March, 3 to 5 in March, 6 and 7 after; Last7Days as of 15 March is row 4 alone.
+        var before = DateInterval.Between(null, TestData.Instant("2026-03-01T00:00:00+01:00"));
+        var after = DateInterval.Between(TestData.Instant("2026-04-01T00:00:00+02:00"), null);
+        var recent = DateInterval.Relative(DatePreset.Last7Days);
+
+        Assert.Equal([0, 1, 2, 6, 7], Rows("OrderDate", new DateSelection([before, after])));
+        Assert.Equal([0, 1, 2, 4], Rows("OrderDate", new DateSelection([recent, before])));
+        Assert.Equal([0, 1, 2, 4, 6, 7], Rows("OrderDate", new DateSelection([before, recent, after])));
+        Assert.Empty(Rows("OrderDate", DateSelection.Empty));
+    }
+
     [Fact]
     public void Absolute_date_selection_is_half_open_on_instants()
     {

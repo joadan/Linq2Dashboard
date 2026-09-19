@@ -109,33 +109,6 @@ internal static class QueryValues
     }
 
     /// <summary>
-    /// Splits <c>first,rest...</c> into the first token and whether every remaining token is the null token.
-    /// Returns false when a remaining token is anything else, so <c>100..500,SE</c> does not read.
-    /// </summary>
-    public static bool SplitNullSuffix(string text, out string first, out bool includeNull)
-    {
-        includeNull = false;
-        int comma = text.IndexOf(',');
-        first = comma < 0 ? text : text[..comma];
-        if (comma < 0)
-        {
-            return true;
-        }
-
-        foreach (string part in text[(comma + 1)..].Split(','))
-        {
-            if (part != NullToken)
-            {
-                return false;
-            }
-
-            includeNull = true;
-        }
-
-        return true;
-    }
-
-    /// <summary>
     /// Writes an interval: <c>from..to</c> when both ends are inclusive (the default), otherwise in bracket
     /// notation with <c>[</c> or <c>]</c> for an inclusive end and <c>(</c> or <c>)</c> for an exclusive one, as
     /// in <c>[100..500)</c>. An empty bound is unbounded.

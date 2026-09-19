@@ -86,12 +86,13 @@ These rules define the experience. They are decisions, not options.
 
 ```text
 Country: Sweden, Norway        →  Country = Sweden OR Country = Norway
+Amount:  < 100, ≥ 1 000        →  Amount < 100 OR Amount ≥ 1 000
 Status:  Open                  →  Status = Open
 
-Matching rows = (Sweden OR Norway) AND (Open)
+Matching rows = (Sweden OR Norway) AND (< 100 OR ≥ 1 000) AND (Open)
 ```
 
-An empty selection in a facet means "no constraint from this facet".
+An empty selection in a facet means "no constraint from this facet". OR within a facet holds for every kind: the values of a value facet, the intervals of a range or date facet (§5), each with or without the null value (§4.8).
 
 This is the only combination mode in the first version. There is no "everything except", no AND within a facet, and no custom boolean logic across facets. The selection model should still leave room for an exclusion mode later without changing the shape of the state contract (§7).
 
@@ -215,14 +216,14 @@ A value facet with two values, or three when the property is nullable (true, fal
 The property is numeric: amount, price, quantity, weight.
 
 - Values: buckets over the property's range, with counts. Bucket boundaries are either fixed by the application in the facet definition or derived once from the dataset at initialisation. They never follow the current selections, so the histogram keeps its shape and only the bar heights change on a click.
-- Selection: a continuous `[min, max]` interval. Buckets are a way of *presenting* the distribution and a shortcut for *choosing* an interval. The selection itself is always an interval.
+- Selection: a set of intervals, combined as OR (§4.1), with or without the null value. A bucket click toggles exactly that bucket's interval in and out of the set, so the bars behave like the values of a value facet: "below 100 or 1 000 and above" is one selection. A slider or an input contributes a continuous `[min, max]` interval of its own. Buckets are a way of *presenting* the distribution and a shortcut for *choosing* intervals; the selection itself is always made of intervals, never of bucket identities.
 
 ### Date facet
 
 The property is a point in time: order date, created, last login.
 
 - Values: buckets by calendar period (year, month, week, day), with counts. Optionally a set of relative presets (today, last 7 days, this year).
-- Selection: a continuous `[from, to]` interval, like the range facet, or a named relative preset that resolves to an interval at calculation time.
+- Selection: a set of parts combined as OR (§4.1), like the range facet, with or without the null value. Each part is either a `[from, to)` interval or a named relative preset that resolves to an interval at calculation time, so "January, March or last 7 days" is one selection.
 - A preset no row falls in can be left out of the state, the way a value no row has is not a facet value (§4.10). This is a facet definition choice and is off by default; the zero-count rule of §4.3 is about filtered counts and is unchanged. Because a preset's interval moves with the clock, it is decided at each calculation, so a preset comes back once its interval reaches a row. A selected preset is left out on the same terms: the selection still applies, still matches, still shows among the active selections and still clears.
 
 **Starting position on dates** (to be revisited once the first version is in use):
@@ -404,5 +405,6 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **A value facet can carry a label per value, read from the row.** The value stays the identity for counting, selections and JSON; the label is what is shown and searched. First row wins, null means "show the value". Async lookups happen in the application before the dashboard is created. Added 2026-09-14. See §5.
 - **Free text is a facet kind, matched by an application function.** A text facet has no values and carries only its text; it joins the AND across facets and rides every key-addressed path (selections, state, active selections, JSON). The function `(row, text) => bool` is the primitive and owns the matching semantics; it must be pure and thread-safe. Whitespace-only text clears. Search within a facet (§4.5) stays a UI operation and keeps the word "search". Decided 2026-09-14. See §5.
 - **Range buckets are fixed at initialisation.** Either application-defined or derived once from the dataset, never from the current selections. See §5.
+- **A range or date selection is a set of intervals, combined as OR.** Until 2026-09-19 it was one interval, so a second bar click replaced the first and "January or March" could not be said. A bar now toggles its interval like a value, the null value toggles beside them, and a slider contributes one interval; a date part may be a preset. Bucket identities never enter the selection. Decided 2026-09-19. See §4.1 and §5.
 - **"Other" is measured against the facet's own counting context.** Not against the matching rows. See §6.
 - **The matching rows are a list, not pages.** The state exposes them counted and indexable in the application-defined order. Paging, virtualisation and display sorting belong to the grid that shows them; the core never tries to be that grid and offers no page API, and the Blazor package renders no rows either: it hands them to the application's grid. Decided 2026-09-19. See §3, §4.4, §7.
