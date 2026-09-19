@@ -43,6 +43,9 @@ public class RangeSliderTests : BunitContext
     private static (string From, string To) Handles(IRenderedComponent<DashboardView<Order>> cut) =>
         (cut.Find("input.l2d-slider-from").GetAttribute("value")!, cut.Find("input.l2d-slider-to").GetAttribute("value")!);
 
+    private static bool[] SelectedBuckets(IRenderedComponent<DashboardView<Order>> cut) =>
+        cut.FindAll("li.l2d-bucket").Select(b => b.ClassList.Contains("l2d-selected")).ToArray();
+
     [Fact]
     public void Slider_is_opt_in()
     {
@@ -82,16 +85,51 @@ public class RangeSliderTests : BunitContext
     }
 
     [Fact]
-    public void Releasing_a_handle_applies_a_closed_interval()
+    public void Releasing_a_handle_applies_an_inclusive_interval_unbounded_where_a_handle_rests_at_its_end()
     {
         Selections? raised = null;
         var cut = RenderFacet(onChanged: s => raised = s);
 
         cut.Find("input.l2d-slider-to").Change("500");
 
-        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.Between(0, 500)), raised);
+        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.AtMost(500)), raised);
         Assert.Equal(("0", "500"), Handles(cut));
         Assert.Equal("--l2d-slider-from: 0%; --l2d-slider-to: 20%;", cut.Find(".l2d-slider").GetAttribute("style"));
+
+        cut.Find("input.l2d-slider-from").Change("100");
+        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.Between(100, 500)), raised);
+    }
+
+    [Fact]
+    public void A_handle_at_its_end_lights_the_open_ended_bucket()
+    {
+        var cut = RenderFacet();
+
+        // Buckets: below 100, 100–500, 500–1000, 1000 and above.
+        cut.Find("input.l2d-slider-to").Change("500");
+        Assert.Equal(new[] { true, true, false, false }, SelectedBuckets(cut));
+
+        cut.Find("input.l2d-slider-to").Change("2500");   // back to the end first: handles cannot cross
+        cut.Find("input.l2d-slider-from").Change("1000");
+        Assert.Equal(new[] { false, false, false, true }, SelectedBuckets(cut));
+    }
+
+    [Fact]
+    public void The_upper_end_is_reached_within_one_step_because_the_grid_starts_at_the_minimum()
+    {
+        Selections? raised = null;
+        var cut = RenderFacet(onChanged: s => raised = s, configure: f => f.Add(x => x.SliderStep, 300d));
+
+        cut.Find("input.l2d-slider-to").Change("2100"); // 400 short of 2500: a real bound
+        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.AtMost(2100)), raised);
+
+        cut.Find("input.l2d-slider-to").Change("2400"); // the last grid point below 2500: the end
+        Assert.Equal(Selections.Empty, raised);
+
+        Assert.True(RangeSlider.AtUpperEnd(19301.47, 19302.36, 100));
+        Assert.False(RangeSlider.AtUpperEnd(19201.47, 19302.36, 100));
+        Assert.True(RangeSlider.AtLowerEnd(1.47, 1.47));
+        Assert.False(RangeSlider.AtLowerEnd(101.47, 1.47));
     }
 
     [Fact]
@@ -125,7 +163,7 @@ public class RangeSliderTests : BunitContext
         var cut = RenderFacet(Selections.Empty.With("Amount", RangeSelection.Between(100, 500)), s => raised = s);
 
         cut.Find("input.l2d-slider-from").Change("0");
-        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.Between(0, 500)), raised);
+        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.AtMost(500)), raised);
 
         cut.Find("input.l2d-slider-to").Change("2500");
         Assert.Equal(Selections.Empty, raised);
@@ -152,10 +190,10 @@ public class RangeSliderTests : BunitContext
         var cut = RenderFacet(onChanged: s => raised = s);
 
         cut.Find("input.l2d-slider-input-from").Change("250");
-        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.Between(250, 2500)), raised);
+        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.AtLeast(250)), raised);
 
-        cut.Find("input.l2d-slider-input-to").Change("99999"); // clamped to max
-        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.Between(250, 2500)), raised);
+        cut.Find("input.l2d-slider-input-to").Change("99999"); // clamped to max, which is the end
+        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.AtLeast(250)), raised);
 
         var noInputs = RenderFacet(configure: f => f.Add(x => x.ShowSliderInputs, false));
         Assert.Empty(noInputs.FindAll("input[type=number]"));

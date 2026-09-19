@@ -134,14 +134,10 @@ public partial class RangeFacet<T>
         return CollapsedChanged.InvokeAsync(collapsed);
     }
 
-    private Task ApplySlider((double From, double To) interval)
-    {
-        RangeFacetState facet = Facet;
-        if (interval.From <= facet.Min && interval.To >= facet.Max)
-        {
-            return Context.ClearAsync(Key);
-        }
-
-        return Context.SelectAsync(Key, RangeSelection.Between(interval.From, interval.To));
-    }
+    /// <summary>
+    /// The slider reports null for a side whose handle rests at its end, so a handle at an end leaves that side unbounded
+    /// and the open-ended first or last bucket counts as covered (design §9). Both at the ends is no constraint at all.
+    /// </summary>
+    private Task ApplySlider((double? From, double? To) bounds) =>
+        bounds is (null, null) ? Context.ClearAsync(Key) : Context.SelectAsync(Key, new RangeSelection(bounds.From, bounds.To));
 }

@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Components;
 namespace Linq2Dashboard.Blazor;
 
 /// <summary>
-/// A dual-handle slider over a range facet's bounds, with optional number inputs. Raises <see cref="OnChange"/> on release with the closed interval (design §9).
+/// A dual-handle slider over a range facet's bounds, with optional number inputs. Raises <see cref="OnChange"/> on release with the new bounds, null for a side whose handle rests at its end (design §9).
 /// A rendering detail of <see cref="RangeFacet{T}"/>, not part of the supported API: it is public only because Razor
 /// components cannot be internal, is hidden from IntelliSense, and may change without notice.
 /// </summary>
@@ -57,9 +57,15 @@ public partial class RangeSlider
     [Parameter]
     public string ToLabel { get; set; } = "To";
 
-    /// <summary>Raised on release or on a number input change with the new closed interval.</summary>
+    /// <summary>
+    /// Raised on release or on a number input change with the new bounds, both inclusive. A side is null when its handle
+    /// rests at the end of its travel: a handle pushed to an end means "no bound on this side", not "from the smallest
+    /// value in the data", which is what lets the open-ended first and last buckets light up. The upper end is reached
+    /// within one step, because a native range input snaps to a grid that starts at the minimum, so a maximum off that
+    /// grid can never be hit exactly (design §9).
+    /// </summary>
     [Parameter]
-    public EventCallback<(double From, double To)> OnChange { get; set; }
+    public EventCallback<(double? From, double? To)> OnChange { get; set; }
 
     /// <inheritdoc />
     protected override void OnParametersSet()
@@ -109,10 +115,19 @@ public partial class RangeSlider
     }
 
     private Task ApplyFrom(object? value) =>
-        PreviewFrom(value) ? OnChange.InvokeAsync((from, to)) : Task.CompletedTask;
+        PreviewFrom(value) ? Apply() : Task.CompletedTask;
 
     private Task ApplyTo(object? value) =>
-        PreviewTo(value) ? OnChange.InvokeAsync((from, to)) : Task.CompletedTask;
+        PreviewTo(value) ? Apply() : Task.CompletedTask;
+
+    private Task Apply() =>
+        OnChange.InvokeAsync((AtLowerEnd(from, Min) ? null : from, AtUpperEnd(to, Max, Step!.Value) ? null : to));
+
+    /// <summary>The lower handle is at its end when it sits on the minimum, which is always on the step grid.</summary>
+    internal static bool AtLowerEnd(double value, double min) => value <= min;
+
+    /// <summary>The upper handle is at its end when it is within one step of the maximum, the closest the grid lets it get.</summary>
+    internal static bool AtUpperEnd(double value, double max, double step) => max - value < step;
 
     private string Percent(double value) =>
         Max > Min ? ((value - Min) / (Max - Min) * 100).ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%" : "0%";
