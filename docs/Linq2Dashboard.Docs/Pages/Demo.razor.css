@@ -211,9 +211,9 @@
     }
 }
 
-/* The demo uses the whole screen: the grid fills the viewport below the toolbar, metrics and chart, and scrolls inside. */
+/* The grid grows with its rows up to a cap, then scrolls inside its own box rather than with the page. */
 .demo-grid {
-    height: max(20rem, calc(100vh - 34rem));
+    max-height: 32rem;
     overflow-y: auto;
     border: 1px solid var(--l2d-border);
     border-radius: var(--l2d-radius);
@@ -221,6 +221,17 @@
 
 .demo-grid ::deep td {
     font-variant-numeric: tabular-nums;
+}
+
+/* QuickGrid leaves the header buttons in the browser's default button font and the table at its content width. */
+.demo-grid ::deep table {
+    width: 100%;
+}
+
+.demo-grid ::deep .col-title {
+    font: inherit;
+    font-weight: 600;
+    color: inherit;
 }
 
 /* QuickGrid has no sticky header of its own; the scroll container is ours, so the header is too. */

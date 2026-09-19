@@ -37,7 +37,7 @@
 }
 
 .sample-grid {
-    height: 30rem;
+    max-height: 30rem;
     overflow-y: auto;
     border: 1px solid var(--l2d-border);
     border-radius: var(--l2d-radius);
@@ -45,6 +45,17 @@
 
 .sample-grid ::deep td {
     font-variant-numeric: tabular-nums;
+}
+
+/* QuickGrid leaves the header buttons in the browser's default button font and the table at its content width. */
+.sample-grid ::deep table {
+    width: 100%;
+}
+
+.sample-grid ::deep .col-title {
+    font: inherit;
+    font-weight: 600;
+    color: inherit;
 }
 
 /* QuickGrid has no sticky header of its own; the scroll container is ours, so the header is too. */
