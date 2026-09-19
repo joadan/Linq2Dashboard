@@ -11,7 +11,7 @@ Interactive exploration of a large in-memory collection: facets with counts, met
 | `Linq2Dashboard` | `Linq2Dashboard` | The engine. net10.0, no dependencies. |
 | `Linq2Dashboard.Blazor` | `Linq2Dashboard.Blazor` | Components that render a dashboard and turn clicks into selections. |
 
-Both are prerelease on NuGet while the API settles: `dotnet add package Linq2Dashboard --prerelease`.
+`Linq2Dashboard.Blazor` depends on `Linq2Dashboard`, so a Blazor app adds only the Blazor package; add the engine alone for a host without the components. Both are prerelease on NuGet while the API settles: `dotnet add package Linq2Dashboard.Blazor --prerelease`.
 
 ## Wiring checklist
 

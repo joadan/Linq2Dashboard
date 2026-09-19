@@ -5,7 +5,6 @@ public partial class FiveMinutes
     private const string CreateAppExample = """
         dotnet new blazor -n Shop --interactivity Server
         cd Shop
-        dotnet add package Linq2Dashboard --prerelease
         dotnet add package Linq2Dashboard.Blazor --prerelease
         dotnet add package Microsoft.AspNetCore.Components.QuickGrid
         dotnet add package Microsoft.Extensions.Caching.Hybrid

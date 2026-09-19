@@ -8,11 +8,12 @@
 
 <p>
     Two packages on NuGet: <code>Linq2Dashboard</code> is the engine and has no UI dependency; <code>Linq2Dashboard.Blazor</code>
-    renders it. Both target .NET 10. Versions are prerelease while the API settles.
+    renders it and depends on the engine, so a Blazor app adds only the Blazor package. Both target .NET 10. Versions are
+    prerelease while the API settles.
 </p>
 
-<pre><code>dotnet add package Linq2Dashboard --prerelease
-dotnet add package Linq2Dashboard.Blazor --prerelease</code></pre>
+<pre><code>dotnet add package Linq2Dashboard.Blazor --prerelease   # a Blazor app; the engine comes with it
+dotnet add package Linq2Dashboard --prerelease          # the engine alone, for a host without the components</code></pre>
 
 <h2>1. Build a dashboard</h2>
 

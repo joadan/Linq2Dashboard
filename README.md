@@ -15,8 +15,8 @@ The core engine is complete for the first version and meets its performance targ
 ## Install
 
 ```powershell
-dotnet add package Linq2Dashboard          # the engine, no UI dependency
-dotnet add package Linq2Dashboard.Blazor   # the components
+dotnet add package Linq2Dashboard.Blazor   # the components; depends on the engine, so this is all a Blazor app needs
+dotnet add package Linq2Dashboard          # the engine alone, no UI dependency
 ```
 
 Versions come from [Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning): `version.json` holds the major.minor and the prerelease tag, the build height supplies the patch. Releases are cut manually from the **Create Release** workflow, which tests, packs, pushes to NuGet through [Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) and tags the commit. No API key is stored anywhere.
