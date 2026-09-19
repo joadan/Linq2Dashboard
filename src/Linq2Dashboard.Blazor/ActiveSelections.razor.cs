@@ -2,7 +2,11 @@ using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
 
-/// <summary>Chips for the current selections, one per facet or per value, each removable, with a clear-all button (design §9). Text comes from the formatter, so chips read like the facets.</summary>
+/// <summary>
+/// Chips for the current selections, each removable, with a clear-all button (design §9). A facet's selection is a set of
+/// parts, values, intervals, presets, the null rows or a text, and every part is removable on its own. Text comes from the
+/// formatter, so chips read like the facets.
+/// </summary>
 public partial class ActiveSelections<T>
 {
     /// <summary>Render nothing when there is no selection. Default true.</summary>
@@ -14,13 +18,14 @@ public partial class ActiveSelections<T>
     public bool ShowFacetName { get; set; } = true;
 
     /// <summary>
-    /// One chip per facet with its selected values inside, each removable on its own, instead of one
-    /// chip per value. Default true: the values of one facet are one OR group (concept §4.1).
+    /// One chip per facet with its selected parts inside, each removable on its own, instead of one
+    /// chip per part. Default true: the parts of one facet are one OR group (concept §4.1). A facet with a
+    /// single part renders a plain chip either way.
     /// </summary>
     [Parameter]
     public bool GroupValues { get; set; } = true;
 
-    /// <summary>Text between values in a grouped chip. Default ", "; " or " states the semantics.</summary>
+    /// <summary>Text between parts in a grouped chip. Default ", "; " or " states the semantics.</summary>
     [Parameter]
     public string ValueSeparator { get; set; } = ", ";
 
@@ -36,39 +41,71 @@ public partial class ActiveSelections<T>
     [Parameter]
     public string RemoveText { get; set; } = "Remove";
 
-    /// <summary>The bucket's or preset's own label when the interval is exactly that, otherwise the formatter's interval text; a text facet's text as typed.</summary>
-    private string SelectionLabel(FacetState facet)
+    /// <summary>One removable piece of a facet's selection and what removing it does.</summary>
+    private readonly record struct ChipPart(string Label, Func<Task> Remove);
+
+    /// <summary>
+    /// The facet's selection as removable parts: each value, each interval or preset, the null rows, or the text.
+    /// Removing a part toggles it off; for the one part of a text facet that clears the facet.
+    /// </summary>
+    private IReadOnlyList<ChipPart> Parts(FacetState facet)
     {
-        switch (facet)
+        switch (facet.Selection)
         {
-            case TextFacetState when facet.Selection is TextSelection text:
-                return text.Text;
+            case null:
+                return [];
 
-            case RangeFacetState range when facet.Selection is RangeSelection selection:
-                if (selection.OnlyNulls)
+            case ValueSelection values:
+                return values.Values
+                    .Select(value => new ChipPart(Formatter.FormatValue(facet, value), () => Context.ToggleAsync(facet.Key, value)))
+                    .ToList();
+
+            case RangeSelection range when facet is RangeFacetState state:
+                var intervals = range.Intervals
+                    .Select(interval => new ChipPart(RangeLabel(state, interval), () => Context.ToggleIntervalAsync(facet.Key, interval)))
+                    .ToList();
+                if (range.IncludeNull)
                 {
-                    return Formatter.NullLabel;
+                    intervals.Add(new ChipPart(Formatter.NullLabel, () => Context.SelectAsync(facet.Key, range.ToggleNull())));
                 }
 
-                RangeBucket? bucket = range.Buckets.FirstOrDefault(b => b.ToSelection().Equals(selection));
-                return bucket is not null ? Formatter.FormatRangeBucket(bucket) : Formatter.FormatRangeSelection(selection);
+                return intervals;
 
-            case DateFacetState dates when facet.Selection is DateSelection selection:
-                if (selection.OnlyNulls)
+            case DateSelection date when facet is DateFacetState state:
+                var parts = date.Intervals
+                    .Select(interval => new ChipPart(DateLabel(state, interval), () => Context.ToggleIntervalAsync(facet.Key, interval)))
+                    .ToList();
+                if (date.IncludeNull)
                 {
-                    return Formatter.NullLabel;
+                    parts.Add(new ChipPart(Formatter.NullLabel, () => Context.SelectAsync(facet.Key, date.ToggleNull())));
                 }
 
-                if (selection.Preset is DatePreset preset)
-                {
-                    return Formatter.FormatPreset(preset);
-                }
+                return parts;
 
-                DateBucket? period = dates.Buckets.FirstOrDefault(b => b.ToSelection().Equals(selection));
-                return period is not null ? Formatter.FormatDateBucket(period, dates.Granularity) : Formatter.FormatDateSelection(selection);
+            case TextSelection text:
+                return [new ChipPart(text.Text, () => Context.ClearAsync(facet.Key))];
 
             default:
-                return facet.Selection?.ToString() ?? string.Empty;
+                return [new ChipPart(facet.Selection?.ToString() ?? string.Empty, () => Context.ClearAsync(facet.Key))];
         }
+    }
+
+    /// <summary>The bucket's own label when the interval is exactly that bucket, otherwise the formatter's interval text.</summary>
+    private string RangeLabel(RangeFacetState state, RangeInterval interval) =>
+        state.Buckets.FirstOrDefault(b => b.ToInterval().Equals(interval)) is RangeBucket bucket
+            ? Formatter.FormatRangeBucket(bucket)
+            : Formatter.FormatRangeInterval(interval);
+
+    /// <summary>The preset's or period's own label when the part is exactly that, otherwise the formatter's interval text.</summary>
+    private string DateLabel(DateFacetState state, DateInterval interval)
+    {
+        if (interval.Preset is DatePreset preset)
+        {
+            return Formatter.FormatPreset(preset);
+        }
+
+        return state.Buckets.FirstOrDefault(b => b.ToInterval().Equals(interval)) is DateBucket bucket
+            ? Formatter.FormatDateBucket(bucket, state.Granularity)
+            : Formatter.FormatDateInterval(interval);
     }
 }

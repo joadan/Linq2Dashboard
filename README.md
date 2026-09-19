@@ -67,7 +67,7 @@ foreach (FacetValue value in country.Values)             // SE is selected and s
     Console.WriteLine($"{value.Value ?? "(none)"}  {value.FilteredCount}/{value.TotalCount}");
 
 var amount = (RangeFacetState)state.Facet("Amount");
-selections = selections.With("Amount", amount.Buckets[1].ToSelection());   // a bucket click
+selections = selections.ToggleInterval("Amount", amount.Buckets[1].ToInterval());   // a bar click: bars toggle like values
 
 IReadOnlyList<Order> rows = state.Items;                 // counted and indexable: hand it to your grid
 
@@ -145,7 +145,7 @@ The rules are decisions, not options. They are spelled out in the [concept docum
 - **Every value carries two counts**, total over the dataset and filtered under the other facets' selections, and filtered counts always sum to the facet's context count.
 - **Null is a value.** It is shown, counted and selectable like any other, never silently dropped.
 - **Zero-count values stay in the state.** Hiding or greying them is the UI's choice.
-- **Range and date buckets are fixed at build**; only their counts change. A bucket click produces exactly the interval the bucket covers.
+- **Range and date buckets are fixed at build**; only their counts change. A bucket click toggles exactly the interval the bucket covers, so bars select like values: "below 100 or 1 000 and above" is one selection.
 - **Free text is a facet too, and it is the one potentially expensive operation.** A text facet has no values; its text narrows the matching rows through the function you give it, and searching inside a value facet's list never does. Every other facet counts through a column lookup, but a new text calls your function once per row, so the cost grows with the dataset and the function. The Blazor input waits for a pause before applying the text, only a new text pays, and parallel counting spreads the scan over the cores.
 - **Metrics skip null** and divide averages by rows that have a value. Distinct counts different non-null values with the facets' equality rules. Count, sum and distinct also carry their share of the total, so a tile can read "12 400 (38 %)". Calculated metrics are formulas over earlier metrics: null in, no value out, and never infinity.
 - **The data is fixed at initialisation.** New data means a new dashboard; selections are serialisable, so the view carries over. A subset is not new data: `dashboard.ScopeTo(x => x.Region == "Nordic")` gives a scoped dashboard with the same definitions over the rows that pass, in milliseconds, with every total measured against the subset. `dashboard.ScopeTo(selections)` does the same from the facets' own selections, so the current view can become a dashboard of its own.

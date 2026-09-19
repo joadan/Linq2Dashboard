@@ -69,7 +69,13 @@ public sealed class DashboardContext<T>
     /// <summary>The click on a value facet: add the value if absent, remove it if present.</summary>
     public Task ToggleAsync(string key, object? value) => ApplyAsync(Selections.Toggle(key, value));
 
-    /// <summary>The click on a bucket or preset, or a slider change: replace the facet's selection.</summary>
+    /// <summary>The click on a range facet's bar: add the interval if absent, remove it if present (concept §5).</summary>
+    public Task ToggleIntervalAsync(string key, RangeInterval interval) => ApplyAsync(Selections.ToggleInterval(key, interval));
+
+    /// <summary>The click on a date facet's bar or preset: add the part if absent, remove it if present (concept §5).</summary>
+    public Task ToggleIntervalAsync(string key, DateInterval interval) => ApplyAsync(Selections.ToggleInterval(key, interval));
+
+    /// <summary>A slider change, a null toggle or any other whole selection: replace the facet's selection. An empty one clears it.</summary>
     public Task SelectAsync(string key, Selection selection) => ApplyAsync(Selections.With(key, selection));
 
     /// <summary>Removes one facet's selection: a header's clear button or a chip.</summary>

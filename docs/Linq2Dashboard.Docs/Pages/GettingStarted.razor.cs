@@ -50,7 +50,7 @@ public partial class GettingStarted
             Console.WriteLine($"{value.Value ?? "(none)"}  {value.FilteredCount}/{value.TotalCount}");
 
         var amount = (RangeFacetState)state.Facet("Amount");
-        selections = selections.With("Amount", amount.Buckets[1].ToSelection());   // a bucket click
+        selections = selections.ToggleInterval("Amount", amount.Buckets[1].ToInterval());   // a bar click: bars toggle like values
 
         IReadOnlyList<Order> rows = state.Items;      // counted and indexable: hand it to your grid
 

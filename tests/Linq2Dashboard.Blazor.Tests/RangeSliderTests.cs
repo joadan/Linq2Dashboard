@@ -170,17 +170,38 @@ public class RangeSliderTests : BunitContext
         Assert.Equal(("0", "2500"), Handles(cut));
     }
 
+    /// <summary>The handles show one interval; a single bar click is one, a second bar makes a set the slider cannot show, so they rest at the ends.</summary>
     [Fact]
-    public void Handles_follow_the_current_selection_including_bucket_clicks()
+    public void Handles_follow_a_single_interval_and_rest_at_the_ends_for_several()
     {
-        var cut = RenderFacet(Selections.Empty.With("Amount", RangeSelection.AtLeast(1000)));
-        Assert.Equal(("1000", "2500"), Handles(cut));
+        var cut = RenderFacet();
+        Assert.Equal(("0", "2500"), Handles(cut));
 
         cut.FindAll("li.l2d-bucket button")[1].Click(); // 100 – 500
         Assert.Equal(("100", "500"), Handles(cut));
 
+        cut.FindAll("li.l2d-bucket button")[3].Click(); // ≥ 1000 joins: two intervals
+        Assert.Equal(("0", "2500"), Handles(cut));
+
+        cut.Render(parameters => parameters.Add(p => p.Selections, Selections.Empty.With("Amount", RangeSelection.AtLeast(1000))));
+        Assert.Equal(("1000", "2500"), Handles(cut));
+
         cut.Render(parameters => parameters.Add(p => p.Selections, Selections.Empty.With("Amount", RangeSelection.OnlyNull)));
         Assert.Equal(("0", "2500"), Handles(cut));
+    }
+
+    /// <summary>The slider's interval replaces the whole set, bars included: it is a single-interval editor.</summary>
+    [Fact]
+    public void Applying_the_slider_replaces_every_toggled_bar()
+    {
+        Selections? raised = null;
+        var low = new RangeInterval(null, 100, toInclusive: false);
+        var high = new RangeInterval(1000, null, toInclusive: false);
+        var cut = RenderFacet(Selections.Empty.With("Amount", new RangeSelection([low, high], includeNull: true)), s => raised = s);
+
+        cut.Find("input.l2d-slider-input-from").Change("250");
+
+        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.AtLeast(250)), raised);
     }
 
     [Fact]

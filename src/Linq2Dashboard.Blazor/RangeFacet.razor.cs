@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
 
-/// <summary>A numeric range facet: fixed buckets as a histogram or a list, the null value beside them, and an optional slider (concept §5). A bucket click selects exactly its interval.</summary>
+/// <summary>A numeric range facet: fixed buckets as a histogram or a list, the null value beside them, and an optional slider (concept §5). A bucket click toggles exactly its interval, so bars select like values.</summary>
 public partial class RangeFacet<T>
 {
     private bool collapsed;
@@ -50,7 +50,7 @@ public partial class RangeFacet<T>
 
     /// <summary>
     /// A dual-handle slider beneath the buckets for a continuous interval (concept §5). Applies on
-    /// release as a closed interval; dragging both handles to the ends clears the facet.
+    /// release as a closed interval that replaces the facet's selection; dragging both handles to the ends clears the facet.
     /// </summary>
     [Parameter]
     public bool ShowSlider { get; set; }
@@ -84,10 +84,13 @@ public partial class RangeFacet<T>
     private RangeFacetState Facet => State.Facet(Key) as RangeFacetState
         ?? throw new InvalidOperationException($"Facet '{Key}' is not a range facet; use the component for its kind.");
 
-    /// <summary>Slider handles follow the current interval selection; anything else puts them at the ends.</summary>
-    private double? SliderFrom => Facet.Selection is RangeSelection { OnlyNulls: false } range ? range.From : null;
+    /// <summary>The facet's selection, or the empty one to toggle from.</summary>
+    private RangeSelection Current => Facet.Selection as RangeSelection ?? RangeSelection.Empty;
 
-    private double? SliderTo => Facet.Selection is RangeSelection { OnlyNulls: false } range ? range.To : null;
+    /// <summary>Slider handles follow the selection when it is exactly one interval; several intervals or none put them at the ends.</summary>
+    private double? SliderFrom => Current.Intervals is [RangeInterval only] ? only.From : null;
+
+    private double? SliderTo => Current.Intervals is [RangeInterval only] ? only.To : null;
 
     private IReadOnlyList<BucketBar> Bars()
     {
@@ -107,15 +110,11 @@ public partial class RangeFacet<T>
         return bars;
     }
 
-    /// <summary>A click selects the bucket's interval; a second click on the selected bucket clears the facet.</summary>
-    private Task ClickBucket(RangeBucket bucket)
-    {
-        RangeSelection selection = bucket.ToSelection();
-        return selection.Equals(Facet.Selection) ? Context.ClearAsync(Key) : Context.SelectAsync(Key, selection);
-    }
+    /// <summary>A click toggles the bucket's interval in the facet's set of intervals (concept §5); removing the last part clears the facet.</summary>
+    private Task ClickBucket(RangeBucket bucket) => Context.ToggleIntervalAsync(Key, bucket.ToInterval());
 
-    private Task ClickNull() =>
-        Facet.Selection is RangeSelection { OnlyNulls: true } ? Context.ClearAsync(Key) : Context.SelectAsync(Key, RangeSelection.OnlyNull);
+    /// <summary>The null bar toggles the null rows beside the intervals (concept §4.8).</summary>
+    private Task ClickNull() => Context.SelectAsync(Key, Current.ToggleNull());
 
     /// <inheritdoc />
     protected override void OnParametersSet()
@@ -137,6 +136,7 @@ public partial class RangeFacet<T>
     /// <summary>
     /// The slider reports null for a side whose handle rests at its end, so a handle at an end leaves that side unbounded
     /// and the open-ended first or last bucket counts as covered (design §9). Both at the ends is no constraint at all.
+    /// The slider's interval replaces the facet's selection, including any bars toggled before it.
     /// </summary>
     private Task ApplySlider((double? From, double? To) bounds) =>
         bounds is (null, null) ? Context.ClearAsync(Key) : Context.SelectAsync(Key, new RangeSelection(bounds.From, bounds.To));

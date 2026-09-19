@@ -12,7 +12,7 @@
                      Collapsible="Collapsible" Collapsed="collapsed" OnToggle="ToggleCollapsed">
             @if (ShowBounds && !double.IsNaN(Facet.Min))
             {
-                <span class="l2d-facet-bounds">@Formatter.FormatRangeSelection(RangeSelection.Between(Facet.Min, Facet.Max))</span>
+                <span class="l2d-facet-bounds">@Formatter.FormatRangeInterval(RangeInterval.Between(Facet.Min, Facet.Max))</span>
             }
         </FacetHeader>
     }

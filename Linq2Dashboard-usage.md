@@ -167,7 +167,7 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 | `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Name`, `Layout`, `ShowSlider`, `ShowSliderInputs`, `SliderStep`, `ShowBounds`, `InputClass` |
 | `DateFacet` | Presets with counts, one bar per period. | `Key`, `Name`, `Layout`, `ShowPresets` |
 | `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`, `DebounceMilliseconds`, `Placeholder`, `InputClass` |
-| `ActiveSelections` | One removable chip per selection, clear all. | `ShowFacetName`, `GroupValues` |
+| `ActiveSelections` | One chip per facet with every part removable (a value, an interval, a preset, the null value), clear all. | `ShowFacetName`, `GroupValues` |
 | `Metric` | One tile by key with its share of the total; a dash when there is no value. A `CountMetric` is the matching row count. | `Key`, `Name`, `MetricTemplate` |
 | `StateSummary` | Everything in the state as plain clickable lists: counts, metrics, every facet. The default content of `DashboardView`, for a first look before laying out a page. | the texts |
 

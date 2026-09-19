@@ -100,6 +100,32 @@ public class DateFacetTests : BunitContext
         Assert.Equal(Selections.Empty, raised);
     }
 
+    /// <summary>Concept §5: periods and presets toggle like values and join one selection; each part lights its own bar or pill.</summary>
+    [Fact]
+    public void Periods_and_presets_toggle_into_one_selection()
+    {
+        Selections? raised = null;
+        var cut = RenderFacet("OrderDate", onChanged: s => raised = s);
+
+        Buckets(cut)[0].QuerySelector("button")!.Click();
+        Buckets(cut)[3].QuerySelector("button")!.Click();
+        Presets(cut)[1].QuerySelector("button")!.Click();
+
+        var january = DateInterval.Between(TestData.Instant("2026-01-01T00:00:00+01:00"), TestData.Instant("2026-02-01T00:00:00+01:00"));
+        var april = DateInterval.Between(TestData.Instant("2026-04-01T00:00:00+02:00"), TestData.Instant("2026-05-01T00:00:00+02:00"));
+        var recent = DateInterval.Relative(DatePreset.Last7Days);
+        Assert.Equal(Selections.Empty.With("OrderDate", new DateSelection([january, april, recent])), raised);
+        Assert.Equal([true, false, false, true], Buckets(cut).Select(b => b.ClassList.Contains("l2d-selected")));
+        Assert.Equal([false, true], Presets(cut).Select(p => p.ClassList.Contains("l2d-selected")));
+
+        Buckets(cut)[0].QuerySelector("button")!.Click();
+        Assert.Equal(Selections.Empty.With("OrderDate", new DateSelection([april, recent])), raised);
+
+        Presets(cut)[1].QuerySelector("button")!.Click();
+        Buckets(cut)[3].QuerySelector("button")!.Click();
+        Assert.Equal(Selections.Empty, raised);
+    }
+
     [Fact]
     public void A_wider_interval_marks_every_period_it_covers()
     {

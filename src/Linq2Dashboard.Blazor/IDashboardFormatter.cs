@@ -45,9 +45,9 @@ public interface IDashboardFormatter
     /// <summary>A relative preset, for example "Last 7 days".</summary>
     string FormatPreset(DatePreset preset);
 
-    /// <summary>A numeric interval that does not coincide with a bucket, for example from a slider: "100 – 500", "≥ 100".</summary>
-    string FormatRangeSelection(RangeSelection selection);
+    /// <summary>One numeric interval that does not coincide with a bucket, for example from a slider: "100 – 500", "≥ 100". The null rows are a part of their own, labelled by <see cref="NullLabel"/>.</summary>
+    string FormatRangeInterval(RangeInterval interval);
 
-    /// <summary>An absolute date interval that does not coincide with a bucket or preset.</summary>
-    string FormatDateSelection(DateSelection selection);
+    /// <summary>One date part that does not coincide with a bucket: an absolute interval, or a preset through <see cref="FormatPreset"/>.</summary>
+    string FormatDateInterval(DateInterval interval);
 }

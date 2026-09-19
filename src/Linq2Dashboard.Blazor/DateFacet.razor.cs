@@ -2,7 +2,7 @@ using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
 
-/// <summary>A date facet: presets with counts, one bar per calendar period, and the null value beside them (concept §5).</summary>
+/// <summary>A date facet: presets with counts, one bar per calendar period, and the null value beside them (concept §5). A bar or preset click toggles that part, so they select like values.</summary>
 public partial class DateFacet<T>
 {
     private bool collapsed;
@@ -61,6 +61,9 @@ public partial class DateFacet<T>
     private DateFacetState Facet => State.Facet(Key) as DateFacetState
         ?? throw new InvalidOperationException($"Facet '{Key}' is not a date facet; use the component for its kind.");
 
+    /// <summary>The facet's selection, or the empty one to toggle from.</summary>
+    private DateSelection Current => Facet.Selection as DateSelection ?? DateSelection.Empty;
+
     private IReadOnlyList<BucketBar> Bars()
     {
         DateFacetState facet = Facet;
@@ -79,18 +82,14 @@ public partial class DateFacet<T>
         return bars;
     }
 
-    /// <summary>A click selects the period; a second click on the selected period clears the facet.</summary>
-    private Task ClickBucket(DateBucket bucket)
-    {
-        DateSelection selection = bucket.ToSelection();
-        return selection.Equals(Facet.Selection) ? Context.ClearAsync(Key) : Context.SelectAsync(Key, selection);
-    }
+    /// <summary>A click toggles the period in the facet's set of parts (concept §5); removing the last part clears the facet.</summary>
+    private Task ClickBucket(DateBucket bucket) => Context.ToggleIntervalAsync(Key, bucket.ToInterval());
 
-    private Task ClickPreset(PresetState preset) =>
-        preset.Selected ? Context.ClearAsync(Key) : Context.SelectAsync(Key, preset.ToSelection());
+    /// <summary>A click toggles the relative preset as a part of its own, beside any periods.</summary>
+    private Task ClickPreset(PresetState preset) => Context.ToggleIntervalAsync(Key, preset.ToInterval());
 
-    private Task ClickNull() =>
-        Facet.Selection is DateSelection { OnlyNulls: true } ? Context.ClearAsync(Key) : Context.SelectAsync(Key, DateSelection.OnlyNull);
+    /// <summary>The null bar toggles the null rows beside the parts (concept §4.8).</summary>
+    private Task ClickNull() => Context.SelectAsync(Key, Current.ToggleNull());
 
     /// <inheritdoc />
     protected override void OnParametersSet()

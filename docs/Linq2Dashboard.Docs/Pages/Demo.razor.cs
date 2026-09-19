@@ -81,18 +81,9 @@ public partial class Demo
         timelineMax = Math.Max(1, timeline.Buckets.Count == 0 ? 1 : timeline.Buckets.Max(b => b.TotalCount));
     }
 
-    /// <summary>A click on a bar selects that month; a click on a selected one clears the facet, as the facet's own bars do.</summary>
-    private Task OnBarClicked(DateBucket bucket)
-    {
-        if (view is null)
-        {
-            return Task.CompletedTask;
-        }
-
-        return bucket.Selected
-            ? view.Context.ClearAsync("OrderDate")
-            : view.Context.SelectAsync("OrderDate", bucket.ToSelection());
-    }
+    /// <summary>A click on a bar toggles that month in the date facet's selection, as the facet's own bars do (concept §5).</summary>
+    private Task OnBarClicked(DateBucket bucket) =>
+        view is null ? Task.CompletedTask : view.Context.ToggleIntervalAsync("OrderDate", bucket.ToInterval());
 
     private string Share(int count) => (count / (double)timelineMax).ToString("0.###", CultureInfo.InvariantCulture);
 

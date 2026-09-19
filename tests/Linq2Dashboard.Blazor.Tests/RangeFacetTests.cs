@@ -97,6 +97,44 @@ public class RangeFacetTests : BunitContext
         Assert.Empty(cut.FindAll(".l2d-selected"));
     }
 
+    /// <summary>Concept §5: bars toggle like values. A second bar joins the first, both light, and each comes off on its own.</summary>
+    [Fact]
+    public void Clicking_a_second_bucket_adds_its_interval_and_both_light_up()
+    {
+        Selections? raised = null;
+        var cut = RenderFacet("Amount", onChanged: s => raised = s);
+
+        Buckets(cut)[0].QuerySelector("button")!.Click();
+        Buckets(cut)[3].QuerySelector("button")!.Click();
+
+        var low = new RangeInterval(null, 100, toInclusive: false);
+        var high = new RangeInterval(1000, null, toInclusive: false);
+        Assert.Equal(Selections.Empty.With("Amount", new RangeSelection([low, high])), raised);
+        Assert.Equal([true, false, false, true], Buckets(cut).Select(b => b.ClassList.Contains("l2d-selected")));
+
+        Buckets(cut)[0].QuerySelector("button")!.Click();
+        Assert.Equal(Selections.Empty.With("Amount", new RangeSelection([high])), raised);
+        Assert.Equal([false, false, false, true], Buckets(cut).Select(b => b.ClassList.Contains("l2d-selected")));
+
+        Buckets(cut)[3].QuerySelector("button")!.Click();
+        Assert.Equal(Selections.Empty, raised);
+    }
+
+    /// <summary>A bar click adds to what a slider or a bookmark selected rather than replacing it; the slider's interval stays a part of its own.</summary>
+    [Fact]
+    public void A_bucket_click_joins_an_existing_interval()
+    {
+        Selections? raised = null;
+        var cut = RenderFacet("Amount", Selections.Empty.With("Amount", RangeSelection.Between(200, 700)), s => raised = s);
+
+        Buckets(cut)[3].QuerySelector("button")!.Click();
+
+        Assert.Equal(
+            Selections.Empty.With("Amount", new RangeSelection([RangeInterval.Between(200, 700), new RangeInterval(1000, null, toInclusive: false)])),
+            raised);
+        Assert.Equal([false, false, false, true], Buckets(cut).Select(b => b.ClassList.Contains("l2d-selected")));
+    }
+
     [Fact]
     public void A_wider_interval_marks_every_bucket_it_covers()
     {
@@ -119,6 +157,27 @@ public class RangeFacetTests : BunitContext
         nullBucket.QuerySelector("button")!.Click();
         Assert.Equal(Selections.Empty.With("Discount", RangeSelection.OnlyNull), raised);
         Assert.Contains("l2d-selected", Buckets(cut).Single(b => b.ClassList.Contains("l2d-null")).ClassName);
+
+        Buckets(cut).Single(b => b.ClassList.Contains("l2d-null")).QuerySelector("button")!.Click();
+        Assert.Equal(Selections.Empty, raised);
+    }
+
+    /// <summary>Concept §4.8, §5: the null bar toggles beside the buckets, as one more part of the same selection.</summary>
+    [Fact]
+    public void The_null_bucket_toggles_beside_a_selected_bucket()
+    {
+        Selections? raised = null;
+        var cut = RenderFacet("Discount", onChanged: s => raised = s);
+
+        Buckets(cut)[0].QuerySelector("button")!.Click();
+        Buckets(cut).Single(b => b.ClassList.Contains("l2d-null")).QuerySelector("button")!.Click();
+
+        var low = new RangeInterval(null, 10, toInclusive: false);
+        Assert.Equal(Selections.Empty.With("Discount", new RangeSelection([low], includeNull: true)), raised);
+        Assert.Equal([true, false, false, true], Buckets(cut).Select(b => b.ClassList.Contains("l2d-selected")));
+
+        Buckets(cut)[0].QuerySelector("button")!.Click();
+        Assert.Equal(Selections.Empty.With("Discount", RangeSelection.OnlyNull), raised);
 
         Buckets(cut).Single(b => b.ClassList.Contains("l2d-null")).QuerySelector("button")!.Click();
         Assert.Equal(Selections.Empty, raised);

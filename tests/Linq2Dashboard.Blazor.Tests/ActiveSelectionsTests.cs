@@ -152,8 +152,66 @@ public class ActiveSelectionsTests : BunitContext
     {
         Assert.Equal("≥ 250", Label(Chips(RenderChips(Selections.Empty.With("Amount", RangeSelection.AtLeast(250)))).Single()));
         Assert.Equal("250 – 750", Label(Chips(RenderChips(Selections.Empty.With("Amount", RangeSelection.Between(250, 750)))).Single()));
-        Assert.Equal("< 500 or (none)", Label(Chips(RenderChips(Selections.Empty.With("Amount", new RangeSelection(null, 500, toInclusive: false, includeNull: true)))).Single()));
+        Assert.Equal(["< 500", "(none)"], Labels(Chips(RenderChips(Selections.Empty.With("Amount", new RangeSelection(null, 500, toInclusive: false, includeNull: true)))).Single()));
         Assert.Equal("(none)", Label(Chips(RenderChips(Selections.Empty.With("Amount", RangeSelection.OnlyNull))).Single()));
+    }
+
+    /// <summary>Concept §5: the intervals of one facet are one OR group, like values; each is removable on its own and the chip clears the facet.</summary>
+    [Fact]
+    public void Intervals_of_one_facet_are_grouped_and_each_is_removable()
+    {
+        Selections? raised = null;
+        var low = new RangeInterval(null, 100, toInclusive: false);
+        var high = RangeInterval.AtLeast(1000);
+        var cut = RenderChips(Selections.Empty.With("Amount", new RangeSelection([low, high], includeNull: true)), s => raised = s);
+
+        var chip = Chips(cut).Single();
+        Assert.Contains("l2d-chip-group", chip.ClassName);
+        Assert.Equal(["< 100", "≥ 1,000", "(none)"], Labels(chip));   // the first bucket's own label, the formatter's text, the null label
+
+        chip.QuerySelectorAll(".l2d-chip-value").Single(v => v.QuerySelector(".l2d-chip-label")!.TextContent == "≥ 1,000")
+            .QuerySelector(".l2d-chip-value-remove")!.Click();
+        Assert.Equal(Selections.Empty.With("Amount", new RangeSelection([low], includeNull: true)), raised);
+
+        Chips(cut).Single().QuerySelectorAll(".l2d-chip-value").Single(v => v.QuerySelector(".l2d-chip-label")!.TextContent == "(none)")
+            .QuerySelector(".l2d-chip-value-remove")!.Click();
+        Assert.Equal(Selections.Empty.With("Amount", new RangeSelection([low])), raised);
+        Assert.DoesNotContain("l2d-chip-group", Chips(cut).Single().ClassName);
+
+        Chips(cut).Single().QuerySelector(".l2d-chip-remove")!.Click();
+        Assert.Equal(Selections.Empty, raised);
+    }
+
+    [Fact]
+    public void Date_parts_are_grouped_with_preset_and_period_labels()
+    {
+        Selections? raised = null;
+        var march = (DateFacetState)BuildDashboard().Calculate().Facet("OrderDate");
+        DateInterval marchPart = march.Buckets.Single(b => b.PeriodStart == new DateTime(2026, 3, 1)).ToInterval();
+        var cut = RenderChips(Selections.Empty.With("OrderDate", new DateSelection([marchPart, DateInterval.Relative(DatePreset.ThisYear)])), s => raised = s);
+
+        var chip = Chips(cut).Single();
+        Assert.Equal("Ordered", Facet(chip));
+        Assert.Equal(["Mar 2026", "This year"], Labels(chip));
+
+        chip.QuerySelectorAll(".l2d-chip-value").Single(v => v.QuerySelector(".l2d-chip-label")!.TextContent == "Mar 2026")
+            .QuerySelector(".l2d-chip-value-remove")!.Click();
+        Assert.Equal(Selections.Empty.With("OrderDate", DateSelection.Relative(DatePreset.ThisYear)), raised);
+    }
+
+    [Fact]
+    public void Grouping_off_gives_one_chip_per_interval()
+    {
+        Selections? raised = null;
+        var low = new RangeInterval(null, 100, toInclusive: false);
+        var high = RangeInterval.AtLeast(1000);
+        var cut = RenderChips(Selections.Empty.With("Amount", new RangeSelection([low, high])), s => raised = s, c => c.Add(x => x.GroupValues, false));
+
+        var chips = Chips(cut);
+        Assert.Equal(["< 100", "≥ 1,000"], chips.Select(Label));
+
+        chips[0].QuerySelector(".l2d-chip-remove")!.Click();
+        Assert.Equal(Selections.Empty.With("Amount", new RangeSelection([high])), raised);
     }
 
     [Fact]

@@ -14,69 +14,54 @@ else
         <ul class="l2d-active-chips">
             @foreach (FacetState facet in State.Facets)
             {
-                @switch (facet.Selection)
+                IReadOnlyList<ChipPart> parts = Parts(facet);
+                @if (parts.Count == 0)
                 {
-                    case null:
-                        break;
+                    continue;
+                }
 
-                    case ValueSelection values when GroupValues:
-                        @* One chip per facet: the values are one OR group (concept §4.1). Each value stays removable on its own. *@
-                        <li @key="facet.Key" class="l2d-chip l2d-chip-group" data-key="@facet.Key">
-                            @if (ShowFacetName)
-                            {
-                                <span class="l2d-chip-facet">@facet.Name</span>
-                            }
-                            <span class="l2d-chip-values">
-                                @for (int i = 0; i < values.Values.Count; i++)
-                                {
-                                    object? value = values.Values[i];
-                                    string label = Formatter.FormatValue(facet, value);
-                                    @if (i > 0)
-                                    {
-                                        <span class="l2d-chip-separator">@ValueSeparator</span>
-                                    }
-                                    <span class="l2d-chip-value">
-                                        <span class="l2d-chip-label">@label</span>
-                                        <button type="button" class="l2d-chip-value-remove" aria-label="@RemoveText @label" title="@RemoveText"
-                                                @onclick="() => Context.ToggleAsync(facet.Key, value)">×</button>
-                                    </span>
-                                }
-                            </span>
-                            <button type="button" class="l2d-chip-remove" aria-label="@RemoveText @facet.Name" title="@RemoveText"
-                                    @onclick="() => Context.ClearAsync(facet.Key)">×</button>
-                        </li>
-                        break;
-
-                    case ValueSelection values:
-                        @* One chip per value; removing it toggles that value off. *@
-                        @foreach (object? value in values.Values)
+                @if (GroupValues && parts.Count > 1)
+                {
+                    @* One chip per facet: the parts are one OR group (concept §4.1). Each part stays removable on its own. *@
+                    <li @key="facet.Key" class="l2d-chip l2d-chip-group" data-key="@facet.Key">
+                        @if (ShowFacetName)
                         {
-                            object? captured = value;
-                            string label = Formatter.FormatValue(facet, value);
-                            <li @key="(facet.Key, captured)" class="l2d-chip" data-key="@facet.Key">
-                                @if (ShowFacetName)
-                                {
-                                    <span class="l2d-chip-facet">@facet.Name</span>
-                                }
-                                <span class="l2d-chip-label">@label</span>
-                                <button type="button" class="l2d-chip-remove" aria-label="@RemoveText @label" title="@RemoveText"
-                                        @onclick="() => Context.ToggleAsync(facet.Key, captured)">×</button>
-                            </li>
+                            <span class="l2d-chip-facet">@facet.Name</span>
                         }
-                        break;
-
-                    default:
-                        @* Range and date facets hold one interval and a text facet one text; removing the chip clears the facet. *@
-                        <li @key="facet.Key" class="l2d-chip" data-key="@facet.Key">
+                        <span class="l2d-chip-values">
+                            @for (int i = 0; i < parts.Count; i++)
+                            {
+                                ChipPart part = parts[i];
+                                @if (i > 0)
+                                {
+                                    <span class="l2d-chip-separator">@ValueSeparator</span>
+                                }
+                                <span class="l2d-chip-value">
+                                    <span class="l2d-chip-label">@part.Label</span>
+                                    <button type="button" class="l2d-chip-value-remove" aria-label="@RemoveText @part.Label" title="@RemoveText"
+                                            @onclick="part.Remove">×</button>
+                                </span>
+                            }
+                        </span>
+                        <button type="button" class="l2d-chip-remove" aria-label="@RemoveText @facet.Name" title="@RemoveText"
+                                @onclick="() => Context.ClearAsync(facet.Key)">×</button>
+                    </li>
+                }
+                else
+                {
+                    @* One chip per part; removing it removes that part, which clears the facet when it was the last one. *@
+                    @foreach (ChipPart part in parts)
+                    {
+                        <li @key="(facet.Key, part.Label)" class="l2d-chip" data-key="@facet.Key">
                             @if (ShowFacetName)
                             {
                                 <span class="l2d-chip-facet">@facet.Name</span>
                             }
-                            <span class="l2d-chip-label">@SelectionLabel(facet)</span>
-                            <button type="button" class="l2d-chip-remove" aria-label="@RemoveText @facet.Name" title="@RemoveText"
-                                    @onclick="() => Context.ClearAsync(facet.Key)">×</button>
+                            <span class="l2d-chip-label">@part.Label</span>
+                            <button type="button" class="l2d-chip-remove" aria-label="@RemoveText @part.Label" title="@RemoveText"
+                                    @onclick="part.Remove">×</button>
                         </li>
-                        break;
+                    }
                 }
             }
         </ul>

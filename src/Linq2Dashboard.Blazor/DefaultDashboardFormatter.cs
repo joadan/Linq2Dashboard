@@ -100,46 +100,29 @@ public class DefaultDashboardFormatter : IDashboardFormatter
     };
 
     /// <inheritdoc />
-    public virtual string FormatRangeSelection(RangeSelection selection)
+    public virtual string FormatRangeInterval(RangeInterval interval) => (interval.From, interval.To) switch
     {
-        if (selection.OnlyNulls)
-        {
-            return NullLabel;
-        }
-
-        string text = (selection.From, selection.To) switch
-        {
-            (null, null) => "any",
-            (double from, null) => $"{(selection.FromInclusive ? "≥" : ">")} {FormatNumber(from)}",
-            (null, double to) => $"{(selection.ToInclusive ? "≤" : "<")} {FormatNumber(to)}",
-            (double from, double to) => $"{FormatNumber(from)} – {FormatNumber(to)}",
-        };
-
-        return selection.IncludeNull ? $"{text} or {NullLabel}" : text;
-    }
+        (null, null) => "any",
+        (double from, null) => $"{(interval.FromInclusive ? "≥" : ">")} {FormatNumber(from)}",
+        (null, double to) => $"{(interval.ToInclusive ? "≤" : "<")} {FormatNumber(to)}",
+        (double from, double to) => $"{FormatNumber(from)} – {FormatNumber(to)}",
+    };
 
     /// <inheritdoc />
-    public virtual string FormatDateSelection(DateSelection selection)
+    public virtual string FormatDateInterval(DateInterval interval)
     {
-        if (selection.OnlyNulls)
-        {
-            return NullLabel;
-        }
-
-        if (selection.Preset is DatePreset preset)
+        if (interval.Preset is DatePreset preset)
         {
             return FormatPreset(preset);
         }
 
-        string text = (selection.From, selection.To) switch
+        return (interval.From, interval.To) switch
         {
             (null, null) => "any",
             (DateTimeOffset from, null) => $"from {from.ToString("d", Culture)}",
             (null, DateTimeOffset to) => $"before {to.ToString("d", Culture)}",
             (DateTimeOffset from, DateTimeOffset to) => $"{from.ToString("d", Culture)} – {to.ToString("d", Culture)}",
         };
-
-        return selection.IncludeNull ? $"{text} or {NullLabel}" : text;
     }
 
     /// <summary>Whole numbers without decimals, others with two.</summary>
