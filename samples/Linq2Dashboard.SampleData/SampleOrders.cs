@@ -53,7 +53,7 @@ public static class SampleOrders
                 CustomerId = customer is int c ? c + 1 : null,
                 Customer = customer is int n ? Customers[n] : null,
                 IsActive = random.Next(100) < 2 ? null : random.Next(100) < 80,
-                Amount = random.Next(100) < 5 ? null : Math.Round((decimal)(Math.Exp(Gaussian(random) * 1.2) * 150), 2),
+                Amount = random.Next(100) < 5 ? null : Math.Round((decimal)(Math.Exp(Gaussian(random) * 0.7) * 250), 2),
                 OrderDate = random.Next(100) < 2 ? null : rangeStart.AddMinutes(random.Next(RangeMinutes)),
                 Quantity = 1 + Skewed(random, 20),
             };
