@@ -22,7 +22,11 @@ internal sealed class DateFacetDefinition<T, TDate> : FacetDefinition<T>
 
     public TimeZoneInfo Zone { get; set; } = TimeZoneInfo.Utc;
 
-    public DateGranularity Granularity { get; set; } = DateGranularity.Month;
+    /// <summary>The period named in the definition, or null to derive one from the data (concept §5).</summary>
+    public DateGranularity? Granularity { get; set; }
+
+    /// <summary>The most periods a derived granularity should lay over the body of the data.</summary>
+    public int MaxPeriods { get; set; } = DateGranularities.DefaultMaxPeriods;
 
     public DatePreset[] Presets { get; set; } = [];
 
@@ -36,7 +40,7 @@ internal sealed class DateFacetDefinition<T, TDate> : FacetDefinition<T>
             DateTimeOffset? read = convert(selector(items[row]), zone);
             value = read.GetValueOrDefault();
             return read.HasValue;
-        }, zone, Granularity);
+        }, zone, Granularity, MaxPeriods);
 
         return new DateFacetIndex(Key, Name, column, Presets, SkipEmptyPresets, timeProvider);
     }

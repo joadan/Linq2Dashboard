@@ -74,10 +74,9 @@ public static class SampleOrders
             b.ValueFacet("Customer", x => x.CustomerId).Label(x => x.Customer).Top(10).Searchable();
             b.BooleanFacet(x => x.IsActive).Name("Active");
             b.RangeFacet(x => x.Amount);   // default: about ten round buckets derived from the data, open at both ends
-            b.DateFacet(x => x.OrderDate)
+            b.DateFacet(x => x.OrderDate)   // default: the period is derived from the data, months over these two years
              .Name("Order date")
              .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
-             .Granularity(DateGranularity.Month)
              .Presets(DatePreset.Last30Days, DatePreset.ThisYear);
             b.TextFacet("search", (x, text) =>
                 (x.Customer?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false)

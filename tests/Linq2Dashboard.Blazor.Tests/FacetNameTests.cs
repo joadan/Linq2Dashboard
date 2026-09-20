@@ -13,7 +13,7 @@ public class FacetNameTests : BunitContext
         {
             b.ValueFacet(x => x.Country).Name("Country");
             b.RangeFacet(x => x.Amount).Name("Amount").Buckets(100, 500, 1000);
-            b.DateFacet(x => x.OrderDate).Name("Ordered").TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).Name("Ordered").TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
             b.TextFacet("search", (order, text) => order.Status.Contains(text, StringComparison.OrdinalIgnoreCase)).Name("Find");
         });
 

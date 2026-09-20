@@ -23,7 +23,7 @@ public class ClassAndAttributeTests : BunitContext
             }
 
             b.RangeFacet(x => x.Discount);
-            b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm);
             b.SumMetric("revenue", x => x.Amount).Name("Revenue");
             b.OrderBy(x => x.Id);
         });

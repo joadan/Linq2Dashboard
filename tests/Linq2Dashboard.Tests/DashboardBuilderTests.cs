@@ -17,7 +17,7 @@ public class DashboardBuilderTests
             b.ValueFacet(x => x.Country);
             b.ValueFacet(x => x.Address!.City);
             b.RangeFacet(x => x.Amount);
-            b.DateFacet(x => x.OrderDate);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month);
             b.BooleanFacet(x => x.IsActive);
         });
 
@@ -102,7 +102,7 @@ public class DashboardBuilderTests
             b.Where(x => x.Amount > 0);
             b.ValueFacet(x => x.Country);
             b.RangeFacet(x => x.Amount);
-            b.DateFacet(x => x.OrderDate);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month);
             b.SumMetric("revenue", x => x.Amount);
             b.OrderBy(x => x.Id);
         });
@@ -127,7 +127,7 @@ public class DashboardBuilderTests
         {
             b.ValueFacet(x => x.Country);
             b.RangeFacet(x => x.Amount);
-            b.DateFacet(x => x.OrderDate);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month);
             b.CountMetric("orders");
             b.OrderBy(x => x.Id);
         });
@@ -216,10 +216,10 @@ public class DashboardBuilderTests
     {
         var dashboard = Create(b =>
         {
-            b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm);     // DateTime, kind Unspecified → in zone
-            b.DateFacet("utc", x => DateTime.SpecifyKind(x.OrderDate, DateTimeKind.Utc)).TimeZone(TestData.Stockholm);
-            b.DateFacet(x => x.Shipped);                                     // DateTimeOffset?
-            b.DateFacet(x => x.Due).TimeZone(TestData.Stockholm);           // DateOnly → midnight in zone
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm);     // DateTime, kind Unspecified → in zone
+            b.DateFacet("utc", x => DateTime.SpecifyKind(x.OrderDate, DateTimeKind.Utc)).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm);
+            b.DateFacet(x => x.Shipped).Granularity(DateGranularity.Month);                                     // DateTimeOffset?
+            b.DateFacet(x => x.Due).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm);           // DateOnly → midnight in zone
         });
 
         var orderDate = Assert.IsType<DateFacetIndex>(dashboard.FacetIndex("OrderDate"));
@@ -258,6 +258,25 @@ public class DashboardBuilderTests
         Assert.Equal([DatePreset.Today, DatePreset.Last7Days], index.Presets);
         Assert.Same(clock, index.TimeProvider);
         Assert.Same(clock, dashboard.TimeProvider);
+    }
+
+    /// <summary>Concept §5: without a named period the granularity is derived from the data, and the state reports the one chosen.</summary>
+    [Fact]
+    public void Date_facet_derives_its_granularity_by_default_and_reports_the_period_chosen()
+    {
+        // The orders span 15 January to 15 April: 91 days, 13 weeks, 3 months. Weeks are the finest within 30.
+        var derived = Create(b => b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm));
+        var index = Assert.IsType<DateFacetIndex>(derived.FacetIndex("OrderDate"));
+        Assert.Equal(DateGranularity.Week, index.Column.Granularity);
+        Assert.Equal(DateGranularity.Week, Assert.IsType<DateFacetState>(derived.Calculate(Selections.Empty).Facet("OrderDate")).Granularity);
+
+        // A lower ceiling climbs the ladder; a named period wins over the data either way.
+        var coarser = Create(b => b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).AutoGranularity(10));
+        Assert.Equal(DateGranularity.Month, Assert.IsType<DateFacetIndex>(coarser.FacetIndex("OrderDate")).Column.Granularity);
+        var named = Create(b => b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).AutoGranularity(10).Granularity(DateGranularity.Day));
+        Assert.Equal(DateGranularity.Day, Assert.IsType<DateFacetIndex>(named.FacetIndex("OrderDate")).Column.Granularity);
+
+        Assert.Throws<ArgumentOutOfRangeException>(() => Create(b => b.DateFacet(x => x.OrderDate).AutoGranularity(0)));
     }
 
     [Fact]

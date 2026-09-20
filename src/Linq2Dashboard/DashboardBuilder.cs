@@ -101,6 +101,7 @@ public sealed class DashboardBuilder<T>
             name => definition.Name = name,
             zone => definition.Zone = zone,
             granularity => definition.Granularity = granularity,
+            maxPeriods => definition.MaxPeriods = maxPeriods,
             presets => definition.Presets = presets,
             skip => definition.SkipEmptyPresets = skip,
             EnsureMutable);

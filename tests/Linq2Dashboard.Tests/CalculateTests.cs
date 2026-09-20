@@ -22,7 +22,7 @@ public class CalculateTests
             b.BooleanFacet(x => x.IsActive);
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
             b.RangeFacet(x => x.Discount).Buckets(10, 100);
-            b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth, DatePreset.Last7Days);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth, DatePreset.Last7Days);
             b.CountMetric("orders");
             b.SumMetric("revenue", x => x.Amount);
             b.AverageMetric("avgDiscount", x => x.Discount);
@@ -362,9 +362,9 @@ public class CalculateTests
     {
         var dashboard = Build(b =>
         {
-            b.DateFacet("Lean", x => x.OrderDate).TimeZone(TestData.Stockholm)
+            b.DateFacet("Lean", x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm)
                 .Presets(DatePreset.Today, DatePreset.ThisMonth).SkipEmptyPresets();
-            b.DateFacet("Full", x => x.OrderDate).TimeZone(TestData.Stockholm)
+            b.DateFacet("Full", x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm)
                 .Presets(DatePreset.Today, DatePreset.ThisMonth);
         });
         var state = dashboard.Calculate();
@@ -381,7 +381,7 @@ public class CalculateTests
     [Fact]
     public void A_selected_empty_preset_is_left_out_too_and_stays_clearable()
     {
-        var dashboard = Build(b => b.DateFacet("Lean", x => x.OrderDate).TimeZone(TestData.Stockholm)
+        var dashboard = Build(b => b.DateFacet("Lean", x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm)
             .Presets(DatePreset.Today, DatePreset.ThisMonth).SkipEmptyPresets());
         var state = dashboard.Calculate(Selections.Empty.With("Lean", DateSelection.Relative(DatePreset.Today)));
         var lean = (DateFacetState)state.Facet("Lean");
@@ -399,7 +399,7 @@ public class CalculateTests
     [Fact]
     public void A_preset_a_scope_empties_is_left_out_of_that_scope_alone()
     {
-        var dashboard = Build(b => b.DateFacet("Lean", x => x.OrderDate).TimeZone(TestData.Stockholm)
+        var dashboard = Build(b => b.DateFacet("Lean", x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm)
             .Presets(DatePreset.Last7Days, DatePreset.ThisMonth).SkipEmptyPresets());
 
         // Last7Days is 9 to 15 March, which holds only row 4, a DK order.
@@ -819,7 +819,7 @@ public class CalculateTests
         {
             b.ValueFacet(x => x.Country).Top(5);
             b.RangeFacet(x => x.Amount);
-            b.DateFacet(x => x.OrderDate).Presets(DatePreset.Today);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).Presets(DatePreset.Today);
             b.CountMetric("orders");
             b.SumMetric("revenue", x => x.Amount);
         });

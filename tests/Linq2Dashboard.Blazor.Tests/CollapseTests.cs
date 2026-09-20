@@ -12,7 +12,7 @@ public class CollapseTests : BunitContext
         {
             b.ValueFacet(x => x.Country);
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
-            b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
         });
 
     private IRenderedComponent<DashboardView<Order>> RenderWith<TComponent>(Action<ComponentParameterCollectionBuilder<TComponent>> configure, Selections? selections = null)

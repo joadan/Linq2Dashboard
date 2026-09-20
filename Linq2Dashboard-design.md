@@ -45,7 +45,7 @@ var dashboard = Dashboard.Create(orders, b =>
 
     b.DateFacet(x => x.OrderDate)
      .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
-     .Granularity(DateGranularity.Month)
+     .Granularity(DateGranularity.Month)                       // or leave it out: derived from the data (§3.3)
      .Presets(DatePreset.Today, DatePreset.Last7Days, DatePreset.ThisYear)
      .SkipEmptyPresets();                                     // leave out a preset no row falls in (§C5)
 
@@ -351,7 +351,7 @@ int[]     bucketCodes  period index at the configured granularity, 0 = null
 long[]    bucketStarts start tick of each period present in the dataset
 ```
 
-Period boundaries are computed in the facet's time zone once, at build. A preset such as `Last7Days` is resolved at `Calculate` by asking the `TimeProvider` for now, converting into the facet zone, and snapping to day boundaries in that zone.
+Period boundaries are computed in the facet's time zone once, at build. When the definition names no granularity, `DateGranularities.Auto` (added 2026-09-20) picks one from the finished tick array before the periods are computed: the 2nd and 98th percentile of the non-null instants, from the same stride sample of at most 100 000 values as the range facet, are converted into the zone and their distance in calendar days is divided by the average length of a day, week, month (365.2425 / 12), quarter and year; the finest period whose estimated count stays within the definition's ceiling, 30 by default, is taken, and a span beyond even years still gets years. The estimate uses the span rather than the periods present, so a sparse column is measured by the distance its bars cover. The build reads the instants in one pass and computes period starts in a second, since the period is not known until the first is done; the cost is the same conversion work as before plus one sort of the sample. The column carries the resolved granularity, so the state, the formatter and the presets never see that it was derived. A preset such as `Last7Days` is resolved at `Calculate` by asking the `TimeProvider` for now, converting into the facet zone, and snapping to day boundaries in that zone.
 
 **Metric column**:
 
@@ -776,6 +776,7 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 - **Columnar only in the first version.** No per-value bitmaps. Same strategy for every cardinality; bitmaps are a later, benchmark-justified addition. See §1, §3.4, §4.1.
 - **Range bounds are `double`.** The precision trade for `decimal` properties is accepted; range values are used only for filtering and bucketing, never for metrics. See §2.2, §3.3.
 - **Derived range buckets: a 1, 2, 5 step over the 2nd to 98th percentile, open tails only where values lie beyond, percentiles from a stride sample of at most 100 000 values.** Chosen over equal widths between minimum and maximum (unreadable edges, one tall bar on skewed data), over quantile edges (unpredictable widths, collapse on ties) and over a log scale (positive values only; a candidate for an explicit option). The sample keeps the build cost at one small sort per range facet and the result deterministic. Decided 2026-09-20. See §2.1, §3.3, §C5.
+- **Derived date granularity: the finest of day, week, month, quarter and year within about 30 periods over the 2nd to 98th percentile span, resolved once at build.** A hard ceiling was chosen over "closest to a target" because fewer bars read better than more in a facet and the rule is easy to state; the percentile body reuses the range facet's reasoning and sample size. Decided 2026-09-20. See §3.3, §C5.
 - **The dashboard is stateless.** `Calculate(selections)` is the only entry point; the UI owns the current `Selections`. See §2.3, §7.
 - **Share of the total is a field on `MetricState`, not a metric kind.** Every state carries `Share`; the tile shows it. Decided 2026-09-14. See §2.2, §4.6, §9.5.
 - **The default metric tile has no display switches; `ShowShare` is removed.** The default tile shows the name, the value and the share whenever the state has one, and the template context always carries every formatted piece, so a template never needs a default-tile parameter to receive data. Decided 2026-09-16. See §9.5.

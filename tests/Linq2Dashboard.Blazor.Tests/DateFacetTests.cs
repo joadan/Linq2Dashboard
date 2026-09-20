@@ -14,8 +14,8 @@ public class DateFacetTests : BunitContext
         Dashboard.Create(TestData.Orders(), b =>
         {
             b.ValueFacet(x => x.Country);
-            b.DateFacet(x => x.OrderDate).Name("Ordered").TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth, DatePreset.Last7Days);
-            b.DateFacet(x => x.Shipped);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).Name("Ordered").TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth, DatePreset.Last7Days);
+            b.DateFacet(x => x.Shipped).Granularity(DateGranularity.Month);
             b.UseTimeProvider(new FixedTimeProvider(TestData.Instant("2026-03-15T10:00:00Z")));
         });
 

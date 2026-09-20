@@ -14,7 +14,7 @@ public class DashboardViewTests : BunitContext
             b.ValueFacet(x => x.Country);
             b.ValueFacet(x => x.Status);
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
-            b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
             b.CountMetric("orders").Name("Orders");
             b.SumMetric("revenue", x => x.Amount).Name("Revenue");
             b.UseTimeProvider(new FixedTimeProvider(TestData.Instant("2026-03-15T10:00:00Z")));

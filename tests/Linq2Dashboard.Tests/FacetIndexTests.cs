@@ -14,8 +14,8 @@ public class FacetIndexTests
         b.BooleanFacet(x => x.IsActive);
         b.BooleanFacet(x => x.Verified);
         b.RangeFacet(x => x.Discount).Buckets(10, 100);
-        b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Presets(DatePreset.Last7Days, DatePreset.ThisMonth);
-        b.DateFacet(x => x.Shipped);
+        b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm).Presets(DatePreset.Last7Days, DatePreset.ThisMonth);
+        b.DateFacet(x => x.Shipped).Granularity(DateGranularity.Month);
         b.UseTimeProvider(Clock);
     });
 

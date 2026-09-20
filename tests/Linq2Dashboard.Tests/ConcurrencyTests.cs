@@ -13,7 +13,7 @@ public class ConcurrencyTests
             b.ValueFacet(x => x.Status);
             b.BooleanFacet(x => x.IsActive);
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
-            b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth);
             b.TextFacet("search", (x, text) => x.Status.Contains(text, StringComparison.OrdinalIgnoreCase));
             b.CountMetric("orders");
             b.SumMetric("revenue", x => x.Amount);

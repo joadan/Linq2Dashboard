@@ -15,7 +15,7 @@ public class ActiveSelectionsTests : BunitContext
             b.ValueFacet(x => x.Status).Name("Order status");
             b.ValueFacet("city", x => x.Country).Label(x => x.Address?.City);
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
-            b.DateFacet(x => x.OrderDate).Name("Ordered").TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).Name("Ordered").TimeZone(TestData.Stockholm).Presets(DatePreset.ThisYear);
             b.UseTimeProvider(new FixedTimeProvider(TestData.Instant("2026-03-15T10:00:00Z")));
         });
 

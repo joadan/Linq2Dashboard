@@ -12,7 +12,7 @@ public class TemplateTests : BunitContext
         {
             b.ValueFacet(x => x.Country);
             b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
-            b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm);
             b.CountMetric("orders").Name("Orders");
             b.SumMetric("revenue", x => x.Amount).Name("Revenue");
         });

@@ -72,33 +72,55 @@ internal sealed class DateColumn
         return (ToInstant(start), ToInstant(NextPeriodStart(start, Granularity)));
     }
 
-    public static DateColumn Build(int rowCount, RowReader<DateTimeOffset> read, TimeZoneInfo zone, DateGranularity granularity)
+    /// <summary>Builds with the period named in the definition.</summary>
+    public static DateColumn Build(int rowCount, RowReader<DateTimeOffset> read, TimeZoneInfo zone, DateGranularity granularity) =>
+        Build(rowCount, read, zone, granularity, DateGranularities.DefaultMaxPeriods);
+
+    /// <summary>
+    /// Builds with <paramref name="granularity"/>, or, when it is null, with the period
+    /// <see cref="DateGranularities.Auto"/> derives from the data for at most about
+    /// <paramref name="maxPeriods"/> periods (concept §5).
+    /// </summary>
+    public static DateColumn Build(int rowCount, RowReader<DateTimeOffset> read, TimeZoneInfo zone, DateGranularity? granularity, int maxPeriods)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(rowCount);
         ArgumentNullException.ThrowIfNull(read);
         ArgumentNullException.ThrowIfNull(zone);
-        if (!Enum.IsDefined(granularity))
+        if (granularity is DateGranularity named && !Enum.IsDefined(named))
         {
             throw new ArgumentOutOfRangeException(nameof(granularity));
         }
 
-        var utcTicks = new long[rowCount];
-        var periodStarts = new long[rowCount];
-        var nulls = new RowSetBuilder(rowCount);
-        var distinctStarts = new HashSet<long>();
+        ArgumentOutOfRangeException.ThrowIfLessThan(maxPeriods, 1);
 
+        var utcTicks = new long[rowCount];
+        var nulls = new RowSetBuilder(rowCount);
         for (int row = 0; row < rowCount; row++)
         {
-            if (!read(row, out DateTimeOffset instant))
+            if (read(row, out DateTimeOffset instant))
+            {
+                utcTicks[row] = instant.UtcTicks;
+            }
+            else
             {
                 utcTicks[row] = NullTicks;
                 nulls.Set(row);
+            }
+        }
+
+        DateGranularity resolved = granularity ?? DateGranularities.Auto(utcTicks, NullTicks, zone, maxPeriods);
+
+        var periodStarts = new long[rowCount];
+        var distinctStarts = new HashSet<long>();
+        for (int row = 0; row < rowCount; row++)
+        {
+            if (utcTicks[row] == NullTicks)
+            {
                 continue;
             }
 
-            utcTicks[row] = instant.UtcTicks;
-            DateTime local = TimeZoneInfo.ConvertTime(instant, zone).DateTime;
-            long start = PeriodStart(local, granularity).Ticks;
+            DateTime local = TimeZoneInfo.ConvertTime(new DateTimeOffset(utcTicks[row], TimeSpan.Zero), zone).DateTime;
+            long start = PeriodStart(local, resolved).Ticks;
             periodStarts[row] = start;
             distinctStarts.Add(start);
         }
@@ -118,7 +140,7 @@ internal sealed class DateColumn
         }
 
         int[] totals = CodeColumn.Totals(codes, bucketStarts.Length + 1);
-        return new DateColumn(utcTicks, nulls.Build(), codes, bucketStarts, totals, zone, granularity);
+        return new DateColumn(utcTicks, nulls.Build(), codes, bucketStarts, totals, zone, resolved);
     }
 
     /// <summary>

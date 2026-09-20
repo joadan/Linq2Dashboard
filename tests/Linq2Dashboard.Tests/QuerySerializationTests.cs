@@ -10,7 +10,7 @@ public class QuerySerializationTests
         b.ValueFacet(x => x.Kind);
         b.BooleanFacet(x => x.IsActive);
         b.RangeFacet(x => x.Amount);
-        b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm);
+        b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm);
         b.ValueFacet("city", x => x.Address).Serialize(a => a!.City, s => new Address(s));
         b.TextFacet("search", (order, text) => order.Status.Contains(text, StringComparison.OrdinalIgnoreCase));
     });

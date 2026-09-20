@@ -11,11 +11,11 @@ public class SerializationTests
         b.ValueFacet(x => x.Quantity);
         b.ValueFacet(x => x.Kind);
         b.BooleanFacet(x => x.IsActive);
-        b.DateFacet("dueDate", x => x.Due);
+        b.DateFacet("dueDate", x => x.Due).Granularity(DateGranularity.Month);
         b.ValueFacet("due", x => x.Due);
         b.ValueFacet("shipped", x => x.Shipped);
         b.RangeFacet(x => x.Amount);
-        b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm);
+        b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm);
         b.ValueFacet("city", x => x.Address).Serialize(a => a!.City, s => new Address(s));
     });
 

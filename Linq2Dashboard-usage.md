@@ -52,7 +52,7 @@ var dashboard = Dashboard.Create(orders, b =>
     b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);   // or .AutoBuckets(10): round edges derived from the data (the default)
     b.DateFacet(x => x.OrderDate)
      .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
-     .Granularity(DateGranularity.Month)
+     .Granularity(DateGranularity.Month)                 // or leave it out: the period is derived from the data
      .Presets(DatePreset.Last30Days, DatePreset.ThisYear);
     b.TextFacet("search", (x, text) => x.CustomerName.Contains(text, StringComparison.OrdinalIgnoreCase));
 
@@ -75,7 +75,7 @@ Rules of the builder:
 - Range facets accept any numeric type or its nullable form. Date facets accept `DateTime`, `DateTimeOffset`, `DateOnly` or their nullable forms.
 - Value facet options: `Name`, `Top(n)` with an "Other" remainder, `RankBy(RankMode.TotalCount)` for a stable list, `Searchable()`, `Label(row => text)`, `Comparer(...)`, `Serialize(format, parse)` for value types JSON cannot round-trip by default.
 - Range facet options: `Name`, `Buckets(cuts...)` strictly ascending, or `AutoBuckets(count)` (the default, with 10) for about `count` equal buckets on round edges over the body of the data, with an open bucket at each end for outliers.
-- Date facet options: `Name`, `TimeZone`, `Granularity` (Year, Quarter, Month, ISO Week, Day), `Presets` (Today, Yesterday, Last7Days, Last30Days, ThisWeek, LastWeek, ThisMonth, LastMonth, ThisQuarter, LastQuarter, ThisYear, LastYear, YearToDate), `SkipEmptyPresets()` to leave out a preset no row falls in (off by default; re-decided at each calculation, and a selected empty preset is left out too).
+- Date facet options: `Name`, `TimeZone`, `Granularity` (Year, Quarter, Month, ISO Week, Day) or `AutoGranularity(maxPeriods)` (the default, with 30) for the finest period that keeps to about `maxPeriods` bars over the body of the data; the state reports the period chosen, `Presets` (Today, Yesterday, Last7Days, Last30Days, ThisWeek, LastWeek, ThisMonth, LastMonth, ThisQuarter, LastQuarter, ThisYear, LastYear, YearToDate), `SkipEmptyPresets()` to leave out a preset no row falls in (off by default; re-decided at each calculation, and a selected empty preset is left out too).
 - `CalculatedMetric` reads earlier metrics by key through `m["key"]`. It gives no value when any input has none or the result is not finite. Define its inputs before it.
 - `UseTimeProvider` supplies "now" for relative presets, for tests.
 - Mistakes surface inside `Create`, not at first use: an unknown metric key in a formula, a non-numeric range selector, non-ascending cuts, a duplicate key.

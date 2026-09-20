@@ -26,7 +26,7 @@ public class ScopeTests
         b.BooleanFacet(x => x.IsActive);
         b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);
         b.RangeFacet(x => x.Discount).Buckets(10, 100);
-        b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth, DatePreset.Last7Days);
+        b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth, DatePreset.Last7Days);
         b.TextFacet("search", (x, text) => x.Status.Contains(text, StringComparison.OrdinalIgnoreCase));
         b.CountMetric("orders");
         b.SumMetric("revenue", x => x.Amount);
@@ -191,7 +191,7 @@ public class ScopeTests
         var parent = Dashboard.Create(TestData.Orders(), b =>
         {
             b.RangeFacet(x => x.Amount).AutoBuckets(5);
-            b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm);
         });
         var parentState = parent.Calculate();
         var scopedState = parent.ScopeTo(x => x.OrderDate.Month == 2).Calculate(); // rows 1 and 2: 250 and 500, both February
@@ -211,7 +211,7 @@ public class ScopeTests
         var rebuilt = Dashboard.Create(TestData.Orders(), b =>
         {
             b.Where(x => x.OrderDate.Month == 2);
-            b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm);
         });
         Assert.Single(((DateFacetState)rebuilt.Calculate().Facet("OrderDate")).Buckets);
     }
@@ -379,7 +379,7 @@ public class ScopeTests
         var clock = new AdjustableTimeProvider(TestData.Instant("2026-03-15T10:00:00Z"));
         var parent = Dashboard.Create(TestData.Orders(), b =>
         {
-            b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth);
+            b.DateFacet(x => x.OrderDate).Granularity(DateGranularity.Month).TimeZone(TestData.Stockholm).Presets(DatePreset.ThisMonth);
             b.UseTimeProvider(clock);
         });
         var thisMonth = parent.ScopeTo(Selections.Empty.With("OrderDate", DateSelection.Relative(DatePreset.ThisMonth)));
