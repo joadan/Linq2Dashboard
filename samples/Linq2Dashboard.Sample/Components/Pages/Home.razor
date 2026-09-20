@@ -29,11 +29,7 @@
     <div class="sample-layout">
         <aside class="sample-facets">
             <TextFacet T="SampleOrder" Key="search" Placeholder="Customer or category" />
-            <ValueFacet T="SampleOrder" Key="Country">
-            <ValueTemplate>
-                    @context.Value  @context.FilteredCount (@context.TotalCount)
-            </ValueTemplate>  
-            </ValueFacet>
+            <ValueFacet T="SampleOrder" Key="Country" />
             <ValueFacet T="SampleOrder" Key="Status" />
             <ValueFacet T="SampleOrder" Key="Category" />
             <ValueFacet T="SampleOrder" Key="Customer" Collapsed="true" />

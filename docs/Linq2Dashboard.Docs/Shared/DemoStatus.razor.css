@@ -1,0 +1,51 @@
+/* The value button is a flex row from the library: label left, count right. These two spans are its children,
+   so they only need to look right; the layout, hover and selected background are the button's. */
+.demo-status-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.demo-status-dot {
+    flex: none;
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 50%;
+    background: var(--demo-status-color, var(--l2d-muted, #71717a));
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--demo-status-color, var(--l2d-muted, #71717a)) 25%, transparent);
+}
+
+.demo-status-count {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+    font-size: var(--l2d-small-size, 0.8125rem);
+    color: var(--l2d-muted, #71717a);
+}
+
+/* The library's selected background sits on the button; the count follows the label's colour there, like the default. */
+.demo-status-selected {
+    color: inherit;
+}
+
+.demo-status-total {
+    opacity: 0.75;
+}
+
+/* One hue per status. */
+.demo-status-dot[data-status="Open"] { --demo-status-color: #2563eb; }
+.demo-status-dot[data-status="Pending"] { --demo-status-color: #d97706; }
+.demo-status-dot[data-status="Shipped"] { --demo-status-color: #16a34a; }
+.demo-status-dot[data-status="Closed"] { --demo-status-color: #71717a; }
+.demo-status-dot[data-status="Cancelled"] { --demo-status-color: #dc2626; }
+
+@media (prefers-color-scheme: dark) {
+    .demo-status-dot[data-status="Open"] { --demo-status-color: #60a5fa; }
+    .demo-status-dot[data-status="Pending"] { --demo-status-color: #fbbf24; }
+    .demo-status-dot[data-status="Shipped"] { --demo-status-color: #4ade80; }
+    .demo-status-dot[data-status="Closed"] { --demo-status-color: #a1a1aa; }
+    .demo-status-dot[data-status="Cancelled"] { --demo-status-color: #f87171; }
+}

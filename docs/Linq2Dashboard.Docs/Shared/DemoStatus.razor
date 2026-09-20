@@ -1,0 +1,9 @@
+@* The demo's status value: a coloured dot before the label, the counts after it. Rendered through ValueTemplate,
+   which replaces only the inside of the value button, so the click, the selected state and the hover stay the
+   library's while the label, the dot and the counts are the page's. *@
+
+<span class="demo-status-label">
+    <span class="demo-status-dot" data-status="@Text" aria-hidden="true"></span>
+    @Text
+</span>
+<span class="demo-status-count @(Value.Selected ? "demo-status-selected" : null)">@Filtered <span class="demo-status-total">(@Total)</span></span>
