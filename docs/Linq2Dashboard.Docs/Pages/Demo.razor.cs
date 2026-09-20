@@ -1,5 +1,6 @@
 using System.Globalization;
 using Microsoft.AspNetCore.Components;
+using Microsoft.JSInterop;
 using Linq2Dashboard.Blazor;
 using Linq2Dashboard.SampleData;
 
@@ -10,6 +11,7 @@ public partial class Demo
     private static readonly int[] RowOptions = [20_000, 50_000, 100_000, 200_000, 500_000, 1_000_000];
     private const int DefaultRows = 50_000;
     private const string RowsParameter = "rows";
+    private const string NoteDismissedKey = "l2d-demo-note-dismissed";
 
     private DashboardView<SampleOrder>? view;
     private Dashboard<SampleOrder>? dashboard;
@@ -20,9 +22,11 @@ public partial class Demo
     private long? generateMilliseconds;
     private long? buildMilliseconds;
     private bool building;
+    private bool noteDismissed;
 
     protected override async Task OnInitializedAsync()
     {
+        noteDismissed = await ReadNoteDismissedAsync();
         var query = System.Web.HttpUtility.ParseQueryString(new Uri(Navigation.Uri).Query);
         if (int.TryParse(query[RowsParameter], out int requested) && RowOptions.Contains(requested))
         {
@@ -62,6 +66,38 @@ public partial class Demo
         dashboard = built;
         building = false;
         UpdateRowsInUrl();
+    }
+
+    /// <summary>
+    /// The note about WebAssembly timings can be closed; the choice is kept in the browser's local storage so it
+    /// stays closed on the next visit. Read synchronously where the runtime allows it, so the note does not flash.
+    /// </summary>
+    private async Task<bool> ReadNoteDismissedAsync()
+    {
+        try
+        {
+            string? stored = JS is IJSInProcessRuntime inProcess
+                ? inProcess.Invoke<string?>("localStorage.getItem", NoteDismissedKey)
+                : await JS.InvokeAsync<string?>("localStorage.getItem", NoteDismissedKey);
+            return stored is not null;
+        }
+        catch (JSException)
+        {
+            return false; // storage blocked by the browser: show the note every time
+        }
+    }
+
+    private async Task DismissNoteAsync()
+    {
+        noteDismissed = true;
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", NoteDismissedKey, "1");
+        }
+        catch (JSException)
+        {
+            // storage blocked by the browser: the note is hidden for this visit only
+        }
     }
 
     private Task OnSelectionsChanged(Selections changed)

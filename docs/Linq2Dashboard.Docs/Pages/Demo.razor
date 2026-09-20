@@ -1,5 +1,6 @@
 @page "/demo"
 @inject NavigationManager Navigation
+@inject IJSRuntime JS
 
 <PageTitle>Demo · Linq2Dashboard</PageTitle>
 
@@ -20,12 +21,18 @@
     }
 </div>
 
-<p class="demo-note">
-    This demo runs entirely in your browser on Blazor WebAssembly so it can be hosted as a static site. That is the
-    slow way to run it: a single interpreted or ahead-of-time compiled thread, and every row held in browser memory.
-    On Blazor Server, the primary target, the same library builds a million rows in about a second and recalculates
-    in 5 to 20 ms on a 4-core machine. Treat the timings here as an upper bound.
-</p>
+@if (!noteDismissed)
+{
+    <div class="demo-note" role="note">
+        <p>
+            This demo runs entirely in your browser on Blazor WebAssembly so it can be hosted as a static site. That is the
+            slow way to run it: a single interpreted or ahead-of-time compiled thread, and every row held in browser memory.
+            On Blazor Server, the primary target, the same library builds a million rows in about a second and recalculates
+            in 5 to 20 ms on a 4-core machine. Treat the timings here as an upper bound.
+        </p>
+        <button type="button" class="demo-note-close" title="Hide this note" aria-label="Hide this note" @onclick="DismissNoteAsync">&times;</button>
+    </div>
+}
 
 @if (dashboard is null)
 {
