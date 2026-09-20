@@ -38,7 +38,10 @@ public sealed class RangeFacetBuilder<T>
         return this;
     }
 
-    /// <summary><paramref name="count"/> equal-width buckets between the dataset's min and max. Default is 10.</summary>
+    /// <summary>
+    /// About <paramref name="count"/> buckets of equal width on round boundaries (0, 100, 200) over the body
+    /// of the distribution, with an open bucket at each end for the values outside it. Default is 10 (concept §5).
+    /// </summary>
     public RangeFacetBuilder<T> AutoBuckets(int count)
     {
         ensureMutable();

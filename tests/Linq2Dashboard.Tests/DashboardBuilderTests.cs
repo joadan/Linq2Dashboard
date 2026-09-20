@@ -192,7 +192,9 @@ public class DashboardBuilderTests
 
         var discount = Assert.IsType<RangeFacetIndex>(dashboard.FacetIndex("Discount"));
         Assert.Equal(3, discount.Column.NullCount);
-        Assert.Equal(10, discount.Column.BucketCount);
+        Assert.Equal(13, discount.Column.BucketCount); // default auto: 0, 5, 10, 50, 250 give the round step 20 over 0 to 260
+        Assert.Equal((0, 20), discount.Column.Bucket(0));
+        Assert.Equal((240, 260), discount.Column.Bucket(12));
 
         var quantity = Assert.IsType<RangeFacetIndex>(dashboard.FacetIndex("Quantity"));
         Assert.Equal(3, quantity.Column.BucketCount);

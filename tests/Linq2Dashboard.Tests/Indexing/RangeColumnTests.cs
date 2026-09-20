@@ -76,17 +76,113 @@ public class RangeColumnTests
     }
 
     [Fact]
-    public void Auto_buckets_are_equal_width_over_the_dataset_bounds()
+    public void Auto_buckets_have_round_edges_and_about_the_requested_count()
     {
-        var column = Build([0, 25, 50, 75, 100, null], RangeBucketing.Auto(4));
+        // 3 to 97 over 5 buckets: the raw width 18.8 rounds to the step 20, aligned to multiples of 20.
+        var column = Build([3, 25, 50, 75, 97, null], RangeBucketing.Auto(5));
 
-        Assert.Equal(4, column.BucketCount);
-        Assert.Equal((0, 25), column.Bucket(0));
-        Assert.Equal((25, 50), column.Bucket(1));
-        Assert.Equal((50, 75), column.Bucket(2));
-        Assert.Equal((75, 100), column.Bucket(3));
-        // 0→1, 25→2, 50→3, 75→4, 100→4 (last bucket includes its upper edge), null→0
-        Assert.Equal([1, 2, 3, 4, 4, 0], column.BucketCodes.ToArray());
+        Assert.Equal(5, column.BucketCount);
+        Assert.Equal((0, 20), column.Bucket(0));
+        Assert.Equal((20, 40), column.Bucket(1));
+        Assert.Equal((40, 60), column.Bucket(2));
+        Assert.Equal((60, 80), column.Bucket(3));
+        Assert.Equal((80, 100), column.Bucket(4));
+        Assert.Equal([1, 2, 3, 4, 5, 0], column.BucketCodes.ToArray());
+    }
+
+    [Fact]
+    public void Auto_buckets_have_no_open_tail_when_nothing_lies_beyond_the_round_edges()
+    {
+        var column = Build([0, 25, 50, 75, 100], RangeBucketing.Auto(4));
+
+        Assert.Equal(0, column.Bucket(0).From);
+        Assert.Equal(100, column.Bucket(column.BucketCount - 1).To);
+        Assert.Equal(column.BucketCount, column.BucketCodes[4]); // 100 sits in the closed last bucket
+    }
+
+    [Fact]
+    public void Auto_buckets_put_outliers_in_open_tails_and_size_the_step_by_the_body()
+    {
+        // 980 values spread over 0 to 97.9, ten far below and ten far above.
+        var values = new double?[1000];
+        for (int i = 0; i < 980; i++)
+        {
+            values[i] = i / 10.0;
+        }
+
+        for (int i = 980; i < 990; i++)
+        {
+            values[i] = -1000;
+        }
+
+        for (int i = 990; i < 1000; i++)
+        {
+            values[i] = 10000;
+        }
+
+        var column = Build(values, RangeBucketing.Auto(10));
+
+        Assert.Equal(12, column.BucketCount);
+        Assert.Equal((double.NegativeInfinity, 0), column.Bucket(0));
+        Assert.Equal((0, 10), column.Bucket(1));
+        Assert.Equal((90, 100), column.Bucket(10));
+        Assert.Equal((100, double.PositiveInfinity), column.Bucket(11));
+        Assert.Equal(10, column.TotalCounts[1]);
+        Assert.Equal(10, column.TotalCounts[12]);
+        Assert.Equal(980, column.TotalCounts[2..12].ToArray().Sum());
+    }
+
+    [Fact]
+    public void Auto_bucket_edges_with_a_fractional_step_are_exact_decimals()
+    {
+        var column = Build([0.1, 0.3, 0.5, 0.7, 0.9], RangeBucketing.Auto(4));
+
+        Assert.Equal(5, column.BucketCount);
+        Assert.Equal([0, 0.2, 0.4, 0.6, 0.8], Enumerable.Range(0, 5).Select(i => column.Bucket(i).From));
+        Assert.Equal(1.0, column.Bucket(4).To);
+    }
+
+    [Fact]
+    public void Auto_buckets_cover_negative_values()
+    {
+        var column = Build([-50, -10, 0, 10, 50], RangeBucketing.Auto(4));
+
+        Assert.Equal(-60, column.Bucket(0).From);
+        Assert.Equal(60, column.Bucket(column.BucketCount - 1).To);
+        Assert.All(Enumerable.Range(0, column.BucketCount), i => Assert.Equal(20, column.Bucket(i).To - column.Bucket(i).From));
+    }
+
+    [Fact]
+    public void Auto_buckets_fall_back_to_the_whole_range_when_the_body_has_one_value()
+    {
+        // 99 zeros and a 3: the 2nd and 98th percentile are both 0, so the step comes from min to max.
+        var values = Enumerable.Repeat<double?>(0, 99).Concat([3]).ToArray();
+
+        var column = Build(values, RangeBucketing.Auto(3));
+
+        Assert.Equal(3, column.BucketCount);
+        Assert.Equal((0, 1), column.Bucket(0));
+        Assert.Equal((2, 3), column.Bucket(2));
+    }
+
+    [Fact]
+    public void Auto_buckets_over_a_large_column_read_a_sample_and_are_deterministic()
+    {
+        var values = new double?[250_000];
+        for (int i = 0; i < values.Length; i++)
+        {
+            values[i] = i % 7 == 0 ? null : i % 1000;
+        }
+
+        var first = Build(values, RangeBucketing.Auto(10));
+        var second = Build(values, RangeBucketing.Auto(10));
+
+        Assert.Equal(10, first.BucketCount);
+        Assert.Equal((0, 100), first.Bucket(0));
+        Assert.Equal((900, 1000), first.Bucket(9));
+        Assert.Equal(
+            Enumerable.Range(0, first.BucketCount).Select(first.Bucket),
+            Enumerable.Range(0, second.BucketCount).Select(second.Bucket));
     }
 
     [Fact]

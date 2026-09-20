@@ -49,7 +49,7 @@ var dashboard = Dashboard.Create(orders, b =>
      .Label(x => x.CustomerName)                     // ...show and search by name
      .Name("Customer").Top(20).Searchable();
     b.BooleanFacet(x => x.IsActive);
-    b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);   // or .AutoBuckets(10)
+    b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);   // or .AutoBuckets(10): round edges derived from the data (the default)
     b.DateFacet(x => x.OrderDate)
      .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
      .Granularity(DateGranularity.Month)
@@ -74,7 +74,7 @@ Rules of the builder:
 - A facet declared from a member expression takes the member's name as its key. Anything else needs an explicit key. Keys are case-sensitive and must be unique among facets and among metrics.
 - Range facets accept any numeric type or its nullable form. Date facets accept `DateTime`, `DateTimeOffset`, `DateOnly` or their nullable forms.
 - Value facet options: `Name`, `Top(n)` with an "Other" remainder, `RankBy(RankMode.TotalCount)` for a stable list, `Searchable()`, `Label(row => text)`, `Comparer(...)`, `Serialize(format, parse)` for value types JSON cannot round-trip by default.
-- Range facet options: `Name`, `Buckets(cuts...)` strictly ascending, or `AutoBuckets(count)` for equal widths.
+- Range facet options: `Name`, `Buckets(cuts...)` strictly ascending, or `AutoBuckets(count)` (the default, with 10) for about `count` equal buckets on round edges over the body of the data, with an open bucket at each end for outliers.
 - Date facet options: `Name`, `TimeZone`, `Granularity` (Year, Month, ISO Week, Day), `Presets` (Today, Yesterday, Last7Days, Last30Days, ThisWeek, LastWeek, ThisMonth, LastMonth, ThisYear, LastYear, YearToDate), `SkipEmptyPresets()` to leave out a preset no row falls in (off by default; re-decided at each calculation, and a selected empty preset is left out too).
 - `CalculatedMetric` reads earlier metrics by key through `m["key"]`. It gives no value when any input has none or the result is not finite. Define its inputs before it.
 - `UseTimeProvider` supplies "now" for relative presets, for tests.

@@ -94,7 +94,7 @@ internal sealed class RangeColumn
             }
         }
 
-        double[] edges = bucketing.Edges(min, max);
+        double[] edges = bucketing.Edges(min, max, values);
         var codes = new int[rowCount];
         for (int row = 0; row < rowCount; row++)
         {
