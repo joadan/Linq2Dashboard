@@ -38,6 +38,13 @@ dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --job sh
 dotnet pack src/Linq2Dashboard/Linq2Dashboard.csproj -c Release -o artifacts   # version from version.json + git height (Nerdbank.GitVersioning)
 ```
 
+## Git workflow
+
+- Nothing is committed to `master` directly. GitHub enforces this with the "Protect master" ruleset: changes reach master only through a pull request whose "Build and test" check has passed; force pushes and deletion are blocked, and the ruleset has no bypass, so it binds the owner too. The Create Release workflow is unaffected because it only tags and publishes.
+- For every change: `git switch -c <short-kebab-name>` from an up-to-date master, commit there, `git push -u origin <branch>`, then `gh pr create` with the commit's summary as the title and its paragraph as the body. Merge from the pull request once CI is green; GitHub deletes the branch on merge.
+- One pull request per change, kept small enough to review in one sitting. Several tightly related commits may share a pull request; unrelated ones do not.
+- `.claude/settings.json` adds a local guard: a hook refuses `git commit` and `git push` from the assistant while master is checked out.
+
 ## Conventions
 
 - Private fields are plain camelCase, never `_prefixed`. Use `this.field = field` in constructors when a parameter shares the name.
