@@ -2,7 +2,11 @@ using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
 
-/// <summary>A value or boolean facet: each value with its counts, the null value, the "Other" remainder and an optional search box (concept §5, §6). A click toggles the value (concept §4.1).</summary>
+/// <summary>
+/// A value, boolean or multi-valued facet: each value with its counts, the null value, the "Other" remainder and an
+/// optional search box (concept §5, §6). A click toggles the value (concept §4.1). A multi-valued facet renders the
+/// same way, with the class <c>l2d-multi-value-facet</c> on the root and never an "Other" row, since its counts overlap.
+/// </summary>
 public partial class ValueFacet<T>
 {
     private string searchText = string.Empty;
@@ -13,7 +17,7 @@ public partial class ValueFacet<T>
     private bool collapsed;
     private bool? lastCollapsedParameter;
 
-    /// <summary>The facet key, as defined in the builder. Must be a value or boolean facet.</summary>
+    /// <summary>The facet key, as defined in the builder. Must be a value, boolean or multi-valued facet.</summary>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
 
@@ -87,7 +91,7 @@ public partial class ValueFacet<T>
     private string HeaderName => Name ?? Facet.Name;
 
     private ValueFacetState Facet => State.Facet(Key) as ValueFacetState
-        ?? throw new InvalidOperationException($"Facet '{Key}' is not a value or boolean facet; use the component for its kind.");
+        ?? throw new InvalidOperationException($"Facet '{Key}' is not a value, boolean or multi-valued facet; use the component for its kind.");
 
     private bool IsSearching => Facet.IsSearchable && searchText.Length > 0;
 

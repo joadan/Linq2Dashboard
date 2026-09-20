@@ -165,7 +165,7 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 | Component | Renders | Notable parameters |
 |---|---|---|
 | `DashboardView` | Owns selections and state, cascades them; its content is a template over the context. | `Dashboard`, `Context`, `@bind-Selections`, `StateChanged`, `Formatter`, `Key`, `SyncUrl` |
-| `ValueFacet` | Values with counts, the null value, "Other", search. | `Key`, `Name`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate`, `InputClass` |
+| `ValueFacet` | Values with counts, the null value, "Other", search. Also boolean and multi-valued facets. | `Key`, `Name`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate`, `InputClass` |
 | `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Name`, `Layout`, `ShowSlider`, `ShowSliderInputs`, `SliderStep`, `ShowBounds`, `InputClass` |
 | `DateFacet` | Presets with counts, one bar per period. | `Key`, `Name`, `Layout`, `ShowPresets` |
 | `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`, `DebounceMilliseconds`, `Placeholder`, `InputClass` |

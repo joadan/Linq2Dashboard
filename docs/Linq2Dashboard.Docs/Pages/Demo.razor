@@ -51,6 +51,8 @@ else
                     <ValueTemplate Context="value"><DemoStatus Value="value" /></ValueTemplate>
                 </ValueFacet>
                 <ValueFacet T="SampleOrder" Key="Channel" />
+                @* A multi-valued facet over a collection property: an order counts under every tag it has, so the counts overlap and there is no Other. Same component. *@
+                <ValueFacet T="SampleOrder" Key="Tags" />
                 <ValueFacet T="SampleOrder" Key="Customer" Collapsed="true" />
                 <ValueFacet T="SampleOrder" Key="IsActive" HideZeroCounts="true" />
                 <RangeFacet T="SampleOrder" Key="Amount" ShowSlider="true" />
