@@ -38,6 +38,8 @@ dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --job sh
 dotnet pack src/Linq2Dashboard/Linq2Dashboard.csproj -c Release -o artifacts   # version from version.json + git height (Nerdbank.GitVersioning)
 ```
 
+`.claude/launch.json` defines the `docs` preview for Claude Code: it runs the built docs site on http://localhost:5199 with `--no-build`, so build `docs/Linq2Dashboard.Docs` first. Building inside the preview would collide with a Visual Studio build of the same project.
+
 ## Git workflow
 
 - Nothing is committed to `master` directly. GitHub enforces this with the "Protect master" ruleset: changes reach master only through a pull request whose "Build and test" check has passed; force pushes and deletion are blocked, and the ruleset has no bypass, so it binds the owner too. The Create Release workflow is unaffected because it only tags and publishes.
