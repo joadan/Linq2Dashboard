@@ -73,7 +73,7 @@ public static class SampleOrders
             b.ValueFacet(x => x.Category).Top(10);
             b.ValueFacet("Customer", x => x.CustomerId).Label(x => x.Customer).Top(10).Searchable();
             b.BooleanFacet(x => x.IsActive).Name("Active");
-            b.RangeFacet(x => x.Amount).Buckets(50, 100, 200, 500, 1000, 2000);
+            b.RangeFacet(x => x.Amount);   // default: about ten round buckets derived from the data, open at both ends
             b.DateFacet(x => x.OrderDate)
              .Name("Order date")
              .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
