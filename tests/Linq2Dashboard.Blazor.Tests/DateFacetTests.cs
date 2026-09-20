@@ -57,9 +57,9 @@ public class DateFacetTests : BunitContext
 
         Assert.Equal("Ordered", cut.Find(".l2d-facet-title").TextContent);
         Assert.Equal(["Jan 2026", "Feb 2026", "Mar 2026", "Apr 2026"], Buckets(cut).Select(Label));
-        Assert.Equal(["1 (1)", "2 (2)", "3 (3)", "2 (2)"], Buckets(cut).Select(Count));
+        Assert.Equal(["1", "2", "3", "2"], Buckets(cut).Select(Count));
         Assert.Equal(["This month", "Last 7 days"], Presets(cut).Select(Label));
-        Assert.Equal(["3 (3)", "1 (1)"], Presets(cut).Select(Count));
+        Assert.Equal(["3", "1"], Presets(cut).Select(Count));
         Assert.Equal(["3 (3) 100.0 %", "1 (1) 100.0 %"], Presets(cut).Select(p => p.QuerySelector("button")!.GetAttribute("title")));
         Assert.Empty(cut.FindAll(".l2d-facet-clear"));
     }
@@ -142,20 +142,21 @@ public class DateFacetTests : BunitContext
     {
         var cut = RenderFacet("OrderDate", Selections.Empty.With("Country", ValueSelection.Of("SE")));
 
-        // SE orders: Jan 15, Mar 1, Mar 31. Totals are shown by default.
-        Assert.Equal(["1 (1)", "0 (2)", "2 (3)", "0 (2)"], Buckets(cut).Select(Count));
-        Assert.Equal(["2 (3)", "0 (1)"], Presets(cut).Select(Count));
+        // SE orders: Jan 15, Mar 1, Mar 31. Totals are off by default, so the filtered count stands alone.
+        Assert.Equal(["1", "0", "2", "0"], Buckets(cut).Select(Count));
+        Assert.Equal(["2", "0"], Presets(cut).Select(Count));
+        Assert.Empty(cut.FindAll(".l2d-bucket-total, .l2d-preset-total"));
         Assert.Contains("l2d-zero", Buckets(cut)[1].ClassName);
     }
 
     [Fact]
-    public void ShowTotals_off_shows_the_filtered_count_alone()
+    public void ShowTotals_adds_the_total_in_parentheses_after_each_filtered_count()
     {
-        var cut = RenderFacet("OrderDate", Selections.Empty.With("Country", ValueSelection.Of("SE")), configure: f => f.Add(x => x.ShowTotals, false));
+        var cut = RenderFacet("OrderDate", Selections.Empty.With("Country", ValueSelection.Of("SE")), configure: f => f.Add(x => x.ShowTotals, true));
 
-        Assert.Equal(["1", "0", "2", "0"], Buckets(cut).Select(Count));
-        Assert.Equal(["2", "0"], Presets(cut).Select(Count));
-        Assert.Empty(cut.FindAll(".l2d-bucket-total, .l2d-preset-total"));
+        Assert.Equal(["1 (1)", "0 (2)", "2 (3)", "0 (2)"], Buckets(cut).Select(Count));
+        Assert.Equal(["2 (3)", "0 (1)"], Presets(cut).Select(Count));
+        Assert.Equal(6, cut.FindAll(".l2d-bucket-total, .l2d-preset-total").Count);
     }
 
     [Fact]
@@ -167,7 +168,7 @@ public class DateFacetTests : BunitContext
         var cut = RenderFacet("Shipped", onChanged: s => raised = s);
         var nullBucket = Buckets(cut).Single(b => b.ClassList.Contains("l2d-null"));
         Assert.Equal("(none)", Label(nullBucket));
-        Assert.Equal("3 (3)", Count(nullBucket));
+        Assert.Equal("3", Count(nullBucket));
         Assert.Empty(Presets(cut));
 
         nullBucket.QuerySelector("button")!.Click();
@@ -222,9 +223,9 @@ public class DateFacetTests : BunitContext
         });
 
         Assert.Equal(["Q1 2026", "Q2 2026"], Buckets(cut).Select(Label));
-        Assert.Equal(["6 (6)", "2 (2)"], Buckets(cut).Select(Count));
+        Assert.Equal(["6", "2"], Buckets(cut).Select(Count));
         Assert.Equal(["This quarter", "Last quarter"], Presets(cut).Select(Label));
-        Assert.Equal(["6 (6)", "0 (0)"], Presets(cut).Select(Count));
+        Assert.Equal(["6", "0"], Presets(cut).Select(Count));
     }
 
     [Fact]

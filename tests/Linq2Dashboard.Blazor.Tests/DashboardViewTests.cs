@@ -63,7 +63,7 @@ public class DashboardViewTests : BunitContext
 
         var countries = cut.FindAll("section[data-key='Country'] li");
         Assert.Equal(["SE", "NO", "(none)", "DK"], countries.Select(li => li.QuerySelector("button")!.TextContent.Trim()));
-        Assert.Equal("3 / 3", countries[0].QuerySelector(".l2d-count")!.TextContent.Trim());
+        Assert.Equal("3 (3)", countries[0].QuerySelector(".l2d-count")!.TextContent.Trim());
         Assert.Empty(cut.FindAll(".l2d-clear-all"));
     }
 
@@ -79,8 +79,8 @@ public class DashboardViewTests : BunitContext
         Assert.Equal("3", cut.Find(".l2d-matching").TextContent);
         Assert.Contains("l2d-selected", cut.FindAll("section[data-key='Country'] li")[0].ClassName);
         // Status counts follow the Country selection; Country's own counts do not (concept §4.2).
-        Assert.Equal("2 / 4", cut.FindAll("section[data-key='Status'] li")[0].QuerySelector(".l2d-count")!.TextContent.Trim());
-        Assert.Equal("3 / 3", cut.FindAll("section[data-key='Country'] li")[0].QuerySelector(".l2d-count")!.TextContent.Trim());
+        Assert.Equal("2 (4)", cut.FindAll("section[data-key='Status'] li")[0].QuerySelector(".l2d-count")!.TextContent.Trim());
+        Assert.Equal("3 (3)", cut.FindAll("section[data-key='Country'] li")[0].QuerySelector(".l2d-count")!.TextContent.Trim());
         Assert.Single(cut.FindAll(".l2d-clear-all"));
 
         ValueButton(cut, "Country", "SE").Click();

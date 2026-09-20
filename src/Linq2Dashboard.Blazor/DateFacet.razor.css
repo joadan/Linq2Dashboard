@@ -55,3 +55,8 @@
 .l2d-selected .l2d-preset-count {
     color: inherit;
 }
+
+/* The total is context, so it sits behind the filtered count. */
+.l2d-preset-total {
+    opacity: var(--l2d-total-opacity, 0.65);
+}

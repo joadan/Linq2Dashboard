@@ -27,9 +27,9 @@ public partial class BucketBars
     [Parameter]
     public bool ShowCounts { get; set; } = true;
 
-    /// <summary>Show the total in parentheses after the filtered count. Default true.</summary>
+    /// <summary>Show the total in parentheses after the filtered count, "filtered (total)". Off by default: the two numbers are equal until another facet narrows the set, and the tooltip always carries both (design §9).</summary>
     [Parameter]
-    public bool ShowTotals { get; set; } = true;
+    public bool ShowTotals { get; set; }
 
     private static string Share(int count, int scale) =>
         ((double)count / scale).ToString("0.###", System.Globalization.CultureInfo.InvariantCulture);

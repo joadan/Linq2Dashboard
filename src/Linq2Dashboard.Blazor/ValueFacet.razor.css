@@ -87,3 +87,8 @@
     color: var(--l2d-muted, #71717a);
     font-size: var(--l2d-small-size, 0.8125rem);
 }
+
+/* The total is context, so it sits behind the filtered count. */
+.l2d-facet-value-total {
+    opacity: var(--l2d-total-opacity, 0.65);
+}

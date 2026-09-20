@@ -57,7 +57,7 @@ public class ValueFacetTests : BunitContext
         Assert.Equal("Order status", cut.Find(".l2d-facet-title").TextContent);
         var items = Items(cut);
         Assert.Equal(["Open", "Closed", "Pending"], items.Select(Label));
-        Assert.Equal(["4 (4)", "2 (2)", "2 (2)"], items.Select(Count));
+        Assert.Equal(["4", "2", "2"], items.Select(Count));
         Assert.Empty(cut.FindAll(".l2d-facet-clear"));
         Assert.Empty(cut.FindAll(".l2d-facet-other"));
     }
@@ -69,7 +69,7 @@ public class ValueFacetTests : BunitContext
 
         var item = Items(cut).Single(li => li.ClassList.Contains("l2d-null"));
         Assert.Equal("(none)", Label(item));
-        Assert.Equal("2 (2)", Count(item));
+        Assert.Equal("2", Count(item));
     }
 
     [Fact]
@@ -87,7 +87,7 @@ public class ValueFacetTests : BunitContext
         Assert.Single(cut.FindAll(".l2d-facet-clear"));
 
         // The facet's own counts are unchanged by its own selection (concept §4.2).
-        Assert.Equal(["3 (3)", "2 (2)", "2 (2)", "1 (1)"], Items(cut).Select(Count));
+        Assert.Equal(["3", "2", "2", "1"], Items(cut).Select(Count));
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class ValueFacetTests : BunitContext
         var shown = RenderFacet("Status", selections);
         var pending = Items(shown).Single(li => Label(li) == "Pending");
         Assert.Contains("l2d-zero", pending.ClassName);
-        Assert.Equal("0 (2)", Count(pending));
+        Assert.Equal("0", Count(pending));
 
         var hidden = RenderFacet("Status", selections, configure: f => f.Add(x => x.HideZeroCounts, true));
         Assert.Equal(["Open", "Closed"], Items(hidden).Select(Label));
@@ -127,20 +127,22 @@ public class ValueFacetTests : BunitContext
     }
 
     [Fact]
-    public void Totals_are_shown_after_each_filtered_count_by_default()
+    public void Totals_are_off_by_default_so_the_filtered_count_stands_alone()
     {
         var cut = RenderFacet("Country", Selections.Empty.With("Status", ValueSelection.Of("Open")));
 
-        Assert.Equal("2 (3)", Count(Items(cut).Single(li => Label(li) == "SE")));
+        Assert.Equal("2", Count(Items(cut).Single(li => Label(li) == "SE")));
+        Assert.Empty(cut.FindAll(".l2d-facet-value-total"));
     }
 
     [Fact]
-    public void ShowTotals_off_shows_the_filtered_count_alone()
+    public void ShowTotals_adds_the_total_in_parentheses_after_each_filtered_count()
     {
-        var cut = RenderFacet("Country", Selections.Empty.With("Status", ValueSelection.Of("Open")), configure: f => f.Add(x => x.ShowTotals, false));
+        var cut = RenderFacet("Country", Selections.Empty.With("Status", ValueSelection.Of("Open")), configure: f => f.Add(x => x.ShowTotals, true));
 
-        Assert.Equal("2", Count(Items(cut).Single(li => Label(li) == "SE")));
-        Assert.Empty(cut.FindAll(".l2d-facet-value-total"));
+        var se = Items(cut).Single(li => Label(li) == "SE");
+        Assert.Equal("2 (3)", Count(se));
+        Assert.Equal("(3)", se.QuerySelector(".l2d-facet-value-total")!.TextContent.Trim());
     }
 
     [Fact]

@@ -193,3 +193,8 @@
     min-width: 2.5rem;
     text-align: right;
 }
+
+/* The total is context, so it sits behind the filtered count. */
+.l2d-bucket-total {
+    opacity: var(--l2d-total-opacity, 0.65);
+}

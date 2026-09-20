@@ -53,9 +53,9 @@ public partial class ValueFacet<T>
     [Parameter]
     public bool SortDescending { get; set; }
 
-    /// <summary>Show the total in parentheses after the filtered count, "filtered (total)". On by default; turn off to show the filtered count alone.</summary>
+    /// <summary>Show the total in parentheses after the filtered count, "filtered (total)". Off by default: the two numbers are equal until another facet narrows the set, and the tooltip always carries both (design §9).</summary>
     [Parameter]
-    public bool ShowTotals { get; set; } = true;
+    public bool ShowTotals { get; set; }
 
     /// <summary>Maximum number of search results (concept §4.5).</summary>
     [Parameter]

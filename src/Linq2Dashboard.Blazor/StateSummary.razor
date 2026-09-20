@@ -42,12 +42,12 @@
                                 <button type="button" class="l2d-value" @onclick="() => Context.ToggleAsync(facet.Key, value.Value)">
                                     @Formatter.FormatValue(facet, value.Value)
                                 </button>
-                                <span class="l2d-count">@Formatter.FormatCount(value.FilteredCount) / @Formatter.FormatCount(value.TotalCount)</span>
+                                <span class="l2d-count">@Formatter.FormatCount(value.FilteredCount) <span class="l2d-count-total">(@Formatter.FormatCount(value.TotalCount))</span></span>
                             </li>
                         }
                         @if (values.Other is FacetCount other)
                         {
-                            <li class="l2d-other">@OtherText <span class="l2d-count">@Formatter.FormatCount(other.FilteredCount) / @Formatter.FormatCount(other.TotalCount)</span></li>
+                            <li class="l2d-other">@OtherText <span class="l2d-count">@Formatter.FormatCount(other.FilteredCount) <span class="l2d-count-total">(@Formatter.FormatCount(other.TotalCount))</span></span></li>
                         }
                         break;
 
@@ -58,7 +58,7 @@
                                 <button type="button" class="l2d-value" @onclick="() => Context.ToggleIntervalAsync(facet.Key, bucket.ToInterval())">
                                     @Formatter.FormatRangeBucket(bucket)
                                 </button>
-                                <span class="l2d-count">@Formatter.FormatCount(bucket.FilteredCount) / @Formatter.FormatCount(bucket.TotalCount)</span>
+                                <span class="l2d-count">@Formatter.FormatCount(bucket.FilteredCount) <span class="l2d-count-total">(@Formatter.FormatCount(bucket.TotalCount))</span></span>
                             </li>
                         }
                         @if (range.Null.TotalCount > 0)
@@ -67,7 +67,7 @@
                                 <button type="button" class="l2d-value" @onclick="() => ToggleNull(range)">
                                     @Formatter.NullLabel
                                 </button>
-                                <span class="l2d-count">@Formatter.FormatCount(range.Null.FilteredCount) / @Formatter.FormatCount(range.Null.TotalCount)</span>
+                                <span class="l2d-count">@Formatter.FormatCount(range.Null.FilteredCount) <span class="l2d-count-total">(@Formatter.FormatCount(range.Null.TotalCount))</span></span>
                             </li>
                         }
                         break;
@@ -79,7 +79,7 @@
                                 <button type="button" class="l2d-value" @onclick="() => Context.ToggleIntervalAsync(facet.Key, preset.ToInterval())">
                                     @Formatter.FormatPreset(preset.Preset)
                                 </button>
-                                <span class="l2d-count">@Formatter.FormatCount(preset.FilteredCount) / @Formatter.FormatCount(preset.TotalCount)</span>
+                                <span class="l2d-count">@Formatter.FormatCount(preset.FilteredCount) <span class="l2d-count-total">(@Formatter.FormatCount(preset.TotalCount))</span></span>
                             </li>
                         }
                         @foreach (DateBucket bucket in dates.Buckets)
@@ -88,7 +88,7 @@
                                 <button type="button" class="l2d-value" @onclick="() => Context.ToggleIntervalAsync(facet.Key, bucket.ToInterval())">
                                     @Formatter.FormatDateBucket(bucket, dates.Granularity)
                                 </button>
-                                <span class="l2d-count">@Formatter.FormatCount(bucket.FilteredCount) / @Formatter.FormatCount(bucket.TotalCount)</span>
+                                <span class="l2d-count">@Formatter.FormatCount(bucket.FilteredCount) <span class="l2d-count-total">(@Formatter.FormatCount(bucket.TotalCount))</span></span>
                             </li>
                         }
                         @if (dates.Null.TotalCount > 0)
@@ -97,7 +97,7 @@
                                 <button type="button" class="l2d-value" @onclick="() => ToggleNull(dates)">
                                     @Formatter.NullLabel
                                 </button>
-                                <span class="l2d-count">@Formatter.FormatCount(dates.Null.FilteredCount) / @Formatter.FormatCount(dates.Null.TotalCount)</span>
+                                <span class="l2d-count">@Formatter.FormatCount(dates.Null.FilteredCount) <span class="l2d-count-total">(@Formatter.FormatCount(dates.Null.TotalCount))</span></span>
                             </li>
                         }
                         break;

@@ -44,9 +44,9 @@ public partial class DateFacet<T>
     [Parameter]
     public bool ShowCounts { get; set; } = true;
 
-    /// <summary>Show the total in parentheses after the filtered count, "filtered (total)". On by default; turn off to show the filtered count alone.</summary>
+    /// <summary>Show the total in parentheses after the filtered count, "filtered (total)". Off by default: the two numbers are equal until another facet narrows the set, and the tooltip always carries both (design §9).</summary>
     [Parameter]
-    public bool ShowTotals { get; set; } = true;
+    public bool ShowTotals { get; set; }
 
     /// <summary>Accessible label and tooltip of the header's clear button, which shows an ×.</summary>
     [Parameter]

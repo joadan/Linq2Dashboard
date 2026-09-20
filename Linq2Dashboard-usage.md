@@ -188,7 +188,7 @@ These are decisions from the concept, not options.
 
 - **OR within a facet, AND across facets.** Sweden or Norway, and status Open. The same for bars: January or March, and status Open.
 - **A facet's own selection is excluded from its own counts.** Under Country, with Sweden selected, Norway still shows what selecting it would add.
-- **Two counts per value.** `TotalCount` over the dataset, `FilteredCount` under the other facets' selections. Filtered counts always sum to the facet's `ContextCount`.
+- **Two counts per value.** `TotalCount` over the dataset, `FilteredCount` under the other facets' selections. Filtered counts always sum to the facet's `ContextCount`. The components show the filtered count; `ShowTotals` adds the total as "filtered (total)", and the tooltip always carries both with the share.
 - **Null is a value.** It is listed, counted and selectable. Never drop it.
 - **Zero-count values stay in the state.** Hiding them is the UI's choice (`HideZeroCounts`).
 - **Ranking picks the values, the UI orders them.** `RankBy` in the builder decides which values Top N presents; `Sort` on `ValueFacet` decides the order on screen: by rank (default), label or value, optionally reversed. Null stays last.
