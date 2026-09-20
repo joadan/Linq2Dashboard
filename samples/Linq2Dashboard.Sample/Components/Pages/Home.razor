@@ -34,6 +34,7 @@
             <ValueFacet T="SampleOrder" Key="Country" style="--l2d-facet-max-height: 12rem" />
             <ValueFacet T="SampleOrder" Key="Status" />
             <ValueFacet T="SampleOrder" Key="Channel" />
+            <ValueFacet T="SampleOrder" Key="Tags" />
             <ValueFacet T="SampleOrder" Key="Customer" Collapsed="true" />
             <ValueFacet T="SampleOrder" Key="IsActive" HideZeroCounts="true" />
             <RangeFacet T="SampleOrder" Key="Amount" ShowSlider="true" />
@@ -58,6 +59,7 @@
                     <PropertyColumn Property="o => o.Country" Sortable="true" />
                     <PropertyColumn Property="o => o.Status" Sortable="true" />
                     <PropertyColumn Property="o => o.Customer" Sortable="true" />
+                    <TemplateColumn Title="Tags">@string.Join(", ", context.Tags ?? [])</TemplateColumn>
                     <PropertyColumn Property="o => o.Amount" Format="N2" Align="Align.Right" Sortable="true" />
                 </QuickGrid>
             </div>

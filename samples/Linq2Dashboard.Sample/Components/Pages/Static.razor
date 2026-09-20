@@ -19,6 +19,7 @@
             <ValueFacet T="SampleOrder" Key="Country" Collapsible="false" style="--l2d-facet-max-height: 12rem" />
             <ValueFacet T="SampleOrder" Key="Status" Collapsible="false" />
             <ValueFacet T="SampleOrder" Key="Channel" Collapsible="false" />
+            <ValueFacet T="SampleOrder" Key="Tags" Collapsible="false" />
             <ValueFacet T="SampleOrder" Key="IsActive" Collapsible="false" HideZeroCounts="true" />
             <RangeFacet T="SampleOrder" Key="Amount" Collapsible="false" />
             <DateFacet T="SampleOrder" Key="OrderDate" Collapsible="false" />
@@ -40,7 +41,7 @@
             }
             <table class="static-table">
                 <thead>
-                    <tr><th>Id</th><th>Date</th><th>Country</th><th>Status</th><th>Customer</th><th class="static-amount">Amount</th></tr>
+                    <tr><th>Id</th><th>Date</th><th>Country</th><th>Status</th><th>Customer</th><th>Tags</th><th class="static-amount">Amount</th></tr>
                 </thead>
                 <tbody>
                     @foreach (SampleOrder order in dash.State.GetItems((long)(current - 1) * PageSize, PageSize))
@@ -51,6 +52,7 @@
                             <td>@order.Country</td>
                             <td>@order.Status</td>
                             <td>@order.Customer</td>
+                            <td>@string.Join(", ", order.Tags ?? [])</td>
                             <td class="static-amount">@order.Amount?.ToString("N2")</td>
                         </tr>
                     }

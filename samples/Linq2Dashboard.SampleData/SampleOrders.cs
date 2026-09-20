@@ -22,6 +22,9 @@ public sealed class SampleOrder
     public DateTime? OrderDate { get; init; }
 
     public int Quantity { get; init; }
+
+    /// <summary>Zero to three tags per order; null on about a quarter of them. Feeds the multi-valued facet.</summary>
+    public string[]? Tags { get; init; }
 }
 
 /// <summary>
@@ -34,6 +37,8 @@ public static class SampleOrders
     private static readonly string[] Statuses = ["Open", "Pending", "Shipped", "Closed", "Cancelled"];
     // Order channels, most common first so the skewed pick makes EDI dominant; twelve values, so Top(10) still folds the tail into Other.
     private static readonly string[] Channels = ["EDI", "E-Com", "Quote", "Mail", "Phone", "Portal", "Sales rep", "Fax", "Marketplace", "API", "Counter", "Punch-out"];
+    // Order tags, most common first; an order gets one to three distinct tags or none.
+    private static readonly string[] TagNames = ["Express", "Gift wrap", "B2B", "Fragile", "Recurring", "Discounted", "Backorder", "Priority"];
     private static readonly string[] Customers = Enumerable.Range(1, 5_000).Select(i => $"Customer {i:0000}").ToArray();
     private const int RangeMinutes = 2 * 365 * 24 * 60;
 
@@ -57,6 +62,7 @@ public static class SampleOrders
                 Amount = random.Next(100) < 5 ? null : Math.Round((decimal)(Math.Exp(Gaussian(random) * 0.7) * 250), 2),
                 OrderDate = random.Next(100) < 2 ? null : rangeStart.AddMinutes(random.Next(RangeMinutes)),
                 Quantity = 1 + Skewed(random, 20),
+                Tags = random.Next(100) < 25 ? null : PickTags(random),
             };
         }
 
@@ -72,6 +78,7 @@ public static class SampleOrders
             b.ValueFacet(x => x.Country);
             b.ValueFacet(x => x.Status);
             b.ValueFacet(x => x.Channel).Top(10);
+            b.MultiValueFacet(x => x.Tags);   // a row counts under every tag it has; counts overlap, no Other
             b.ValueFacet("Customer", x => x.CustomerId).Label(x => x.Customer).Top(10).Searchable();
             b.BooleanFacet(x => x.IsActive).Name("Active");
             b.RangeFacet(x => x.Amount);   // default: about ten round buckets derived from the data, open at both ends
@@ -90,6 +97,18 @@ public static class SampleOrders
             b.CalculatedMetric("perCustomer", m => m["revenue"] / m["customers"]).Name("Revenue per customer");
             b.OrderByDescending(x => x.OrderDate);
         });
+
+    private static string[] PickTags(Random random)
+    {
+        int count = 1 + Skewed(random, 3);
+        var tags = new HashSet<string>();
+        while (tags.Count < count)
+        {
+            tags.Add(TagNames[Skewed(random, TagNames.Length)]);
+        }
+
+        return tags.ToArray();
+    }
 
     private static int Skewed(Random random, int n)
     {
