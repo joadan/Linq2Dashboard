@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "docs",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "docs/Linq2Dashboard.Docs", "--no-build", "--no-launch-profile", "--", "--urls", "http://localhost:5199"],
+      "port": 5199
+    }
+  ]
+}
