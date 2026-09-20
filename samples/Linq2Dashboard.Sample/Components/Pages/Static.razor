@@ -1,0 +1,80 @@
+@page "/static"
+@inject Dashboard<SampleOrder> Dashboard
+@inject NavigationManager Navigation
+
+<PageTitle>Linq2Dashboard sample: static rendering</PageTitle>
+
+<h1>Orders, rendered statically</h1>
+
+<p class="static-note">
+    This page has no render mode, so it is static server-side rendering: no circuit, no state on the server, and the URL
+    is the whole selection. Every facet value, bar, preset and chip is a link to the URL of the changed selections, and
+    the table pages through <code>page=</code> in the same URL. Inputs, the slider and collapsing need an interactive
+    page, so the facets here are fixed open. <a href="/">Interactive version</a>
+</p>
+
+<DashboardView T="SampleOrder" Context="dash" Dashboard="Dashboard" SyncUrl="true" ResetOnChange="page">
+    <div class="static-layout">
+        <aside class="static-facets">
+            <ValueFacet T="SampleOrder" Key="Country" Collapsible="false" style="--l2d-facet-max-height: 12rem" />
+            <ValueFacet T="SampleOrder" Key="Status" Collapsible="false" />
+            <ValueFacet T="SampleOrder" Key="Channel" Collapsible="false" />
+            <ValueFacet T="SampleOrder" Key="IsActive" Collapsible="false" HideZeroCounts="true" />
+            <RangeFacet T="SampleOrder" Key="Amount" Collapsible="false" />
+            <DateFacet T="SampleOrder" Key="OrderDate" Collapsible="false" />
+        </aside>
+        <main class="static-main">
+            <ActiveSelections T="SampleOrder" />
+
+            <div class="static-metrics">
+                <Metric T="SampleOrder" Key="orders" />
+                <Metric T="SampleOrder" Key="revenue" />
+                <Metric T="SampleOrder" Key="average" />
+                <Metric T="SampleOrder" Key="customers" />
+            </div>
+
+            @{
+                int count = dash.State.MatchingCount;
+                int pages = Math.Max(1, (count + PageSize - 1) / PageSize);
+                int current = Math.Min(Page, pages);
+            }
+            <table class="static-table">
+                <thead>
+                    <tr><th>Id</th><th>Date</th><th>Country</th><th>Status</th><th>Customer</th><th class="static-amount">Amount</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (SampleOrder order in dash.State.GetItems((long)(current - 1) * PageSize, PageSize))
+                    {
+                        <tr>
+                            <td>@order.Id</td>
+                            <td>@order.OrderDate?.ToString("yyyy-MM-dd")</td>
+                            <td>@order.Country</td>
+                            <td>@order.Status</td>
+                            <td>@order.Customer</td>
+                            <td class="static-amount">@order.Amount?.ToString("N2")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            <nav class="static-pager" aria-label="Pages">
+                @if (current > 1)
+                {
+                    <a href="@PageHref(current - 1)">Previous</a>
+                }
+                else
+                {
+                    <span class="static-pager-disabled">Previous</span>
+                }
+                <span>Page @current of @pages.ToString("N0"), @count.ToString("N0") rows</span>
+                @if (current < pages)
+                {
+                    <a href="@PageHref(current + 1)">Next</a>
+                }
+                else
+                {
+                    <span class="static-pager-disabled">Next</span>
+                }
+            </nav>
+        </main>
+    </div>
+</DashboardView>

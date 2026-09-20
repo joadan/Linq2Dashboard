@@ -41,8 +41,8 @@ public partial class ActiveSelections<T>
     [Parameter]
     public string RemoveText { get; set; } = "Remove";
 
-    /// <summary>One removable piece of a facet's selection and what removing it does.</summary>
-    private readonly record struct ChipPart(string Label, Func<Task> Remove);
+    /// <summary>One removable piece of a facet's selection, what removing it does, and the link that is when the view renders links.</summary>
+    private readonly record struct ChipPart(string Label, Func<Task> Remove, string? Href);
 
     /// <summary>
     /// The facet's selection as removable parts: each value, each interval or preset, the null rows, or the text.
@@ -50,6 +50,7 @@ public partial class ActiveSelections<T>
     /// </summary>
     private IReadOnlyList<ChipPart> Parts(FacetState facet)
     {
+        string key = facet.Key;
         switch (facet.Selection)
         {
             case null:
@@ -57,36 +58,36 @@ public partial class ActiveSelections<T>
 
             case ValueSelection values:
                 return values.Values
-                    .Select(value => new ChipPart(Formatter.FormatValue(facet, value), () => Context.ToggleAsync(facet.Key, value)))
+                    .Select(value => new ChipPart(Formatter.FormatValue(facet, value), () => Context.ToggleAsync(key, value), LinkTo(s => s.Toggle(key, value))))
                     .ToList();
 
             case RangeSelection range when facet is RangeFacetState state:
                 var intervals = range.Intervals
-                    .Select(interval => new ChipPart(RangeLabel(state, interval), () => Context.ToggleIntervalAsync(facet.Key, interval)))
+                    .Select(interval => new ChipPart(RangeLabel(state, interval), () => Context.ToggleIntervalAsync(key, interval), LinkTo(s => s.ToggleInterval(key, interval))))
                     .ToList();
                 if (range.IncludeNull)
                 {
-                    intervals.Add(new ChipPart(Formatter.NullLabel, () => Context.SelectAsync(facet.Key, range.ToggleNull())));
+                    intervals.Add(new ChipPart(Formatter.NullLabel, () => Context.SelectAsync(key, range.ToggleNull()), LinkTo(s => s.With(key, range.ToggleNull()))));
                 }
 
                 return intervals;
 
             case DateSelection date when facet is DateFacetState state:
                 var parts = date.Intervals
-                    .Select(interval => new ChipPart(DateLabel(state, interval), () => Context.ToggleIntervalAsync(facet.Key, interval)))
+                    .Select(interval => new ChipPart(DateLabel(state, interval), () => Context.ToggleIntervalAsync(key, interval), LinkTo(s => s.ToggleInterval(key, interval))))
                     .ToList();
                 if (date.IncludeNull)
                 {
-                    parts.Add(new ChipPart(Formatter.NullLabel, () => Context.SelectAsync(facet.Key, date.ToggleNull())));
+                    parts.Add(new ChipPart(Formatter.NullLabel, () => Context.SelectAsync(key, date.ToggleNull()), LinkTo(s => s.With(key, date.ToggleNull()))));
                 }
 
                 return parts;
 
             case TextSelection text:
-                return [new ChipPart(text.Text, () => Context.ClearAsync(facet.Key))];
+                return [new ChipPart(text.Text, () => Context.ClearAsync(key), LinkTo(s => s.Clear(key)))];
 
             default:
-                return [new ChipPart(facet.Selection?.ToString() ?? string.Empty, () => Context.ClearAsync(facet.Key))];
+                return [new ChipPart(facet.Selection?.ToString() ?? string.Empty, () => Context.ClearAsync(key), LinkTo(s => s.Clear(key)))];
         }
     }
 

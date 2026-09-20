@@ -19,34 +19,7 @@
     gap: 0.25rem;
 }
 
-.l2d-preset-button {
-    display: inline-flex;
-    align-items: baseline;
-    gap: 0.375rem;
-    padding: 0.125rem 0.5rem;
-    border: 1px solid var(--l2d-border, #d4d4d8);
-    border-radius: var(--l2d-chip-radius, 999px);
-    background: none;
-    font: inherit;
-    font-size: var(--l2d-small-size, 0.8125rem);
-    color: inherit;
-    cursor: pointer;
-}
-
-.l2d-preset-button:hover {
-    background: var(--l2d-hover, rgba(0, 0, 0, 0.05));
-}
-
-.l2d-selected .l2d-preset-button {
-    background: var(--l2d-selected-background, rgba(37, 99, 235, 0.12));
-    border-color: transparent;
-    font-weight: 600;
-}
-
-.l2d-zero:not(.l2d-selected) .l2d-preset-button {
-    color: var(--l2d-muted, #71717a);
-}
-
+/* The preset's button or link itself is styled in Clickable.razor.css, which renders it; these rules style its content. */
 .l2d-preset-count {
     font-variant-numeric: tabular-nums;
     color: var(--l2d-muted, #71717a);

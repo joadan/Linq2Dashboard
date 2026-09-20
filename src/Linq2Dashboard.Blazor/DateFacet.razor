@@ -8,7 +8,7 @@
     }
     else
     {
-        <FacetHeader Name="@HeaderName" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)"
+        <FacetHeader Name="@HeaderName" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)" ClearHref="@LinkTo(s => s.Clear(Key))"
                      Collapsible="Collapsible" Collapsed="collapsed" OnToggle="ToggleCollapsed" />
     }
 
@@ -21,9 +21,9 @@
             @foreach (PresetState preset in Facet.Presets)
             {
                 <li @key="preset.Preset" class="l2d-preset @(preset.Selected ? "l2d-selected" : null) @(preset.FilteredCount == 0 ? "l2d-zero" : null)">
-                    <button type="button" class="l2d-preset-button" aria-pressed="@(preset.Selected ? "true" : "false")"
-                            title="@CountText.Tooltip(Formatter, Formatter.FormatPreset(preset.Preset), preset.FilteredCount, preset.TotalCount)"
-                            @onclick="() => ClickPreset(preset)">
+                    <Clickable Class="l2d-preset-button" Pressed="preset.Selected"
+                               Title="@CountText.Tooltip(Formatter, Formatter.FormatPreset(preset.Preset), preset.FilteredCount, preset.TotalCount)"
+                               Href="@LinkTo(s => s.ToggleInterval(Key, preset.ToInterval()))" OnClick="() => ClickPreset(preset)">
                         <span class="l2d-preset-label">@Formatter.FormatPreset(preset.Preset)</span>
                         @if (ShowCounts)
                         {
@@ -31,7 +31,7 @@
                                 @Formatter.FormatCount(preset.FilteredCount)@if (ShowTotals) {<span class="l2d-preset-total"> (@Formatter.FormatCount(preset.TotalCount))</span>}
                             </span>
                         }
-                    </button>
+                    </Clickable>
                 </li>
             }
         </ul>

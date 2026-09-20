@@ -31,6 +31,10 @@ public partial class FacetHeader
     [Parameter]
     public EventCallback OnClear { get; set; }
 
+    /// <summary>When set, the clear button is a link to this URL instead of raising <see cref="OnClear"/>: the view renders links (design §9).</summary>
+    [Parameter]
+    public string? ClearHref { get; set; }
+
     /// <summary>Render the name as a toggle that raises <see cref="OnToggle"/>.</summary>
     [Parameter]
     public bool Collapsible { get; set; }

@@ -99,12 +99,14 @@ public partial class RangeFacet<T>
         foreach (RangeBucket bucket in facet.Buckets)
         {
             RangeBucket captured = bucket;
-            bars.Add(new BucketBar(Formatter.FormatRangeBucket(bucket), bucket.TotalCount, bucket.FilteredCount, bucket.Selected, false, () => ClickBucket(captured)));
+            bars.Add(new BucketBar(Formatter.FormatRangeBucket(bucket), bucket.TotalCount, bucket.FilteredCount, bucket.Selected, false, () => ClickBucket(captured),
+                LinkTo(s => s.ToggleInterval(Key, captured.ToInterval()))));
         }
 
         if (facet.Null.TotalCount > 0)
         {
-            bars.Add(new BucketBar(Formatter.NullLabel, facet.Null.TotalCount, facet.Null.FilteredCount, facet.Null.Selected, true, ClickNull));
+            bars.Add(new BucketBar(Formatter.NullLabel, facet.Null.TotalCount, facet.Null.FilteredCount, facet.Null.Selected, true, ClickNull,
+                LinkTo(s => s.With(Key, Current.ToggleNull()))));
         }
 
         return bars;

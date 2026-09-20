@@ -27,10 +27,18 @@ public partial class StateSummary<T>
     public string OtherText { get; set; } = "Other";
 
     /// <summary>The null item of a range facet toggles the null rows beside the intervals (concept §4.8).</summary>
-    private Task ToggleNull(RangeFacetState facet) =>
-        Context.SelectAsync(facet.Key, (facet.Selection as RangeSelection ?? RangeSelection.Empty).ToggleNull());
+    private Task ToggleNull(RangeFacetState facet) => Context.SelectAsync(facet.Key, NullToggled(facet));
 
     /// <summary>The null item of a date facet toggles the null rows beside the parts (concept §4.8).</summary>
-    private Task ToggleNull(DateFacetState facet) =>
-        Context.SelectAsync(facet.Key, (facet.Selection as DateSelection ?? DateSelection.Empty).ToggleNull());
+    private Task ToggleNull(DateFacetState facet) => Context.SelectAsync(facet.Key, NullToggled(facet));
+
+    /// <summary>The link form of <see cref="ToggleNull(RangeFacetState)"/>, when the view renders links.</summary>
+    private string? NullHref(RangeFacetState facet) => LinkTo(s => s.With(facet.Key, NullToggled(facet)));
+
+    /// <summary>The link form of <see cref="ToggleNull(DateFacetState)"/>, when the view renders links.</summary>
+    private string? NullHref(DateFacetState facet) => LinkTo(s => s.With(facet.Key, NullToggled(facet)));
+
+    private static RangeSelection NullToggled(RangeFacetState facet) => (facet.Selection as RangeSelection ?? RangeSelection.Empty).ToggleNull();
+
+    private static DateSelection NullToggled(DateFacetState facet) => (facet.Selection as DateSelection ?? DateSelection.Empty).ToggleNull();
 }

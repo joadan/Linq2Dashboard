@@ -37,6 +37,14 @@ public abstract class DashboardComponentBase<T> : ComponentBase, IDisposable
     /// <summary>The root element's class attribute: the library's classes followed by <see cref="Class"/>.</summary>
     protected string RootClass(string libraryClasses) => CssClasses.Join(libraryClasses, Class);
 
+    /// <summary>
+    /// The link a click renders as when <see cref="DashboardContext{T}.Links"/> is on: the URL of the selections that
+    /// <paramref name="change"/> makes from the current ones. Null when clicks are buttons, so the change is not even
+    /// computed in an interactive view (design §9).
+    /// </summary>
+    protected string? LinkTo(Func<Selections, Selections> change) =>
+        Context.Links ? Context.Href(change(Context.Selections)) : null;
+
     /// <summary>Subscribes to the context; throws when the component is not inside a <see cref="DashboardView{T}"/>.</summary>
     protected override void OnInitialized()
     {

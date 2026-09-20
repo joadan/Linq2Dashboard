@@ -1,0 +1,10 @@
+@* Every click in the library: a link to the URL of the changed selections when the view renders links, a button otherwise. *@
+
+@if (Href is not null)
+{
+    <a class="@Class" href="@Href" title="@Title" aria-label="@AriaLabel">@ChildContent</a>
+}
+else
+{
+    <button type="button" class="@Class" title="@Title" aria-label="@AriaLabel" aria-pressed="@PressedAttribute" @onclick="OnClick">@ChildContent</button>
+}
