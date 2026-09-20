@@ -25,7 +25,7 @@
             {
                 <li @key="value.Value ?? NullKey" class="l2d-facet-value @(value.Selected ? "l2d-selected" : null) @(value.FilteredCount == 0 ? "l2d-zero" : null) @(value.IsNull ? "l2d-null" : null)">
                     <button type="button" class="l2d-facet-value-button" aria-pressed="@(value.Selected ? "true" : "false")"
-                            title="@CountText.Tooltip(Formatter, value.FilteredCount, value.TotalCount)"
+                            title="@CountText.Tooltip(Formatter, Formatter.FormatValue(Facet, value.Value), value.FilteredCount, value.TotalCount)"
                             @onclick="() => Context.ToggleAsync(Key, value.Value)">
                         @if (ValueTemplate is not null)
                         {
