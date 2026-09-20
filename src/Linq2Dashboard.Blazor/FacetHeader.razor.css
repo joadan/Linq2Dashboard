@@ -34,19 +34,23 @@
     margin-right: 0;
 }
 
+/* An inline SVG rather than a rotated bordered box: a square rotated by a quarter turn keeps its bounding box, so the
+   chevron never pokes outside the header and is not clipped when the host puts the facets in a scrolling column. */
 .l2d-facet-chevron {
     flex: none;
-    display: inline-block;
-    width: 0.5em;
-    height: 0.5em;
-    border-right: 2px solid var(--l2d-muted, #71717a);
-    border-bottom: 2px solid var(--l2d-muted, #71717a);
-    transform: translateY(-0.15em) rotate(45deg);
+    align-self: center;
+    width: 0.625em;
+    height: 0.625em;
+    fill: none;
+    stroke: var(--l2d-muted, #71717a);
+    stroke-width: 1.75;
+    stroke-linecap: round;
+    stroke-linejoin: round;
     transition: transform 120ms ease;
 }
 
 .l2d-collapsed .l2d-facet-chevron {
-    transform: translateY(0) rotate(-45deg);
+    transform: rotate(-90deg);
 }
 
 .l2d-facet-clear {

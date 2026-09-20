@@ -4,7 +4,7 @@
     @if (Collapsible)
     {
         <button type="button" class="l2d-facet-toggle" aria-expanded="@(Collapsed ? "false" : "true")" @onclick="OnToggle">
-            <span class="l2d-facet-chevron" aria-hidden="true"></span>
+            <svg class="l2d-facet-chevron" viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="M2 3.5 5 6.5 8 3.5" /></svg>
             <h3 class="l2d-facet-title">@Name</h3>
         </button>
     }
