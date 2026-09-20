@@ -8,7 +8,7 @@ public sealed class SampleOrder
 
     public string Status { get; init; } = "";
 
-    public string Category { get; init; } = "";
+    public string Channel { get; init; } = "";
 
     public int? CustomerId { get; init; }
 
@@ -33,7 +33,7 @@ public static class SampleOrders
     private static readonly string[] Countries = ["Sweden", "Norway", "Denmark", "Finland", "Germany", "Netherlands", "Poland", "France", "Spain", "Italy", "United Kingdom", "Ireland"];
     private static readonly string[] Statuses = ["Open", "Pending", "Shipped", "Closed", "Cancelled"];
     // Order channels, most common first so the skewed pick makes EDI dominant; twelve values, so Top(10) still folds the tail into Other.
-    private static readonly string[] Categories = ["EDI", "E-Com", "Quote", "Mail", "Phone", "Portal", "Sales rep", "Fax", "Marketplace", "API", "Counter", "Punch-out"];
+    private static readonly string[] Channels = ["EDI", "E-Com", "Quote", "Mail", "Phone", "Portal", "Sales rep", "Fax", "Marketplace", "API", "Counter", "Punch-out"];
     private static readonly string[] Customers = Enumerable.Range(1, 5_000).Select(i => $"Customer {i:0000}").ToArray();
     private const int RangeMinutes = 2 * 365 * 24 * 60;
 
@@ -50,7 +50,7 @@ public static class SampleOrders
                 Id = i + 1,
                 Country = Countries[Skewed(random, Countries.Length)],
                 Status = Statuses[Skewed(random, Statuses.Length)],
-                Category = Categories[Skewed(random, Categories.Length)],
+                Channel = Channels[Skewed(random, Channels.Length)],
                 CustomerId = customer is int c ? c + 1 : null,
                 Customer = customer is int n ? Customers[n] : null,
                 IsActive = random.Next(100) < 2 ? null : random.Next(100) < 80,
@@ -71,7 +71,7 @@ public static class SampleOrders
         {
             b.ValueFacet(x => x.Country);
             b.ValueFacet(x => x.Status);
-            b.ValueFacet(x => x.Category).Top(10);
+            b.ValueFacet(x => x.Channel).Top(10);
             b.ValueFacet("Customer", x => x.CustomerId).Label(x => x.Customer).Top(10).Searchable();
             b.BooleanFacet(x => x.IsActive).Name("Active");
             b.RangeFacet(x => x.Amount);   // default: about ten round buckets derived from the data, open at both ends
@@ -81,7 +81,7 @@ public static class SampleOrders
              .Presets(DatePreset.Last30Days, DatePreset.ThisYear);
             b.TextFacet("search", (x, text) =>
                 (x.Customer?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false)
-                || x.Category.Contains(text, StringComparison.OrdinalIgnoreCase))
+                || x.Channel.Contains(text, StringComparison.OrdinalIgnoreCase))
              .Name("Search");
             b.CountMetric("orders").Name("Orders");
             b.SumMetric("revenue", x => x.Amount).Name("Revenue");

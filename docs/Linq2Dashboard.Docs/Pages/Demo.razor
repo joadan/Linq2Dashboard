@@ -36,13 +36,13 @@ else
     <DashboardView T="SampleOrder" @ref="view" Context="dash" Dashboard="dashboard" Formatter="DemoFormatter.Instance" SyncUrl="true" Selections="selections" SelectionsChanged="OnSelectionsChanged" StateChanged="OnStateChanged">
         <div class="demo-layout">
             <aside class="demo-facets">
-                <TextFacet T="SampleOrder" Key="search" Placeholder="Customer or category" />
+                <TextFacet T="SampleOrder" Key="search" Placeholder="Customer or channel" />
                 <ValueFacet T="SampleOrder" Key="Country" />
                 @* A value template: the page renders the inside of each value button, the library keeps the button, its click and its selected state. *@
                 <ValueFacet T="SampleOrder" Key="Status">
                     <ValueTemplate Context="value"><DemoStatus Value="value" /></ValueTemplate>
                 </ValueFacet>
-                <ValueFacet T="SampleOrder" Key="Category" />
+                <ValueFacet T="SampleOrder" Key="Channel" />
                 <ValueFacet T="SampleOrder" Key="Customer" Collapsed="true" />
                 <ValueFacet T="SampleOrder" Key="IsActive" HideZeroCounts="true" />
                 <RangeFacet T="SampleOrder" Key="Amount" ShowSlider="true" />
