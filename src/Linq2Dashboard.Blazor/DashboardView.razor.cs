@@ -55,6 +55,14 @@ public partial class DashboardView<T> : IDisposable
     [Parameter]
     public bool SyncUrl { get; set; }
 
+    /// <summary>
+    /// Query parameters of the page that a selection change drops, comma-separated, for example <c>page</c>: a new
+    /// filter has a new first page. Applies to the URL the view writes and to the links it renders when not interactive;
+    /// every other parameter of the page is kept as it is. Needs <see cref="SyncUrl"/> (design §9).
+    /// </summary>
+    [Parameter]
+    public string? ResetOnChange { get; set; }
+
     /// <summary>Text formatting for every component inside. Defaults to <see cref="DefaultDashboardFormatter"/>.</summary>
     [Parameter]
     public IDashboardFormatter? Formatter { get; set; }
@@ -111,6 +119,7 @@ public partial class DashboardView<T> : IDisposable
             }
 
             context = new DashboardContext<T>(Dashboard, initial, formatter, OnSelectionsChangedAsync, OnStateChangedAsync);
+            ConfigureLinks();
             contextDashboard = Dashboard;
             contextFormatter = formatter;
             lastSelectionsParameter = Selections;
@@ -124,6 +133,8 @@ public partial class DashboardView<T> : IDisposable
             await OnStateChangedAsync(context.State);
             return;
         }
+
+        ConfigureLinks();
 
         // Another dashboard, typically a scope of the first (concept §4.10), or another formatter: the same context
         // adopts it, so the components inside, which subscribed to this context once, all follow the change.
@@ -168,16 +179,47 @@ public partial class DashboardView<T> : IDisposable
             return;
         }
 
-        SelectionSerializer serializer = context.Dashboard.Serializer;
-        if (serializer.FromQueryString(Navigation.Uri, QueryPrefix).Equals(context.Selections))
+        if (context.Dashboard.Serializer.FromQueryString(Navigation.Uri, QueryPrefix).Equals(context.Selections))
         {
             return;
         }
 
         var uri = new Uri(Navigation.Uri);
-        string query = serializer.ToQueryString(context.Selections, QueryPrefix, uri.Query);
-        string target = uri.GetLeftPart(UriPartial.Path) + (query.Length > 0 ? "?" + query : string.Empty) + uri.Fragment;
-        Navigation.NavigateTo(target, replace: true);
+        Navigation.NavigateTo(uri.GetLeftPart(UriPartial.Authority) + UrlFor(context.Selections), replace: true);
+    }
+
+    /// <summary>
+    /// Clicks are links exactly when the renderer is not interactive and the URL is the state (design §9): static
+    /// server-side rendering, or the prerender of an interactive page, where a button would do nothing until the
+    /// circuit connects. The href builder is available whenever <see cref="SyncUrl"/> is on.
+    /// </summary>
+    private void ConfigureLinks() =>
+        context?.ConfigureLinks(SyncUrl && !RendererInfo.IsInteractive, SyncUrl ? UrlFor : null);
+
+    /// <summary>
+    /// This page's path, query and fragment with <paramref name="selections"/> written over the view's parameters. The
+    /// page's other parameters stay in place, except those named in <see cref="ResetOnChange"/>, which are dropped.
+    /// </summary>
+    private string UrlFor(Selections selections)
+    {
+        var uri = new Uri(Navigation.Uri);
+        string query = Context.Dashboard.Serializer.ToQueryString(selections, QueryPrefix, WithoutReset(uri.Query));
+        return uri.AbsolutePath + (query.Length > 0 ? "?" + query : string.Empty) + uri.Fragment;
+    }
+
+    /// <summary>The query without the parameters named in <see cref="ResetOnChange"/>; the rest verbatim, in order.</summary>
+    private string WithoutReset(string query)
+    {
+        if (string.IsNullOrWhiteSpace(ResetOnChange) || query.Length == 0)
+        {
+            return query;
+        }
+
+        string[] reset = ResetOnChange.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries);
+        IEnumerable<string> kept = query.TrimStart('?')
+            .Split('&', StringSplitOptions.RemoveEmptyEntries)
+            .Where(segment => !reset.Contains(Uri.UnescapeDataString(segment.Split('=', 2)[0]), StringComparer.Ordinal));
+        return string.Join('&', kept);
     }
 
     /// <summary>A navigation within this page whose query says something else for this view applies it, as a click would: back, forward, or a link on the page.</summary>

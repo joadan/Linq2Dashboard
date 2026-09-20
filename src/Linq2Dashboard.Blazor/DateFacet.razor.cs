@@ -71,12 +71,14 @@ public partial class DateFacet<T>
         foreach (DateBucket bucket in facet.Buckets)
         {
             DateBucket captured = bucket;
-            bars.Add(new BucketBar(Formatter.FormatDateBucket(bucket, facet.Granularity), bucket.TotalCount, bucket.FilteredCount, bucket.Selected, false, () => ClickBucket(captured)));
+            bars.Add(new BucketBar(Formatter.FormatDateBucket(bucket, facet.Granularity), bucket.TotalCount, bucket.FilteredCount, bucket.Selected, false, () => ClickBucket(captured),
+                LinkTo(s => s.ToggleInterval(Key, captured.ToInterval()))));
         }
 
         if (facet.Null.TotalCount > 0)
         {
-            bars.Add(new BucketBar(Formatter.NullLabel, facet.Null.TotalCount, facet.Null.FilteredCount, facet.Null.Selected, true, ClickNull));
+            bars.Add(new BucketBar(Formatter.NullLabel, facet.Null.TotalCount, facet.Null.FilteredCount, facet.Null.Selected, true, ClickNull,
+                LinkTo(s => s.With(Key, Current.ToggleNull()))));
         }
 
         return bars;

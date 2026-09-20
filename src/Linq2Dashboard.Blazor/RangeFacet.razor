@@ -8,7 +8,7 @@
     }
     else
     {
-        <FacetHeader Name="@HeaderName" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)"
+        <FacetHeader Name="@HeaderName" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)" ClearHref="@LinkTo(s => s.Clear(Key))"
                      Collapsible="Collapsible" Collapsed="collapsed" OnToggle="ToggleCollapsed">
             @if (ShowBounds && !double.IsNaN(Facet.Min))
             {

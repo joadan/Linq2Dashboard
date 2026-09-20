@@ -38,13 +38,13 @@ else
                                 }
                                 <span class="l2d-chip-value">
                                     <span class="l2d-chip-label">@part.Label</span>
-                                    <button type="button" class="l2d-chip-value-remove" aria-label="@RemoveText @part.Label" title="@RemoveText"
-                                            @onclick="part.Remove">×</button>
+                                    <Clickable Class="l2d-chip-value-remove" AriaLabel="@($"{RemoveText} {part.Label}")" Title="@RemoveText"
+                                               Href="@part.Href" OnClick="part.Remove">×</Clickable>
                                 </span>
                             }
                         </span>
-                        <button type="button" class="l2d-chip-remove" aria-label="@RemoveText @facet.Name" title="@RemoveText"
-                                @onclick="() => Context.ClearAsync(facet.Key)">×</button>
+                        <Clickable Class="l2d-chip-remove" AriaLabel="@($"{RemoveText} {facet.Name}")" Title="@RemoveText"
+                                   Href="@LinkTo(s => s.Clear(facet.Key))" OnClick="() => Context.ClearAsync(facet.Key)">×</Clickable>
                     </li>
                 }
                 else
@@ -58,13 +58,13 @@ else
                                 <span class="l2d-chip-facet">@facet.Name</span>
                             }
                             <span class="l2d-chip-label">@part.Label</span>
-                            <button type="button" class="l2d-chip-remove" aria-label="@RemoveText @part.Label" title="@RemoveText"
-                                    @onclick="part.Remove">×</button>
+                            <Clickable Class="l2d-chip-remove" AriaLabel="@($"{RemoveText} {part.Label}")" Title="@RemoveText"
+                                       Href="@part.Href" OnClick="part.Remove">×</Clickable>
                         </li>
                     }
                 }
             }
         </ul>
-        <button type="button" class="l2d-active-clear-all" aria-label="@ClearAllText" title="@ClearAllText" @onclick="() => Context.ClearAllAsync()">×</button>
+        <Clickable Class="l2d-active-clear-all" AriaLabel="@ClearAllText" Title="@ClearAllText" Href="@LinkTo(_ => Linq2Dashboard.Selections.Empty)" OnClick="() => Context.ClearAllAsync()">×</Clickable>
     </div>
 }

@@ -15,6 +15,6 @@
     @ChildContent
     @if (ShowClear)
     {
-        <button type="button" class="l2d-facet-clear" aria-label="@ClearText" title="@ClearText" @onclick="OnClear">×</button>
+        <Clickable Class="l2d-facet-clear" AriaLabel="@ClearText" Title="@ClearText" Href="@ClearHref" OnClick="OnClear">×</Clickable>
     }
 </header>

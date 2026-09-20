@@ -7,7 +7,7 @@
         <span class="l2d-total">@Formatter.FormatCount(State.TotalCount)</span>
         @if (!State.Selections.IsEmpty)
         {
-            <button type="button" class="l2d-clear-all" @onclick="() => Context.ClearAllAsync()">@ClearAllText</button>
+            <Clickable Class="l2d-clear-all" Href="@LinkTo(_ => Linq2Dashboard.Selections.Empty)" OnClick="() => Context.ClearAllAsync()">@ClearAllText</Clickable>
         }
     </p>
 
@@ -24,12 +24,13 @@
 
     @foreach (FacetState facet in State.Facets)
     {
+        string key = facet.Key;
         <section class="l2d-summary-facet" data-key="@facet.Key">
             <h4>
                 @facet.Name
                 @if (facet.HasSelection)
                 {
-                    <button type="button" class="l2d-clear" @onclick="() => Context.ClearAsync(facet.Key)">@ClearText</button>
+                    <Clickable Class="l2d-clear" Href="@LinkTo(s => s.Clear(key))" OnClick="() => Context.ClearAsync(key)">@ClearText</Clickable>
                 }
             </h4>
             <ul>
@@ -39,9 +40,9 @@
                         @foreach (FacetValue value in values.Values)
                         {
                             <li class="@(value.Selected ? "l2d-selected" : null)">
-                                <button type="button" class="l2d-value" @onclick="() => Context.ToggleAsync(facet.Key, value.Value)">
+                                <Clickable Class="l2d-value" Href="@LinkTo(s => s.Toggle(key, value.Value))" OnClick="() => Context.ToggleAsync(key, value.Value)">
                                     @Formatter.FormatValue(facet, value.Value)
-                                </button>
+                                </Clickable>
                                 <span class="l2d-count">@Formatter.FormatCount(value.FilteredCount) <span class="l2d-count-total">(@Formatter.FormatCount(value.TotalCount))</span></span>
                             </li>
                         }
@@ -55,18 +56,18 @@
                         @foreach (RangeBucket bucket in range.Buckets)
                         {
                             <li class="@(bucket.Selected ? "l2d-selected" : null)">
-                                <button type="button" class="l2d-value" @onclick="() => Context.ToggleIntervalAsync(facet.Key, bucket.ToInterval())">
+                                <Clickable Class="l2d-value" Href="@LinkTo(s => s.ToggleInterval(key, bucket.ToInterval()))" OnClick="() => Context.ToggleIntervalAsync(key, bucket.ToInterval())">
                                     @Formatter.FormatRangeBucket(bucket)
-                                </button>
+                                </Clickable>
                                 <span class="l2d-count">@Formatter.FormatCount(bucket.FilteredCount) <span class="l2d-count-total">(@Formatter.FormatCount(bucket.TotalCount))</span></span>
                             </li>
                         }
                         @if (range.Null.TotalCount > 0)
                         {
                             <li class="@(range.Null.Selected ? "l2d-selected" : null)">
-                                <button type="button" class="l2d-value" @onclick="() => ToggleNull(range)">
+                                <Clickable Class="l2d-value" Href="@NullHref(range)" OnClick="() => ToggleNull(range)">
                                     @Formatter.NullLabel
-                                </button>
+                                </Clickable>
                                 <span class="l2d-count">@Formatter.FormatCount(range.Null.FilteredCount) <span class="l2d-count-total">(@Formatter.FormatCount(range.Null.TotalCount))</span></span>
                             </li>
                         }
@@ -76,27 +77,27 @@
                         @foreach (PresetState preset in dates.Presets)
                         {
                             <li class="l2d-preset @(preset.Selected ? "l2d-selected" : null)">
-                                <button type="button" class="l2d-value" @onclick="() => Context.ToggleIntervalAsync(facet.Key, preset.ToInterval())">
+                                <Clickable Class="l2d-value" Href="@LinkTo(s => s.ToggleInterval(key, preset.ToInterval()))" OnClick="() => Context.ToggleIntervalAsync(key, preset.ToInterval())">
                                     @Formatter.FormatPreset(preset.Preset)
-                                </button>
+                                </Clickable>
                                 <span class="l2d-count">@Formatter.FormatCount(preset.FilteredCount) <span class="l2d-count-total">(@Formatter.FormatCount(preset.TotalCount))</span></span>
                             </li>
                         }
                         @foreach (DateBucket bucket in dates.Buckets)
                         {
                             <li class="@(bucket.Selected ? "l2d-selected" : null)">
-                                <button type="button" class="l2d-value" @onclick="() => Context.ToggleIntervalAsync(facet.Key, bucket.ToInterval())">
+                                <Clickable Class="l2d-value" Href="@LinkTo(s => s.ToggleInterval(key, bucket.ToInterval()))" OnClick="() => Context.ToggleIntervalAsync(key, bucket.ToInterval())">
                                     @Formatter.FormatDateBucket(bucket, dates.Granularity)
-                                </button>
+                                </Clickable>
                                 <span class="l2d-count">@Formatter.FormatCount(bucket.FilteredCount) <span class="l2d-count-total">(@Formatter.FormatCount(bucket.TotalCount))</span></span>
                             </li>
                         }
                         @if (dates.Null.TotalCount > 0)
                         {
                             <li class="@(dates.Null.Selected ? "l2d-selected" : null)">
-                                <button type="button" class="l2d-value" @onclick="() => ToggleNull(dates)">
+                                <Clickable Class="l2d-value" Href="@NullHref(dates)" OnClick="() => ToggleNull(dates)">
                                     @Formatter.NullLabel
-                                </button>
+                                </Clickable>
                                 <span class="l2d-count">@Formatter.FormatCount(dates.Null.FilteredCount) <span class="l2d-count-total">(@Formatter.FormatCount(dates.Null.TotalCount))</span></span>
                             </li>
                         }

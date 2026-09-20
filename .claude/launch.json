@@ -6,6 +6,12 @@
       "runtimeExecutable": "dotnet",
       "runtimeArgs": ["run", "--project", "docs/Linq2Dashboard.Docs", "--no-build", "--no-launch-profile", "--", "--urls", "http://localhost:5199"],
       "port": 5199
+    },
+    {
+      "name": "sample",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "samples/Linq2Dashboard.Sample", "--no-build", "--no-launch-profile", "--", "--urls", "http://localhost:5198", "--environment", "Development"],
+      "port": 5198
     }
   ]
 }

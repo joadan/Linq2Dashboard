@@ -10,6 +10,7 @@ public sealed class DashboardContext<T>
     private readonly Func<Selections, Task> onSelectionsChanged;
     private readonly Func<DashboardState<T>, Task> onStateChanged;
     private IQueryable<T>? items;
+    private Func<Selections, string>? hrefFor;
 
     internal DashboardContext(
         Dashboard<T> dashboard,
@@ -48,6 +49,37 @@ public sealed class DashboardContext<T>
 
     /// <summary>Raised after <see cref="State"/> changed. Components re-render on it; the host listens through <see cref="DashboardView{T}.StateChanged"/>.</summary>
     public event Action? StateChanged;
+
+    /// <summary>
+    /// True when clicks render as links instead of buttons: the view is not interactive (static server-side rendering,
+    /// or the prerender of an interactive page before its circuit connects) and <see cref="DashboardView{T}.SyncUrl"/> is on,
+    /// so the URL is the state and a link to the URL of the changed selections is the click (design §9). Components
+    /// check it and hosts rendering their own clickable content can do the same, building the link with <see cref="Href"/>.
+    /// </summary>
+    public bool Links { get; private set; }
+
+    /// <summary>
+    /// The URL of this page with <paramref name="selections"/> written over the view's query parameters, the page's other
+    /// parameters kept except those named in <see cref="DashboardView{T}.ResetOnChange"/>. Available whenever the view has
+    /// <see cref="DashboardView{T}.SyncUrl"/>, whether or not <see cref="Links"/> is on, for a host that renders its own links.
+    /// </summary>
+    public string Href(Selections selections)
+    {
+        ArgumentNullException.ThrowIfNull(selections);
+        if (hrefFor is null)
+        {
+            throw new InvalidOperationException("Links need the URL as the state: set SyncUrl on the DashboardView.");
+        }
+
+        return hrefFor(selections);
+    }
+
+    /// <summary>Set by the view: whether clicks render as links, and how a link for given selections is written.</summary>
+    internal void ConfigureLinks(bool links, Func<Selections, string>? hrefFor)
+    {
+        Links = links;
+        this.hrefFor = hrefFor;
+    }
 
     /// <summary>Wall time of the most recent <c>Calculate</c>, including the initial one. A cache hit reads as near zero.</summary>
     public TimeSpan LastCalculation { get; private set; }

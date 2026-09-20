@@ -8,7 +8,7 @@
     }
     else
     {
-        <FacetHeader Name="@HeaderName" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)"
+        <FacetHeader Name="@HeaderName" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)" ClearHref="@LinkTo(s => s.Clear(Key))"
                      Collapsible="Collapsible" Collapsed="collapsed" OnToggle="ToggleCollapsed" />
     }
 
@@ -24,9 +24,9 @@
             @foreach (FacetValue value in Displayed)
             {
                 <li @key="value.Value ?? NullKey" class="l2d-facet-value @(value.Selected ? "l2d-selected" : null) @(value.FilteredCount == 0 ? "l2d-zero" : null) @(value.IsNull ? "l2d-null" : null)">
-                    <button type="button" class="l2d-facet-value-button" aria-pressed="@(value.Selected ? "true" : "false")"
-                            title="@CountText.Tooltip(Formatter, Formatter.FormatValue(Facet, value.Value), value.FilteredCount, value.TotalCount)"
-                            @onclick="() => Context.ToggleAsync(Key, value.Value)">
+                    <Clickable Class="l2d-facet-value-button" Pressed="value.Selected"
+                               Title="@CountText.Tooltip(Formatter, Formatter.FormatValue(Facet, value.Value), value.FilteredCount, value.TotalCount)"
+                               Href="@LinkTo(s => s.Toggle(Key, value.Value))" OnClick="() => Context.ToggleAsync(Key, value.Value)">
                         @if (ValueTemplate is not null)
                         {
                             @ValueTemplate(value)
@@ -38,7 +38,7 @@
                                 @Formatter.FormatCount(value.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> (@Formatter.FormatCount(value.TotalCount))</span>}
                             </span>
                         }
-                    </button>
+                    </Clickable>
                 </li>
             }
             @if (!IsSearching && Facet.Other is FacetCount other)
