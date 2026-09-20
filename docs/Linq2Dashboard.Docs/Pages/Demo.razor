@@ -56,9 +56,6 @@ else
                 <DateFacet T="SampleOrder" Key="OrderDate" />
             </aside>
             <div class="demo-main">
-                <div class="demo-status">
-                    <CalculationTiming />
-                </div>
                 <ActiveSelections T="SampleOrder" />
                 <div class="demo-metrics">
                     <Metric T="SampleOrder" Key="orders" Name="Orders matching">
@@ -116,6 +113,9 @@ else
                         <PropertyColumn Property="o => o.Customer" Sortable="true" />
                         <PropertyColumn Property="o => o.Amount" Format="N2" Align="Align.Right" Sortable="true" />
                     </QuickGrid>
+                </div>
+                <div class="demo-status">
+                    <CalculationTiming />
                 </div>
                 <details class="demo-json">
                     <summary>Selections as JSON and as the URL query</summary>
