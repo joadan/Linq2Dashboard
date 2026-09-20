@@ -29,7 +29,8 @@ public abstract class FacetState
 
     /// <summary>
     /// Rows in this facet's own counting context: every other facet's selection applied, this
-    /// facet's own excluded (concept §4.2). Filtered counts under this facet sum to this number.
+    /// facet's own excluded (concept §4.2). Filtered counts under this facet sum to this number, or to
+    /// at least this number under a multi-valued facet, whose rows are counted under several values (concept §5).
     /// </summary>
     public int ContextCount { get; }
 
@@ -37,7 +38,7 @@ public abstract class FacetState
     public bool HasSelection => Selection is not null;
 }
 
-/// <summary>State of a value or boolean facet.</summary>
+/// <summary>State of a value, boolean or multi-valued facet.</summary>
 public sealed class ValueFacetState : FacetState
 {
     private readonly Func<string, int, IReadOnlyList<FacetValue>> search;
@@ -64,8 +65,15 @@ public sealed class ValueFacetState : FacetState
     /// </summary>
     public IReadOnlyList<FacetValue> Values { get; }
 
-    /// <summary>Remainder when Top N truncated the list, measured against this facet's context; null when nothing was truncated.</summary>
+    /// <summary>Remainder when Top N truncated the list, measured against this facet's context; null when nothing was truncated, and always null for a multi-valued facet (concept §6).</summary>
     public FacetCount? Other { get; }
+
+    /// <summary>
+    /// True for a multi-valued facet (concept §5): a row is counted under every value it has, so the
+    /// filtered counts overlap, sum to at least <see cref="FacetState.ContextCount"/>, and no bar is a
+    /// share of the whole. Never has <see cref="Other"/>.
+    /// </summary>
+    public bool IsMultiValued => Kind == FacetKind.MultiValue;
 
     /// <summary>Number of facet values in the dataset, null included, whether presented or not.</summary>
     public int DistinctCount { get; }

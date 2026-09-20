@@ -14,4 +14,10 @@ public enum FacetKind
 
     /// <summary>Free text matched by an application function. No values, only the text. Added 2026-09-14.</summary>
     Text,
+
+    /// <summary>
+    /// A collection property: each row has a set of values and is counted under every one of them, so
+    /// the counts overlap and there is no "Other" (concept §5). Its state is a <see cref="ValueFacetState"/>. Added 2026-09-20.
+    /// </summary>
+    MultiValue,
 }

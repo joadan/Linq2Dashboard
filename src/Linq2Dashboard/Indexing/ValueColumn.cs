@@ -31,7 +31,7 @@ internal static class ValueColumn
 /// practice even though it cannot be expressed on the type parameter.
 /// </remarks>
 #pragma warning disable CS8714 // Nullability of type argument doesn't match 'notnull' constraint (see remarks).
-internal sealed class ValueColumn<TValue>
+internal sealed class ValueColumn<TValue> : IValueColumn<TValue>
 {
     private readonly int[] codes;
     private readonly TValue[] dictionary;
@@ -63,8 +63,8 @@ internal sealed class ValueColumn<TValue>
     /// <summary>Total count per code, index 0 being null. Computed once at build (concept §4.3).</summary>
     public ReadOnlySpan<int> TotalCounts => totalCounts;
 
-    /// <summary>The same totals as an array, for a facet index to keep without copying. Never written after build.</summary>
-    internal int[] TotalCountsArray => totalCounts;
+    /// <inheritdoc />
+    public int[] TotalCountsArray => totalCounts;
 
     public int CodeAt(int row) => codes[row];
 

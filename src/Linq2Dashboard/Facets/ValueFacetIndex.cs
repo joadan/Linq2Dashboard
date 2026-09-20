@@ -5,7 +5,11 @@ using Linq2Dashboard.Serialization;
 
 namespace Linq2Dashboard.Facets;
 
-/// <summary>Built value or boolean facet: the dictionary-encoded column plus presentation options.</summary>
+/// <summary>
+/// Built value, boolean or multi-valued facet: the dictionary-encoded column plus presentation
+/// options. The kinds differ only in the column behind <see cref="IValueColumn{TValue}"/> and in
+/// "Other", which a multi-valued facet never has (concept §5, §6).
+/// </summary>
 internal sealed class ValueFacetIndex<TValue> : FacetIndex
 {
     private readonly Lazy<string[]> searchLabels;
@@ -15,14 +19,14 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     private readonly int valueCount;
 
     public ValueFacetIndex(
-        string key, string name, FacetKind kind, ValueColumn<TValue> column,
+        string key, string name, FacetKind kind, IValueColumn<TValue> column,
         int? top, RankMode rankMode, bool searchable, ValueFormatter<TValue>? formatter, string?[]? labels = null)
         : this(key, name, kind, column, column.TotalCountsArray, column.RowCount, top, rankMode, searchable, formatter, Validate(column, labels), null)
     {
     }
 
     private ValueFacetIndex(
-        string key, string name, FacetKind kind, ValueColumn<TValue> column, int[] totals, int rowCount,
+        string key, string name, FacetKind kind, IValueColumn<TValue> column, int[] totals, int rowCount,
         int? top, RankMode rankMode, bool searchable, ValueFormatter<TValue>? formatter, string?[]? labels, Lazy<string[]>? searchLabels)
         : base(key, name, kind, rowCount)
     {
@@ -61,7 +65,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         return Column.TryGetCode(ConvertValue(value), out int code) ? labels[code - 1] : null;
     }
 
-    public ValueColumn<TValue> Column { get; }
+    public IValueColumn<TValue> Column { get; }
 
     public int? Top { get; }
 
@@ -121,7 +125,8 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
 
             presented.Sort((a, b) => BestFirst.Compare(RankOf(a, counts), RankOf(b, counts)));
 
-            if (presented.Count < valueCount)
+            // A multi-valued facet has no "Other": rows overlap, so a remainder cannot be computed by subtraction (concept §6).
+            if (presented.Count < valueCount && Kind != FacetKind.MultiValue)
             {
                 int presentedTotal = 0;
                 int presentedFiltered = 0;
@@ -445,7 +450,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         return null;
     }
 
-    private static string?[]? Validate(ValueColumn<TValue> column, string?[]? labels)
+    private static string?[]? Validate(IValueColumn<TValue> column, string?[]? labels)
     {
         if (labels is not null && labels.Length != column.DistinctCount)
         {
