@@ -8,6 +8,8 @@ public enum DateGranularity
 {
     /// <summary>Calendar year.</summary>
     Year,
+    /// <summary>Calendar quarter: January to March, April to June, July to September, October to December.</summary>
+    Quarter,
     /// <summary>Calendar month.</summary>
     Month,
     /// <summary>ISO 8601 week, Monday to Sunday.</summary>

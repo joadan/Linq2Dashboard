@@ -173,6 +173,7 @@ internal sealed class DateColumn
         return granularity switch
         {
             DateGranularity.Year => new DateTime(day.Year, 1, 1),
+            DateGranularity.Quarter => new DateTime(day.Year, (day.Month - 1) / 3 * 3 + 1, 1),
             DateGranularity.Month => new DateTime(day.Year, day.Month, 1),
             DateGranularity.Week => day.AddDays(-(((int)day.DayOfWeek + 6) % 7)),
             DateGranularity.Day => day,
@@ -185,6 +186,7 @@ internal sealed class DateColumn
         granularity switch
         {
             DateGranularity.Year => periodStart.AddYears(1),
+            DateGranularity.Quarter => periodStart.AddMonths(3),
             DateGranularity.Month => periodStart.AddMonths(1),
             DateGranularity.Week => periodStart.AddDays(7),
             DateGranularity.Day => periodStart.AddDays(1),

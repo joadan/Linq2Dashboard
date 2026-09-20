@@ -373,6 +373,8 @@ internal static class DatePresets
             DatePreset.LastWeek => PreviousPeriod(today, DateGranularity.Week),
             DatePreset.ThisMonth => Period(today, DateGranularity.Month),
             DatePreset.LastMonth => PreviousPeriod(today, DateGranularity.Month),
+            DatePreset.ThisQuarter => Period(today, DateGranularity.Quarter),
+            DatePreset.LastQuarter => PreviousPeriod(today, DateGranularity.Quarter),
             DatePreset.ThisYear => Period(today, DateGranularity.Year),
             DatePreset.LastYear => PreviousPeriod(today, DateGranularity.Year),
             DatePreset.YearToDate => (DateColumn.PeriodStart(today, DateGranularity.Year), today.AddDays(1)),

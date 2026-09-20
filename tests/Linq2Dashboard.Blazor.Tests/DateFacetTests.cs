@@ -206,6 +206,28 @@ public class DateFacetTests : BunitContext
     }
 
     [Fact]
+    public void Quarter_periods_and_presets_label_as_quarters()
+    {
+        // Every order lies in Q1 or Q2 2026; now is 15 March, so this quarter is Q1 and last quarter has no rows.
+        var dashboard = Dashboard.Create(TestData.Orders(), b =>
+        {
+            b.DateFacet(x => x.OrderDate).TimeZone(TestData.Stockholm).Granularity(DateGranularity.Quarter).Presets(DatePreset.ThisQuarter, DatePreset.LastQuarter);
+            b.UseTimeProvider(new FixedTimeProvider(TestData.Instant("2026-03-15T10:00:00Z")));
+        });
+        var cut = Render<DashboardView<Order>>(parameters =>
+        {
+            parameters.Add(p => p.Dashboard, dashboard);
+            parameters.Add(p => p.Formatter, new DefaultDashboardFormatter(CultureInfo.InvariantCulture));
+            parameters.AddContent<DateFacet<Order>>(facet => facet.Add(f => f.Key, "OrderDate"));
+        });
+
+        Assert.Equal(["Q1 2026", "Q2 2026"], Buckets(cut).Select(Label));
+        Assert.Equal(["6 (6)", "2 (2)"], Buckets(cut).Select(Count));
+        Assert.Equal(["This quarter", "Last quarter"], Presets(cut).Select(Label));
+        Assert.Equal(["6 (6)", "0 (0)"], Presets(cut).Select(Count));
+    }
+
+    [Fact]
     public void Wrong_kind_fails_clearly()
     {
         var error = Assert.ThrowsAny<Exception>(() => RenderFacet("Country"));

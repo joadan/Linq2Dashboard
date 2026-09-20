@@ -31,6 +31,12 @@ public enum DatePreset
     /// <summary>The calendar month before the one containing today.</summary>
     LastMonth,
 
+    /// <summary>The calendar quarter containing today.</summary>
+    ThisQuarter,
+
+    /// <summary>The calendar quarter before the one containing today.</summary>
+    LastQuarter,
+
     /// <summary>The calendar year containing today.</summary>
     ThisYear,
 

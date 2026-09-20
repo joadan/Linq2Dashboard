@@ -223,7 +223,7 @@ The property is numeric: amount, price, quantity, weight.
 
 The property is a point in time: order date, created, last login.
 
-- Values: buckets by calendar period (year, month, week, day), with counts. Optionally a set of relative presets (today, last 7 days, this year).
+- Values: buckets by calendar period (year, quarter, month, week, day), with counts. Optionally a set of relative presets (today, last 7 days, this year).
 - Selection: a set of parts combined as OR (§4.1), like the range facet, with or without the null value. Each part is either a `[from, to)` interval or a named relative preset that resolves to an interval at calculation time, so "January, March or last 7 days" is one selection.
 - A preset no row falls in can be left out of the state, the way a value no row has is not a facet value (§4.10). This is a facet definition choice and is off by default; the zero-count rule of §4.3 is about filtered counts and is unchanged. Because a preset's interval moves with the clock, it is decided at each calculation, so a preset comes back once its interval reaches a row. A selected preset is left out on the same terms: the selection still applies, still matches, still shows among the active selections and still clears.
 
@@ -234,7 +234,7 @@ The property is a point in time: order date, created, last login.
 - Conversion into the facet's zone: `DateTimeOffset` is converted. `DateTime` with kind UTC is converted; with kind Local or Unspecified it is taken as already being in the facet's zone. `DateOnly` has no zone and buckets as the calendar day it is.
 - **"Now"** comes from a `TimeProvider` given to the dashboard at initialisation. Default is the system clock. Tests and reproducible snapshots supply their own.
 - A relative preset is stored in the selection as the preset, not as the interval it resolved to. A bookmarked "last 7 days" therefore stays relative when restored later. Because the data is fixed (§4.9), the same preset can still resolve differently on a different day; that is intended.
-- The bucket granularity (year, month, week, day) is a facet definition choice. Weeks follow ISO 8601 unless the definition says otherwise.
+- The bucket granularity (year, quarter, month, week, day) is a facet definition choice. Quarters are the calendar quarters, January to March first. Weeks follow ISO 8601 unless the definition says otherwise.
 
 ### Text facet
 
@@ -407,6 +407,7 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **Free text is a facet kind, matched by an application function.** A text facet has no values and carries only its text; it joins the AND across facets and rides every key-addressed path (selections, state, active selections, JSON). The function `(row, text) => bool` is the primitive and owns the matching semantics; it must be pure and thread-safe. Whitespace-only text clears. Search within a facet (§4.5) stays a UI operation and keeps the word "search". Decided 2026-09-14. See §5.
 - **Range buckets are fixed at initialisation.** Either application-defined or derived once from the dataset, never from the current selections. See §5.
 - **Derived range buckets have round boundaries and open tails.** Until 2026-09-20 they were equal widths between the dataset's minimum and maximum, which gave edges no one would write and, on skewed data, one tall bar. Now about the requested number of buckets on a 1, 2, 5 step covers the 2nd to 98th percentile, and the values beyond it fall in an open bucket at each end, as with application-defined cuts. Quantile buckets and a log scale were considered and left out until a dataset asks for them. Decided 2026-09-20. See §5.
+- **Quarter is a date granularity, with ThisQuarter and LastQuarter presets.** Business data is read by quarter, and without it a date facet had nothing between 12 bars a year and 1, which an automatic granularity needs. Calendar quarters only; a fiscal year offset and periods finer than a day are left until a dataset asks. Added 2026-09-20. See §5.
 - **A range or date selection is a set of intervals, combined as OR.** Until 2026-09-19 it was one interval, so a second bar click replaced the first and "January or March" could not be said. A bar now toggles its interval like a value, the null value toggles beside them, and a slider contributes one interval; a date part may be a preset. Bucket identities never enter the selection. Decided 2026-09-19. See §4.1 and §5.
 - **"Other" is measured against the facet's own counting context.** Not against the matching rows. See §6.
 - **The matching rows are a list, not pages.** The state exposes them counted and indexable in the application-defined order. Paging, virtualisation and display sorting belong to the grid that shows them; the core never tries to be that grid and offers no page API, and the Blazor package renders no rows either: it hands them to the application's grid. Decided 2026-09-19. See §3, §4.4, §7.

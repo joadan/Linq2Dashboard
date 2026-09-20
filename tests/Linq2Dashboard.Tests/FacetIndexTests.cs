@@ -170,7 +170,9 @@ public class FacetIndexTests
         // Now is Sunday 15 March 2026. LastWeek = 2-8 March, LastMonth = February, LastYear = the whole of 2025.
         Assert.Empty(Rows("OrderDate", DateSelection.Relative(DatePreset.LastWeek)));
         Assert.Equal([1, 2], Rows("OrderDate", DateSelection.Relative(DatePreset.LastMonth)));
+        Assert.Empty(Rows("OrderDate", DateSelection.Relative(DatePreset.LastQuarter)));
         Assert.Empty(Rows("OrderDate", DateSelection.Relative(DatePreset.LastYear)));
+        Assert.Equal([0, 1, 2, 3, 4, 5], Rows("OrderDate", DateSelection.Relative(DatePreset.ThisQuarter)));
 
         var index = Assert.IsType<DateFacetIndex>(Dashboard.FacetIndex("OrderDate"));
         Assert.Equal(
@@ -180,12 +182,19 @@ public class FacetIndexTests
             (TestData.Instant("2026-02-01T00:00:00+01:00"), TestData.Instant("2026-03-01T00:00:00+01:00")),
             index.ResolvePreset(DatePreset.LastMonth));
         Assert.Equal(
+            (TestData.Instant("2025-10-01T00:00:00+02:00"), TestData.Instant("2026-01-01T00:00:00+01:00")),
+            index.ResolvePreset(DatePreset.LastQuarter));
+        Assert.Equal(
+            (TestData.Instant("2026-01-01T00:00:00+01:00"), TestData.Instant("2026-04-01T00:00:00+02:00")),
+            index.ResolvePreset(DatePreset.ThisQuarter));
+        Assert.Equal(
             (TestData.Instant("2025-01-01T00:00:00+01:00"), TestData.Instant("2026-01-01T00:00:00+01:00")),
             index.ResolvePreset(DatePreset.LastYear));
 
         // Each ends exactly where its "this" counterpart begins.
         Assert.Equal(index.ResolvePreset(DatePreset.ThisWeek).From, index.ResolvePreset(DatePreset.LastWeek).To);
         Assert.Equal(index.ResolvePreset(DatePreset.ThisMonth).From, index.ResolvePreset(DatePreset.LastMonth).To);
+        Assert.Equal(index.ResolvePreset(DatePreset.ThisQuarter).From, index.ResolvePreset(DatePreset.LastQuarter).To);
         Assert.Equal(index.ResolvePreset(DatePreset.ThisYear).From, index.ResolvePreset(DatePreset.LastYear).To);
     }
 

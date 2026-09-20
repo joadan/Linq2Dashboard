@@ -75,6 +75,7 @@ public class DefaultDashboardFormatter : IDashboardFormatter
         return granularity switch
         {
             DateGranularity.Year => start.ToString("yyyy", Culture),
+            DateGranularity.Quarter => $"Q{(start.Month - 1) / 3 + 1} {start.Year}",
             DateGranularity.Month => start.ToString("MMM yyyy", Culture),
             DateGranularity.Week => $"Week {ISOWeek.GetWeekOfYear(start)}, {ISOWeek.GetYear(start)}",
             DateGranularity.Day => start.ToString("d", Culture),
@@ -93,6 +94,8 @@ public class DefaultDashboardFormatter : IDashboardFormatter
         DatePreset.LastWeek => "Last week",
         DatePreset.ThisMonth => "This month",
         DatePreset.LastMonth => "Last month",
+        DatePreset.ThisQuarter => "This quarter",
+        DatePreset.LastQuarter => "Last quarter",
         DatePreset.ThisYear => "This year",
         DatePreset.LastYear => "Last year",
         DatePreset.YearToDate => "Year to date",

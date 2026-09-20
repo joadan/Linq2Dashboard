@@ -29,6 +29,9 @@ public class DateColumnTests
 
     [Theory]
     [InlineData("2026-03-15T13:45:00", DateGranularity.Year, "2026-01-01T00:00:00")]
+    [InlineData("2026-03-15T13:45:00", DateGranularity.Quarter, "2026-01-01T00:00:00")]
+    [InlineData("2026-04-01T00:00:00", DateGranularity.Quarter, "2026-04-01T00:00:00")] // first day of Q2 stays
+    [InlineData("2026-12-31T23:59:59", DateGranularity.Quarter, "2026-10-01T00:00:00")]
     [InlineData("2026-03-15T13:45:00", DateGranularity.Month, "2026-03-01T00:00:00")]
     [InlineData("2026-03-15T13:45:00", DateGranularity.Day, "2026-03-15T00:00:00")]
     [InlineData("2026-03-15T13:45:00", DateGranularity.Week, "2026-03-09T00:00:00")] // Sunday → previous Monday
@@ -45,6 +48,8 @@ public class DateColumnTests
 
     [Theory]
     [InlineData("2026-01-01T00:00:00", DateGranularity.Year, "2027-01-01T00:00:00")]
+    [InlineData("2026-01-01T00:00:00", DateGranularity.Quarter, "2026-04-01T00:00:00")]
+    [InlineData("2026-10-01T00:00:00", DateGranularity.Quarter, "2027-01-01T00:00:00")]
     [InlineData("2026-01-01T00:00:00", DateGranularity.Month, "2026-02-01T00:00:00")]
     [InlineData("2026-12-01T00:00:00", DateGranularity.Month, "2027-01-01T00:00:00")]
     [InlineData("2026-03-09T00:00:00", DateGranularity.Week, "2026-03-16T00:00:00")]
