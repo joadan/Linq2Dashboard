@@ -203,13 +203,24 @@ The property has a discrete set of values: country, status, category, brand, cus
 
 - Values: each distinct value, with counts.
 - Selection: a set of values (multi-select).
-- Each row has exactly one value (or null) in a value facet. Collection-valued properties such as tags are not supported by value facets in the first version. See *Later* in §8.
+- Each row has exactly one value (or null) in a value facet. A collection-valued property such as tags is a *multi-valued facet*, below.
 - Label: optionally, a text per value read from the row, for facets whose value is an identity rather than a name. A Customer facet counts and selects by customer id, so a renamed customer keeps its saved selections, but shows "Acme (Malmö)". The label is read once per distinct value, from the first row that has it, and is what search (§4.5) matches. A value without a label is shown by the UI as the value itself. The null value never has a label; how it is shown stays with the UI (§4.8).
 - Concerns: high cardinality. A Customer facet with 100 000 values must not show 100 000 rows. See *Top N* and *Search* below.
 
 ### Boolean facet
 
 A value facet with two values, or three when the property is nullable (true, false, null). Called out because the UI for it is usually a toggle or a set of chips rather than a list.
+
+### Multi-valued facet
+
+A value facet over a collection property: the tags on an order, the categories of a product, the people on a ticket. Added 2026-09-20.
+
+- Values: each distinct item across all rows, with counts. A row is counted once under each distinct item in its collection, however often the collection repeats it; a null item inside the collection is skipped.
+- Null: a row whose collection is null, empty or holds only nulls has the null value (§4.8).
+- Selection: a set of values, matching the rows that have **any** of them (OR, as in §4.1). "Has all of these" is a later selection mode (§8).
+- Counting follows §4.2 unchanged: the facet's own selection is excluded. Because a row appears under several values, the filtered counts sum to **at least** the context count, not exactly, and a bar is not a share of the whole. The UI must not imply that it is.
+- Top N presents the highest-ranked values and pins the selected ones as in §6, but there is no "Other": the rows overlap, so a remainder cannot be computed by subtraction.
+- Everything else is the value facet's: a label per value (read from the value, since a row has several), search, comparer, serialisation, scoping. Its state is the value facet's state with a flag saying it is multi-valued.
 
 ### Range facet
 
@@ -269,6 +280,7 @@ Other           87 421
 ```
 
 - "Other" is the remainder: rows in the facet's own counting context (§4.2) that are not covered by the presented values. Its filtered count is the context count minus the sum of the presented filtered counts. Its total count is the dataset count minus the sum of the presented total counts. It is informational, not selectable.
+- A multi-valued facet (§5) has no "Other". Its rows appear under several values, so "context count minus the presented counts" is not a remainder. Top N still limits the list and pins the selected values.
 - Values the user has already selected are always presented, even if they fall outside the top N. Otherwise a click could make the clicked value disappear.
 - Ranking is a per-facet choice between two modes:
 
@@ -348,6 +360,7 @@ Because facets are identified by string keys and selections are serialisable, a 
 - Top N with "Other" and pinned selected values.
 - Search within a value facet.
 - Text facets: a user-typed text matched by an application function. Added 2026-09-14; see §5.
+- Multi-valued facets over collection properties, OR within the facet. Added 2026-09-20; see §5.
 - Scoped dashboards: the same definitions over a subset of the dataset, without a rebuild. Added 2026-09-15; see §4.10.
 - Metrics: count, sum, average, min, max.
 - The matching rows as a list in application-defined order, for any grid to page, virtualise and sort.
@@ -363,7 +376,7 @@ Because facets are identified by string keys and selections are serialisable, a 
 ### Later
 
 - Grouping and hierarchical facets, including metrics per facet value (revenue per country).
-- Multi-valued facets over collection properties (tags, categories). One row appears under several values, so counts no longer sum to the matching total. Needs its own rules for counting and for AND versus OR within the facet.
+- ~~Multi-valued facets over collection properties (tags, categories).~~ Added 2026-09-20 with OR within the facet; see §5. AND within the facet ("has all of these tags") remains later, as a selection mode: it makes a value's count depend on the facet's own selection, against §4.2.
 - ~~Distinct count, percentage-of-total, calculated metrics.~~ All three were added on 2026-09-14; see §4.4.
 - Exclusion selections ("everything except Sweden") as an additional mode on value facets.
 - Saved views and bookmarks (the state contract already allows it).
@@ -390,7 +403,7 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **Data is fixed at initialisation.** No add, remove, replace or refresh. New data means a new dashboard. See §4.9.
 - **A dashboard can be scoped to a subset without a rebuild.** A scoped dashboard shares the parent's definitions and indexes and behaves exactly like one built over the subset with a fixed filter, except that buckets and range bounds come from the parent. The scope is not a selection. Decided 2026-09-15. See §4.10.
 - **A scope can be given as selections as well as a predicate.** The facets resolve the rows, so semantics are theirs and nothing scans the row objects; the scoped dashboard starts with nothing selected, shows only the values in scope without own-facet exclusion, and freezes relative date presets at the moment of scoping. Decided 2026-09-15. See §4.10.
-- **Multi-valued properties are a later concern.** In the first version every row has exactly one value or null per facet. See §5 and §8.
+- **Multi-valued properties are a facet kind of their own, with OR within the facet.** Until 2026-09-20 every row had exactly one value or null per facet. A multi-valued facet counts a row under each distinct value it has, selects the rows having any selected value, sums its filtered counts to at least the context count and has no "Other", because a remainder by subtraction is wrong when rows overlap. AND within the facet is a later selection mode, since with it a value's count would have to reflect the facet's own selection, against §4.2. Decided 2026-09-20. See §5, §6, §8.
 - **OR within a facet, AND across facets is the only combination mode.** Exclusion is a later addition. See §4.1 and §8.
 - **Top N ranking supports both modes.** Per facet, by filtered count (default) or by total count. See §6.
 - **Ranking picks the values; the UI orders them.** Rank mode stays in the definition because it needs every value's count. The display order of the presented values is a UI choice: rank, label or value, either direction, null last. Decided 2026-09-15. See §6.

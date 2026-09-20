@@ -40,6 +40,9 @@ var dashboard = Dashboard.Create(orders, b =>
 
     b.BooleanFacet(x => x.IsActive);
 
+    b.MultiValueFacet(x => x.Tags)                             // collection property: a row counts under every tag (§C5)
+     .Top(20);                                                 // no "Other" (§C6)
+
     b.RangeFacet(x => x.Amount)
      .Buckets(0, 100, 500, 1000);                              // explicit boundaries, or .AutoBuckets(10)
 
@@ -73,6 +76,7 @@ var dashboard = Dashboard.Create(orders, b =>
 - Range and metric selectors accept any numeric property, nullable or not; the conversion to `double` is compiled into the selector. Date selectors accept `DateTime`, `DateTimeOffset`, `DateOnly` and their nullable forms; anything else is rejected at `Create`.
 - `Buckets(100, 500, 1000)` names cut points, not edges: it yields "below 100", "100 to 500", "500 to 1000" and "1000 and above", so every value lands in a bucket. `AutoBuckets(count)`, the default with ten, derives round cut points from the data at build (§3.3, §C5); `count` is approximate, since a round step rarely divides the data's span evenly.
 - `TextFacet` (§C5, added 2026-09-14) always takes an explicit key, since there is no selector to derive one from, and a `Func<T, string, bool>` that must be pure and thread-safe. The builder offers `Name` only; matching semantics live in the function.
+- `MultiValueFacet` (§C5, added 2026-09-20) takes an `Expression<Func<T, IEnumerable<TItem>?>>`, so the item type is inferred from the collection. It is a method of its own rather than an overload of `ValueFacet` because `string` is `IEnumerable<char>`: an overload would make every string facet ambiguous, or silently a facet over characters. Its builder has the value facet's options, with `Label` reading the value (`Func<TItem, string?>`) since a row has several.
 - All facet builders return a typed builder so kind-specific options are discoverable; the shape above is the whole configuration surface for the first version.
 
 Scoping a dashboard (§C4.10, added 2026-09-15):
@@ -329,6 +333,19 @@ int[]     totalCounts  per code, computed once
 - Equality of values uses `EqualityComparer<TValue>.Default` unless the builder is given a comparer. For `string` facets the default is `StringComparer.OrdinalIgnoreCase`, so `"Sweden"` and `"sweden"` are one facet value. The dictionary keeps the first-seen spelling, and that is the spelling the state presents and the serializer writes. A case-sensitive string facet is a builder option.
 - Reading `codes[row]` in ascending row order is a sequential memory scan. This is what makes the counting pass in §4.3 fast regardless of cardinality.
 
+**Multi-value column** (multi-valued facets, added 2026-09-20):
+
+```text
+int[]     offsets      rowCount + 1; the codes of row r are codes[offsets[r]..offsets[r + 1]]
+int[]     codes        one per (row, distinct value) pair, flat, never 0
+TValue[]  dictionary   as the value column
+int[]     totalCounts  per code; index 0 counts the rows with an empty slice
+```
+
+- A row's collection is read once; null items and the row's repeats of a value (under the facet's comparer) are dropped, and the remaining occurrences are coded by a `ValueColumn` built over them, so equality and first-seen spelling have one implementation. A row with an empty slice is the null value.
+- Cost is 4 bytes per row plus 4 per occurrence. Counting (§4.3) walks each context row's slice, so it is proportional to the occurrences in the context rather than to the rows; `RowsWithCodes` stops at the first selected code in a row.
+- `ValueFacetIndex` sees both columns through `IValueColumn<TValue>` (dictionary, totals, `RowsWithCodes`, `CountInto`). Nothing else in the pipeline knows the kind.
+
 **Range column**:
 
 ```text
@@ -441,7 +458,7 @@ foreach (int row in C_f.Rows())
 
 One sequential pass over the rows in context. Cost is proportional to `|C_f|`, not to `V`.
 
-`counts[0]` is the null value's filtered count (§C4.8). Total counts come from the column and are never recomputed. A scoped index (§C4.10) carries its own totals array, counted once over the scope with this same loop when `ScopeTo` is called, and presents against it; the column is shared with the parent. A value facet also counts how many codes have a non-zero total, which is the scope's value count, and skips codes with a zero total when presenting and searching, so a value absent from the scope is never listed.
+`counts[0]` is the null value's filtered count (§C4.8). A multi-value column increments every code in a context row's slice and `counts[0]` for an empty slice, so its counts sum to at least |C_f| (§C5). Total counts come from the column and are never recomputed. A scoped index (§C4.10) carries its own totals array, counted once over the scope with this same loop when `ScopeTo` is called, and presents against it; the column is shared with the parent. A value facet also counts how many codes have a non-zero total, which is the scope's value count, and skips codes with a zero total when presenting and searching, so a value absent from the scope is never listed.
 
 Facets are independent at this stage and may be counted in parallel. Parallelism is a builder option, off by default until benchmarks say otherwise.
 
@@ -452,7 +469,7 @@ From `counts`, build the presented list (§C6):
 1. Start with every selected value, regardless of rank.
 2. Fill up to `N` with the highest-ranked remaining values, ranking by filtered count or total count per the facet's `RankMode`. Zero-count values are eligible and are included if they rank (§C4.3).
 3. Ties break by total count, then by dictionary order, so the order is deterministic.
-4. `Other.FilteredCount = |C_f| − Σ presented filtered`, `Other.TotalCount = N_dataset − Σ presented total`. Omitted when nothing was truncated.
+4. `Other.FilteredCount = |C_f| − Σ presented filtered`, `Other.TotalCount = N_dataset − Σ presented total`. Omitted when nothing was truncated, and always for a multi-valued facet (§C6).
 
 Selecting the top `N` from `V = 100 000` counts is a partial sort, `O(V)` expected. The full `counts` array is retained inside the state to serve `Search` without recounting.
 
@@ -784,6 +801,7 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 - **Share of the total is a field on `MetricState`, not a metric kind.** Every state carries `Share`; the tile shows it. Decided 2026-09-14. See §2.2, §4.6, §9.5.
 - **The default metric tile has no display switches; `ShowShare` is removed.** The default tile shows the name, the value and the share whenever the state has one, and the template context always carries every formatted piece, so a template never needs a default-tile parameter to receive data. Decided 2026-09-16. See §9.5.
 - **Distinct count has its own code column and does not share a facet's.** Exact bit-set counting over dictionary codes, dictionary discarded after build. Decided 2026-09-14. See §3.3, §4.6.
+- **A multi-valued facet is the value facet index over a second column, behind an interface.** `IValueColumn<TValue>` carries the dictionary, the totals, `RowsWithCodes` and `CountInto`; `MultiValueColumn<TValue>` stores offsets plus a flat code array and codes its occurrences through a `ValueColumn`, so equality and first-seen spelling have one implementation. `ValueFacetIndex` is unchanged except that it computes no "Other" for `FacetKind.MultiValue`, and `ValueFacetState` gains `IsMultiValued`, so the Blazor `ValueFacet` component renders it as it is. A state type and an index of their own were rejected as duplicating the value facet for one flag. Decided 2026-09-20. See §2.1, §3.3, §4.3, §4.4, §C5.
 - **Calculated metrics take a delegate over keyed values, not an expression or a fixed ratio shape.** Keys are checked by a dry run at definition; definition order is the dependency order. Decided 2026-09-14. See §2.1, §4.6.
 - **Value labels are a row selector on the builder, evaluated once per distinct value at `Create`.** Not a value selector (the row form covers it, and reaches denormalised columns directly), not async (the dashboard reads its data once, synchronously; lookups happen before `Create`), and not a formatter concern (the label is data and must drive search). Decided 2026-09-14. See §2.1, §2.4, §3.3.
 - **Metric tiles have no decoration parameters; a different look goes through `MetricTemplate`, which receives the formatted pieces.** A tile has no behaviour, so its default is a placeholder and the template is the real path. Decided 2026-09-14. See §9.5.

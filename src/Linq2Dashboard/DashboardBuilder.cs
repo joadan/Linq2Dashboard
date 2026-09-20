@@ -57,6 +57,28 @@ public sealed class DashboardBuilder<T>
     public ValueFacetBuilder<T, bool?> BooleanFacet(string key, Expression<Func<T, bool?>> selector) =>
         AddValueFacet(key, selector, FacetKind.Boolean);
 
+    /// <summary>
+    /// A multi-valued facet over a collection property, keyed by the selector's member name (concept §5):
+    /// each row is counted under every value in its collection, a value is counted once per row however
+    /// often the row repeats it, and a null, empty or all-null collection is the null value. A
+    /// selection matches rows having any of the selected values. Filtered counts sum to at least the
+    /// context count, and there is no "Other" (concept §6). Its state is a <see cref="ValueFacetState"/>.
+    /// </summary>
+    public MultiValueFacetBuilder<T, TItem> MultiValueFacet<TItem>(Expression<Func<T, IEnumerable<TItem>?>> selector) =>
+        MultiValueFacet(DeriveKey(selector), selector);
+
+    /// <summary>A multi-valued facet with an explicit key.</summary>
+    public MultiValueFacetBuilder<T, TItem> MultiValueFacet<TItem>(string key, Expression<Func<T, IEnumerable<TItem>?>> selector)
+    {
+        ValidateKey(key);
+        ArgumentNullException.ThrowIfNull(selector);
+        EnsureMutable();
+
+        var definition = new MultiValueFacetDefinition<T, TItem>(key, selector);
+        AddFacet(definition);
+        return new MultiValueFacetBuilder<T, TItem>(definition, EnsureMutable);
+    }
+
     /// <summary>A numeric range facet. <typeparamref name="TProp"/> must be a numeric type or its nullable form.</summary>
     public RangeFacetBuilder<T> RangeFacet<TProp>(Expression<Func<T, TProp>> selector) =>
         RangeFacet(DeriveKey(selector), selector);

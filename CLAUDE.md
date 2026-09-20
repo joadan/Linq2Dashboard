@@ -63,7 +63,7 @@ dotnet pack src/Linq2Dashboard/Linq2Dashboard.csproj -c Release -o artifacts   #
 
 - Columnar only; no per-value bitmaps. The benchmarks meet every target without them.
 - The dashboard is immutable after `Create` and holds no selection state. The UI owns `Selections`.
-- Null is a facet value. Zero-count values stay in the state. Filtered counts always sum to the facet's context count.
+- Null is a facet value. Zero-count values stay in the state. Filtered counts sum to the facet's context count, or to at least it under a multi-valued facet, whose rows count under several values.
 - Parallel counting exists but is off by default.
 - Blazor components hold no dashboard state; everything goes through DashboardContext<T>. Facet defaults use the shared FacetHeader and BucketBars; styling goes through the --l2d-* properties declared in DashboardView.razor.css, never hard-coded values in components.
 

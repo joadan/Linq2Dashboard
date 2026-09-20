@@ -49,6 +49,7 @@ var dashboard = Dashboard.Create(orders, b =>
      .Label(x => x.CustomerName)                     // ...show and search by name
      .Name("Customer").Top(20).Searchable();
     b.BooleanFacet(x => x.IsActive);
+    b.MultiValueFacet(x => x.Tags);                  // a collection property: a row counts under every tag it has
     b.RangeFacet(x => x.Amount).Buckets(100, 500, 1000);   // or .AutoBuckets(10): round edges derived from the data (the default)
     b.DateFacet(x => x.OrderDate)
      .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
@@ -74,6 +75,7 @@ Rules of the builder:
 - A facet declared from a member expression takes the member's name as its key. Anything else needs an explicit key. Keys are case-sensitive and must be unique among facets and among metrics.
 - Range facets accept any numeric type or its nullable form. Date facets accept `DateTime`, `DateTimeOffset`, `DateOnly` or their nullable forms.
 - Value facet options: `Name`, `Top(n)` with an "Other" remainder, `RankBy(RankMode.TotalCount)` for a stable list, `Searchable()`, `Label(row => text)`, `Comparer(...)`, `Serialize(format, parse)` for value types JSON cannot round-trip by default.
+- Multi-valued facet options: the same, except that `Label(value => text)` reads the value, since a row has several, and `Top(n)` presents no "Other". A row counts once under each distinct value in its collection; a null, empty or all-null collection is the null value. The item type is inferred from the collection, so a `List<string>` gives a facet over `string`.
 - Range facet options: `Name`, `Buckets(cuts...)` strictly ascending, or `AutoBuckets(count)` (the default, with 10) for about `count` equal buckets on round edges over the body of the data, with an open bucket at each end for outliers.
 - Date facet options: `Name`, `TimeZone`, `Granularity` (Year, Quarter, Month, ISO Week, Day) or `AutoGranularity(maxPeriods)` (the default, with 30) for the finest period that keeps to about `maxPeriods` bars over the body of the data; the state reports the period chosen, `Presets` (Today, Yesterday, Last7Days, Last30Days, ThisWeek, LastWeek, ThisMonth, LastMonth, ThisQuarter, LastQuarter, ThisYear, LastYear, YearToDate), `SkipEmptyPresets()` to leave out a preset no row falls in (off by default; re-decided at each calculation, and a selected empty preset is left out too).
 - `CalculatedMetric` reads earlier metrics by key through `m["key"]`. It gives no value when any input has none or the result is not finite. Define its inputs before it.
@@ -145,7 +147,7 @@ state.Items;                                      // IReadOnlyList<T>: every mat
 state.GetItems(skip: 200, take: 50);              // a slice, the same rows as Items.Skip(200).Take(50)
 ```
 
-Cast `state.Facet(key)` by the facet's kind: `ValueFacetState` for value and boolean facets, `RangeFacetState`, `DateFacetState`, `TextFacetState`. `FacetState.Kind` says which.
+Cast `state.Facet(key)` by the facet's kind: `ValueFacetState` for value, boolean and multi-valued facets (`IsMultiValued` tells the last apart), `RangeFacetState`, `DateFacetState`, `TextFacetState`. `FacetState.Kind` says which.
 
 ## Scoping
 
@@ -189,8 +191,9 @@ These are decisions from the concept, not options.
 
 - **OR within a facet, AND across facets.** Sweden or Norway, and status Open. The same for bars: January or March, and status Open.
 - **A facet's own selection is excluded from its own counts.** Under Country, with Sweden selected, Norway still shows what selecting it would add.
-- **Two counts per value.** `TotalCount` over the dataset, `FilteredCount` under the other facets' selections. Filtered counts always sum to the facet's `ContextCount`. The components show the filtered count; `ShowTotals` adds the total as "filtered (total)", and the tooltip always carries both with the share.
+- **Two counts per value.** `TotalCount` over the dataset, `FilteredCount` under the other facets' selections. Filtered counts sum to the facet's `ContextCount`, except under a multi-valued facet, where a row counts under every value it has and they sum to at least it. The components show the filtered count; `ShowTotals` adds the total as "filtered (total)", and the tooltip always carries both with the share.
 - **Null is a value.** It is listed, counted and selectable. Never drop it.
+- **A multi-valued facet has no "Other".** Its rows overlap, so a remainder cannot be computed by subtraction. `Top(n)` still limits the list and pins selected values; `Other` is null.
 - **Zero-count values stay in the state.** Hiding them is the UI's choice (`HideZeroCounts`).
 - **Ranking picks the values, the UI orders them.** `RankBy` in the builder decides which values Top N presents; `Sort` on `ValueFacet` decides the order on screen: by rank (default), label or value, optionally reversed. Null stays last.
 - **Buckets are fixed at build.** Only their counts change. A bucket click toggles exactly its interval, so bars select like values: "below 100 or 1 000 and above" is one selection, and the null bar toggles beside them.
