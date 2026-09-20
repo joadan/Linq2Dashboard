@@ -32,7 +32,8 @@ public static class SampleOrders
 {
     private static readonly string[] Countries = ["Sweden", "Norway", "Denmark", "Finland", "Germany", "Netherlands", "Poland", "France", "Spain", "Italy", "United Kingdom", "Ireland"];
     private static readonly string[] Statuses = ["Open", "Pending", "Shipped", "Closed", "Cancelled"];
-    private static readonly string[] Categories = Enumerable.Range(1, 40).Select(i => $"Category {i:00}").ToArray();
+    // Order channels, most common first so the skewed pick makes EDI dominant; twelve values, so Top(10) still folds the tail into Other.
+    private static readonly string[] Categories = ["EDI", "E-Com", "Quote", "Mail", "Phone", "Portal", "Sales rep", "Fax", "Marketplace", "API", "Counter", "Punch-out"];
     private static readonly string[] Customers = Enumerable.Range(1, 5_000).Select(i => $"Customer {i:0000}").ToArray();
     private const int RangeMinutes = 2 * 365 * 24 * 60;
 
