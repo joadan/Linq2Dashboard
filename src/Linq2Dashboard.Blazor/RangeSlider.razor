@@ -1,26 +1,27 @@
 @* Dual-handle slider over [Min, Max]. Two native range inputs overlap; the thumbs take pointer events, the tracks do not.
-   Values preview while dragging and apply on release, so the dashboard recalculates once per gesture. *@
+   Values preview while dragging and apply on release, so the dashboard recalculates once per gesture.
+   The handles may cross: the interval is always from the lower one to the upper one, so the picture never disagrees with the DOM. *@
 
-<div class="l2d-slider" style="--l2d-slider-from: @Percent(from); --l2d-slider-to: @Percent(to);">
+<div class="l2d-slider" style="--l2d-slider-from: @Percent(Lower); --l2d-slider-to: @Percent(Upper);">
     <div class="l2d-slider-track">
         <div class="l2d-slider-fill"></div>
-        <input type="range" class="l2d-slider-from" min="@Text(Min)" max="@Text(Max)" step="@Text(Step)" value="@Text(from)"
-               aria-label="@FromLabel" @oninput="e => PreviewFrom(e.Value)" @onchange="e => ApplyFrom(e.Value)" />
-        <input type="range" class="l2d-slider-to" min="@Text(Min)" max="@Text(Max)" step="@Text(Step)" value="@Text(to)"
-               aria-label="@ToLabel" @oninput="e => PreviewTo(e.Value)" @onchange="e => ApplyTo(e.Value)" />
+        <input type="range" class="l2d-slider-from" min="@Text(Min)" max="@Text(Max)" step="@Text(Step)" value="@Text(first)"
+               aria-label="@(FirstIsLower ? FromLabel : ToLabel)" @oninput="e => PreviewFirst(e.Value)" @onchange="e => ApplyFirst(e.Value)" />
+        <input type="range" class="l2d-slider-to" min="@Text(Min)" max="@Text(Max)" step="@Text(Step)" value="@Text(second)"
+               aria-label="@(FirstIsLower ? ToLabel : FromLabel)" @oninput="e => PreviewSecond(e.Value)" @onchange="e => ApplySecond(e.Value)" />
     </div>
     @if (ShowInputs)
     {
         <div class="l2d-slider-inputs">
-            <input type="number" class="@CssClasses.Input("l2d-slider-input-from", InputClass)" min="@Text(Min)" max="@Text(Max)" step="@Text(Step)" value="@Text(from)"
-                   aria-label="@FromLabel" @onchange="e => ApplyFrom(e.Value)" />
+            <input type="number" class="@CssClasses.Input("l2d-slider-input-from", InputClass)" min="@Text(Min)" max="@Text(Max)" step="@Text(Step)" value="@Text(Lower)"
+                   aria-label="@FromLabel" @onchange="e => ApplyLower(e.Value)" />
             <span class="l2d-slider-separator">–</span>
-            <input type="number" class="@CssClasses.Input("l2d-slider-input-to", InputClass)" min="@Text(Min)" max="@Text(Max)" step="@Text(Step)" value="@Text(to)"
-                   aria-label="@ToLabel" @onchange="e => ApplyTo(e.Value)" />
+            <input type="number" class="@CssClasses.Input("l2d-slider-input-to", InputClass)" min="@Text(Min)" max="@Text(Max)" step="@Text(Step)" value="@Text(Upper)"
+                   aria-label="@ToLabel" @onchange="e => ApplyUpper(e.Value)" />
         </div>
     }
     else
     {
-        <div class="l2d-slider-values">@Formatter.FormatRangeInterval(RangeInterval.Between(from, to))</div>
+        <div class="l2d-slider-values">@Formatter.FormatRangeInterval(RangeInterval.Between(Lower, Upper))</div>
     }
 </div>

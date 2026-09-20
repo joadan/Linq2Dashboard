@@ -109,7 +109,7 @@ public class RangeSliderTests : BunitContext
         cut.Find("input.l2d-slider-to").Change("500");
         Assert.Equal(new[] { true, true, false, false }, SelectedBuckets(cut));
 
-        cut.Find("input.l2d-slider-to").Change("2500");   // back to the end first: handles cannot cross
+        cut.Find("input.l2d-slider-to").Change("2500");
         cut.Find("input.l2d-slider-from").Change("1000");
         Assert.Equal(new[] { false, false, false, true }, SelectedBuckets(cut));
     }
@@ -144,16 +144,78 @@ public class RangeSliderTests : BunitContext
         Assert.Equal(("0", "800"), Handles(cut));
     }
 
+    /// <summary>Each handle stays where the browser put it, since Blazor cannot push a clamped value back into the DOM; the interval runs from the lower one to the upper one.</summary>
     [Fact]
-    public void Handles_cannot_cross()
+    public void Handles_may_cross_and_the_lower_one_is_from()
     {
         Selections? raised = null;
         var cut = RenderFacet(Selections.Empty.With("Amount", RangeSelection.Between(100, 500)), s => raised = s);
 
+        // While dragging, the first input is past the second: the picture, the inputs and the labels follow the order of the values.
+        cut.Find("input.l2d-slider-from").Input("900");
+        Assert.Equal(("900", "500"), Handles(cut));
+        Assert.Null(raised);
+        Assert.Equal("--l2d-slider-from: 20%; --l2d-slider-to: 36%;", cut.Find(".l2d-slider").GetAttribute("style"));
+        Assert.Equal("500", cut.Find("input.l2d-slider-input-from").GetAttribute("value"));
+        Assert.Equal("900", cut.Find("input.l2d-slider-input-to").GetAttribute("value"));
+        Assert.Equal("To", cut.Find("input.l2d-slider-from").GetAttribute("aria-label"));
+        Assert.Equal("From", cut.Find("input.l2d-slider-to").GetAttribute("aria-label"));
+
+        // On release the ordered interval is applied; the host feeds it back and the handles take it in order again.
         cut.Find("input.l2d-slider-from").Change("900");
+        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.Between(500, 900)), raised);
+        Assert.Equal(("500", "900"), Handles(cut));
+        Assert.Equal("From", cut.Find("input.l2d-slider-from").GetAttribute("aria-label"));
+
+        // A number above the other handle crosses them the same way.
+        cut.Find("input.l2d-slider-input-from").Change("1200");
+        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.Between(900, 1200)), raised);
+        Assert.Equal(("900", "1200"), Handles(cut));
+        Assert.Equal("900", cut.Find("input.l2d-slider-input-from").GetAttribute("value"));
+        Assert.Equal("1200", cut.Find("input.l2d-slider-input-to").GetAttribute("value"));
+    }
+
+    /// <summary>A host that does not feed the selection back leaves the handles crossed; the number inputs then address the lower and upper handle, whichever input holds them.</summary>
+    [Fact]
+    public void Number_inputs_address_the_lower_and_upper_handle_when_crossed()
+    {
+        var cut = Render<RangeSlider>(parameters =>
+        {
+            parameters.Add(p => p.Min, 0d);
+            parameters.Add(p => p.Max, 2500d);
+            parameters.Add(p => p.From, 100d);
+            parameters.Add(p => p.To, 500d);
+            parameters.Add(p => p.Formatter, new DefaultDashboardFormatter(CultureInfo.InvariantCulture));
+        });
+
+        cut.Find("input.l2d-slider-from").Change("900");
+        Assert.Equal("900", cut.Find("input.l2d-slider-from").GetAttribute("value"));
+        Assert.Equal("500", cut.Find("input.l2d-slider-to").GetAttribute("value"));
+
+        cut.Find("input.l2d-slider-input-from").Change("600");   // the lower handle is the second input
+        Assert.Equal("900", cut.Find("input.l2d-slider-from").GetAttribute("value"));
+        Assert.Equal("600", cut.Find("input.l2d-slider-to").GetAttribute("value"));
+
+        cut.Find("input.l2d-slider-input-to").Change("1000");    // the upper handle is the first input
+        Assert.Equal("1000", cut.Find("input.l2d-slider-from").GetAttribute("value"));
+        Assert.Equal("600", cut.Find("input.l2d-slider-to").GetAttribute("value"));
+        Assert.Equal("600", cut.Find("input.l2d-slider-input-from").GetAttribute("value"));
+        Assert.Equal("1000", cut.Find("input.l2d-slider-input-to").GetAttribute("value"));
+    }
+
+    /// <summary>Two handles on the same spot are not crossed: the first input keeps the From label and the lower number input.</summary>
+    [Fact]
+    public void Meeting_handles_keep_their_roles()
+    {
+        var cut = RenderFacet(Selections.Empty.With("Amount", RangeSelection.Between(100, 500)));
+
+        cut.Find("input.l2d-slider-from").Change("500");
 
         Assert.Equal(("500", "500"), Handles(cut));
-        Assert.Equal(Selections.Empty.With("Amount", RangeSelection.Between(500, 500)), raised);
+        Assert.Equal("From", cut.Find("input.l2d-slider-from").GetAttribute("aria-label"));
+
+        cut.Find("input.l2d-slider-input-from").Change("200");
+        Assert.Equal(("200", "500"), Handles(cut));
     }
 
     [Fact]

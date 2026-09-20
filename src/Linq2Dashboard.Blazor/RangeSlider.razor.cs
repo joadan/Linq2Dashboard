@@ -5,14 +5,17 @@ namespace Linq2Dashboard.Blazor;
 
 /// <summary>
 /// A dual-handle slider over a range facet's bounds, with optional number inputs. Raises <see cref="OnChange"/> on release with the new bounds, null for a side whose handle rests at its end (design §9).
+/// The handles may cross: each is kept where the browser has it and the interval runs from the lower one to the upper one,
+/// because Blazor writes a value to the DOM only when it changed since the last render, so a clamped handle would keep
+/// moving on screen while the state stood still.
 /// A rendering detail of <see cref="RangeFacet{T}"/>, not part of the supported API: it is public only because Razor
 /// components cannot be internal, is hidden from IntelliSense, and may change without notice.
 /// </summary>
 [EditorBrowsable(EditorBrowsableState.Never)]
 public partial class RangeSlider
 {
-    private double from;
-    private double to;
+    private double first;
+    private double second;
     private double? lastFrom;
     private double? lastTo;
     private bool initialised;
@@ -87,41 +90,58 @@ public partial class RangeSlider
             initialised = true;
             lastFrom = From;
             lastTo = To;
-            from = Math.Clamp(From ?? Min, Min, Max);
-            to = Math.Clamp(To ?? Max, Min, Max);
+            first = Math.Clamp(From ?? Min, Min, Max);
+            second = Math.Clamp(To ?? Max, Min, Max);
         }
     }
 
-    private bool PreviewFrom(object? value)
+    /// <summary>The lower of the two handles, whichever input holds it.</summary>
+    private double Lower => Math.Min(first, second);
+
+    /// <summary>The upper of the two handles, whichever input holds it.</summary>
+    private double Upper => Math.Max(first, second);
+
+    /// <summary>Whether the first input holds the lower handle. A tie counts as not crossed, so labels and inputs stay put until the handles really pass each other.</summary>
+    private bool FirstIsLower => first <= second;
+
+    private bool PreviewFirst(object? value)
     {
         if (!TryParse(value, out double v))
         {
             return false;
         }
 
-        from = Math.Min(Math.Clamp(v, Min, Max), to);
+        first = Math.Clamp(v, Min, Max);
         return true;
     }
 
-    private bool PreviewTo(object? value)
+    private bool PreviewSecond(object? value)
     {
         if (!TryParse(value, out double v))
         {
             return false;
         }
 
-        to = Math.Max(Math.Clamp(v, Min, Max), from);
+        second = Math.Clamp(v, Min, Max);
         return true;
     }
 
-    private Task ApplyFrom(object? value) =>
-        PreviewFrom(value) ? Apply() : Task.CompletedTask;
+    private Task ApplyFirst(object? value) =>
+        PreviewFirst(value) ? Apply() : Task.CompletedTask;
 
-    private Task ApplyTo(object? value) =>
-        PreviewTo(value) ? Apply() : Task.CompletedTask;
+    private Task ApplySecond(object? value) =>
+        PreviewSecond(value) ? Apply() : Task.CompletedTask;
+
+    /// <summary>The lower number input moves whichever handle is lower; a value above the other handle crosses them and the inputs re-render swapped.</summary>
+    private Task ApplyLower(object? value) =>
+        FirstIsLower ? ApplyFirst(value) : ApplySecond(value);
+
+    /// <summary>The upper number input moves whichever handle is upper.</summary>
+    private Task ApplyUpper(object? value) =>
+        FirstIsLower ? ApplySecond(value) : ApplyFirst(value);
 
     private Task Apply() =>
-        OnChange.InvokeAsync((AtLowerEnd(from, Min) ? null : from, AtUpperEnd(to, Max, Step!.Value) ? null : to));
+        OnChange.InvokeAsync((AtLowerEnd(Lower, Min) ? null : Lower, AtUpperEnd(Upper, Max, Step!.Value) ? null : Upper));
 
     /// <summary>The lower handle is at its end when it sits on the minimum, which is always on the step grid.</summary>
     internal static bool AtLowerEnd(double value, double min) => value <= min;
