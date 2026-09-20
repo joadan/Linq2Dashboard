@@ -3,6 +3,9 @@
 ###############################################################################
 * text=auto
 
+# Shell scripts run under bash, which chokes on CR; keep them LF on every checkout.
+*.sh text eol=lf
+
 ###############################################################################
 # Set default behavior for command prompt diff.
 #
