@@ -44,7 +44,8 @@ else
         <div class="demo-layout">
             <aside class="demo-facets">
                 <TextFacet T="SampleOrder" Key="search" Placeholder="Customer or channel" />
-                <ValueFacet T="SampleOrder" Key="Country" />
+                @* A per-facet cap: the list scrolls inside itself, the header stays. Set the property on the dashboard instead to cap every facet. *@
+                <ValueFacet T="SampleOrder" Key="Country" style="--l2d-facet-max-height: 12rem" />
                 @* A value template: the page renders the inside of each value button, the library keeps the button, its click and its selected state. *@
                 <ValueFacet T="SampleOrder" Key="Status">
                     <ValueTemplate Context="value"><DemoStatus Value="value" /></ValueTemplate>
