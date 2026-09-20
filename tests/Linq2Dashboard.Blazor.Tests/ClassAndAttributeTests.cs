@@ -101,6 +101,50 @@ public class ClassAndAttributeTests : BunitContext
         Assert.Equal("Country", root.GetAttribute("data-key"));
     }
 
+    /// <summary>
+    /// <c>--l2d-facet-max-height</c> caps the value list alone (design §9): a per-facet value set on the root reaches the
+    /// list by inheritance, while the header and the search box are siblings of the list, so they stay in place when it scrolls.
+    /// </summary>
+    [Fact]
+    public void A_facet_max_height_on_the_root_reaches_the_value_list_but_not_the_header_or_search_box()
+    {
+        var cut = RenderWith<ValueFacet<Order>>(facet =>
+        {
+            facet.Add(f => f.Key, "Status");
+            facet.AddUnmatched("style", "--l2d-facet-max-height: 8rem");
+        }, searchable: true);
+
+        IElement root = cut.Find(".l2d-value-facet");
+        Assert.Equal("--l2d-facet-max-height: 8rem", root.GetAttribute("style"));
+
+        IElement list = root.QuerySelector(".l2d-facet-values")!;
+        Assert.NotEmpty(list.QuerySelectorAll(".l2d-facet-value"));
+        Assert.Null(list.QuerySelector(".l2d-facet-header"));
+        Assert.Null(list.QuerySelector(".l2d-facet-search"));
+        Assert.Contains("l2d-facet", root.QuerySelector(".l2d-facet-header")!.ParentElement!.ClassList);
+        Assert.Contains("l2d-facet", root.QuerySelector(".l2d-facet-search")!.ParentElement!.ClassList);
+    }
+
+    /// <summary>The bucket list of a range or date facet in list layout is capped the same way; the header stays outside it (design §9).</summary>
+    [Fact]
+    public void A_facet_max_height_on_the_root_reaches_the_bucket_list_but_not_the_header()
+    {
+        var cut = RenderWith<RangeFacet<Order>>(facet =>
+        {
+            facet.Add(f => f.Key, "Discount");
+            facet.Add(f => f.Layout, BucketLayout.List);
+            facet.AddUnmatched("style", "--l2d-facet-max-height: 8rem");
+        });
+
+        IElement root = cut.Find(".l2d-range-facet");
+        Assert.Equal("--l2d-facet-max-height: 8rem", root.GetAttribute("style"));
+
+        IElement list = root.QuerySelector(".l2d-buckets-list")!;
+        Assert.NotEmpty(list.QuerySelectorAll(".l2d-bucket"));
+        Assert.Null(list.QuerySelector(".l2d-facet-header"));
+        Assert.Contains("l2d-facet", root.QuerySelector(".l2d-facet-header")!.ParentElement!.ClassList);
+    }
+
     [Fact]
     public void RangeFacet_keeps_its_layout_and_collapsed_classes_beside_the_host_class()
     {

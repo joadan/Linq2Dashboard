@@ -19,12 +19,15 @@
     color: inherit;
 }
 
+/* The list alone is capped and scrolls; the header and the search box above it stay in place (design §9). */
 .l2d-facet-values {
     list-style: none;
     margin: 0;
     padding: 0;
     display: flex;
     flex-direction: column;
+    max-height: var(--l2d-facet-max-height, none);
+    overflow-y: auto;
 }
 
 .l2d-facet-value-button {
