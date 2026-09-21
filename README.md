@@ -3,6 +3,7 @@
 [![CI](https://github.com/joadan/Linq2Dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/joadan/Linq2Dashboard/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/Linq2Dashboard.svg?label=Linq2Dashboard)](https://www.nuget.org/packages/Linq2Dashboard/)
 [![NuGet](https://img.shields.io/nuget/v/Linq2Dashboard.Blazor.svg?label=Linq2Dashboard.Blazor)](https://www.nuget.org/packages/Linq2Dashboard.Blazor/)
+[![GitHub stars](https://img.shields.io/github/stars/joadan/Linq2Dashboard?style=flat&label=Stars)](https://github.com/joadan/Linq2Dashboard/stargazers)
 
 Interactive exploration of large in-memory collections for .NET: facets with counts, metrics, and the matching rows that all update together on every click. The faceted-search experience of an e-commerce site, applied to any collection, with a LINQ-flavoured API.
 
@@ -188,6 +189,12 @@ dotnet run --project docs/Linq2Dashboard.Docs                    # the docs site
 dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --memory
 dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --job short --filter *
 ```
+
+## Stargazers
+
+If Linq2Dashboard is useful to you, a star helps others find it.
+
+[![Star history](https://api.star-history.com/svg?repos=joadan/Linq2Dashboard&type=Date)](https://www.star-history.com/#joadan/Linq2Dashboard&Date)
 
 ## Licence
 
