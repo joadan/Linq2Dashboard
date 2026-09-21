@@ -347,10 +347,18 @@ public class CalculateTests
         Assert.Equal([true, false, false, true], withPreset.Buckets.Select(b => b.Selected));
         Assert.Equal([false, true], withPreset.Presets.Select(p => p.Selected));
 
-        // The March bar as a part lights "This month" as before, beside the other parts.
-        var withMarch = (DateFacetState)Shared.Calculate(selections.ToggleInterval("OrderDate", dates.Buckets[2].ToInterval())).Facet("OrderDate");
+        // The March bar joins the adjacent April bar into one interval (concept §5), which lights both bars but is no longer
+        // exactly "This month", so that preset goes dark (design §2.4): the selection now reads "March to April".
+        var withMarchSelections = selections.ToggleInterval("OrderDate", dates.Buckets[2].ToInterval());
+        Assert.Equal(new DateSelection([dates.Buckets[0].ToInterval(), DateInterval.Between(dates.Buckets[2].From, dates.Buckets[3].To)]), withMarchSelections["OrderDate"]);
+        var withMarch = (DateFacetState)Shared.Calculate(withMarchSelections).Facet("OrderDate");
         Assert.Equal([true, false, true, true], withMarch.Buckets.Select(b => b.Selected));
-        Assert.Equal([true, false], withMarch.Presets.Select(p => p.Selected));
+        Assert.Equal([false, false], withMarch.Presets.Select(p => p.Selected));
+
+        // Clicking April again carves it out of the joined interval, and March alone is exactly "This month" once more.
+        var marchAlone = (DateFacetState)Shared.Calculate(withMarchSelections.ToggleInterval("OrderDate", dates.Buckets[3].ToInterval())).Facet("OrderDate");
+        Assert.Equal([true, false, true, false], marchAlone.Buckets.Select(b => b.Selected));
+        Assert.Equal([true, false], marchAlone.Presets.Select(p => p.Selected));
 
         // Toggling a part off removes it alone; the last one clears the facet.
         Assert.Equal(dates.Buckets[3].ToSelection(), selections.ToggleInterval("OrderDate", dates.Buckets[0].ToInterval())["OrderDate"]);

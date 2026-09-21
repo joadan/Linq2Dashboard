@@ -79,13 +79,115 @@ public class SelectionsTests
         Assert.Equal(two.GetHashCode(), new RangeSelection([high, low]).GetHashCode());
         Assert.Equal(two, new RangeSelection([low, high, low]));                  // duplicates dropped
         Assert.Same(two, two.Add(high));
-        Assert.Same(two, two.Remove(RangeInterval.Between(1, 2)));
+        Assert.Same(two, two.Remove(RangeInterval.Between(200, 300)));           // nothing to carve out
         Assert.NotEqual(two, two.ToggleNull());
         Assert.True(two.ToggleNull().IncludeNull);
         Assert.Equal(two, two.ToggleNull().ToggleNull());
         Assert.True(RangeSelection.Empty.ToggleNull().OnlyNulls);
         Assert.True(RangeSelection.OnlyNull.ToggleNull().IsEmpty);
         Assert.Throws<ArgumentException>(() => new RangeSelection([low, null!]));
+    }
+
+    /// <summary>Concept §5: adjacent or overlapping intervals are one interval, so two neighbouring bars span one range and the set is canonical.</summary>
+    [Fact]
+    public void RangeSelection_joins_adjacent_and_overlapping_intervals()
+    {
+        var first = new RangeInterval(100, 200, toInclusive: false);
+        var second = new RangeInterval(200, 300, toInclusive: false);
+        var third = new RangeInterval(300, 400, toInclusive: false);
+        var joined = new RangeInterval(100, 300, toInclusive: false);
+
+        Assert.Equal([joined], RangeSelection.Empty.Toggle(first).Toggle(second).Intervals);
+        Assert.Equal([joined], new RangeSelection([second, first]).Intervals);                         // canonical whatever the order
+        Assert.Equal(new RangeSelection([joined]), new RangeSelection([first, second]));
+        Assert.Equal(new RangeSelection([joined]).GetHashCode(), new RangeSelection([first, second]).GetHashCode());
+        Assert.Equal([new RangeInterval(100, 400, toInclusive: false)], new RangeSelection([third, first, second]).Intervals);
+
+        Assert.Equal([RangeInterval.Between(100, 350)], new RangeSelection([RangeInterval.Between(150, 350), first]).Intervals);   // overlap
+        Assert.Equal([new RangeInterval(100, 300, toInclusive: false)], new RangeSelection([first, RangeInterval.Between(150, 250), second]).Intervals);
+        Assert.Equal([RangeInterval.Between(100, 200)], new RangeSelection([first, RangeInterval.Between(200, 200)]).Intervals);   // a point closes the open end
+
+        Assert.Equal(2, new RangeSelection([first, third]).Intervals.Count);                              // a gap keeps them apart
+        Assert.Equal([first, third], new RangeSelection([third, first]).Intervals);                      // ascending
+        Assert.Equal(2, new RangeSelection([first, new RangeInterval(200, 300, fromInclusive: false)]).Intervals.Count);   // [100,200) and (200,300) exclude 200
+
+        Assert.Equal([new RangeInterval(null, 200, toInclusive: false)], new RangeSelection([new RangeInterval(null, 100, toInclusive: false), first]).Intervals);   // open tail
+        Assert.Equal([RangeInterval.AtLeast(300)], new RangeSelection([third, RangeInterval.AtLeast(400)]).Intervals);
+        Assert.Equal([new RangeInterval(null, null)], new RangeSelection([RangeInterval.AtMost(5), RangeInterval.AtLeast(3)]).Intervals);
+    }
+
+    /// <summary>Concept §5: a click on a covered bar carves its interval out, splitting the interval it sits inside, so the outer bars stay selected.</summary>
+    [Fact]
+    public void RangeSelection_toggle_carves_a_covered_interval_out()
+    {
+        var first = new RangeInterval(100, 200, toInclusive: false);
+        var second = new RangeInterval(200, 300, toInclusive: false);
+        var third = new RangeInterval(300, 400, toInclusive: false);
+        var all = new RangeSelection([first, second, third]);
+
+        Assert.True(all.Contains(second));
+        Assert.True(all.Contains(RangeInterval.Between(150, 350)));
+        Assert.False(all.Contains(RangeInterval.Between(150, 400)));                                    // 400 is not in [100,400)
+        Assert.False(all.Contains(RangeInterval.AtLeast(300)));
+
+        Assert.Equal([first, third], all.Toggle(second).Intervals);                                      // the middle bar goes, two remain
+        Assert.Equal([new RangeInterval(200, 400, toInclusive: false)], all.Toggle(first).Intervals);   // an end bar
+        Assert.Equal([new RangeInterval(100, 300, toInclusive: false)], all.Toggle(third).Intervals);
+        Assert.True(all.Toggle(first).Toggle(second).Toggle(third).IsEmpty);                            // one by one back to nothing
+        Assert.Equal(all, all.Toggle(second).Toggle(second));                                          // out and in again
+        Assert.Same(all, all.Add(second));
+
+        // Carving out of a closed slider interval leaves the right ends: [150,200) and [300,350].
+        var slider = RangeSelection.Between(150, 350);
+        Assert.Equal([new RangeInterval(150, 200, toInclusive: false), new RangeInterval(300, 350, fromInclusive: true)], slider.Toggle(second).Intervals);
+        Assert.Equal([RangeInterval.Between(150, 200), new RangeInterval(300, 350, fromInclusive: false)], slider.Remove(new RangeInterval(200, 300, fromInclusive: false)).Intervals);
+
+        // A bar the slider covers only in part is not selected, so a click adds it and the union grows.
+        Assert.False(slider.Contains(third));
+        Assert.Equal([new RangeInterval(150, 400, toInclusive: false)], slider.Toggle(third).Intervals);
+
+        // Remove is set difference even when the interval is not fully covered.
+        Assert.Equal([new RangeInterval(100, 150, toInclusive: false), new RangeInterval(350, 400, fromInclusive: false, toInclusive: false)], all.Remove(RangeInterval.Between(150, 350)).Intervals);
+        Assert.Equal([RangeInterval.Between(400, 400)], new RangeSelection([RangeInterval.Between(100, 400)]).Remove(new RangeInterval(null, 400, toInclusive: false)).Intervals);
+        Assert.True(all.Remove(new RangeInterval(null, null)).IsEmpty);
+        Assert.False(all.ToggleNull().Remove(new RangeInterval(null, null)).IsEmpty);                   // the null rows stay
+    }
+
+    /// <summary>Concept §5: adjacent months join into one interval, while a preset stays a part of its own and never merges.</summary>
+    [Fact]
+    public void DateSelection_joins_adjacent_intervals_but_not_presets()
+    {
+        var january = DateInterval.Between(TestData.Instant("2026-01-01T00:00:00Z"), TestData.Instant("2026-02-01T00:00:00Z"));
+        var february = DateInterval.Between(TestData.Instant("2026-02-01T00:00:00Z"), TestData.Instant("2026-03-01T00:00:00Z"));
+        var march = DateInterval.Between(TestData.Instant("2026-03-01T00:00:00Z"), TestData.Instant("2026-04-01T00:00:00Z"));
+        var januaryToFebruary = DateInterval.Between(january.From, february.To);
+        var recent = DateInterval.Relative(DatePreset.Last7Days);
+        var today = DateInterval.Relative(DatePreset.Today);
+
+        Assert.Equal([januaryToFebruary], DateSelection.Empty.Toggle(january).Toggle(february).Intervals);
+        Assert.Equal([januaryToFebruary], new DateSelection([february, january]).Intervals);
+        Assert.Equal(new DateSelection([januaryToFebruary]), new DateSelection([january, february]));
+        Assert.Equal([january, march], new DateSelection([march, january]).Intervals);                  // a gap keeps them apart, ascending
+        Assert.Equal([DateInterval.Between(january.From, march.To)], new DateSelection([january, DateInterval.Between(february.From!.Value.AddDays(-10), march.From), march]).Intervals);   // overlap
+        Assert.Equal([DateInterval.Between(null, february.To)], new DateSelection([DateInterval.Between(null, january.To), february]).Intervals);   // open tail
+
+        var withPresets = new DateSelection([recent, february, today, january]);
+        Assert.Equal([januaryToFebruary, today, recent], withPresets.Intervals);                        // intervals first, then presets
+        Assert.True(withPresets.Contains(recent));
+        Assert.False(new DateSelection([DateInterval.Between(null, null)]).Contains(recent));            // an unbounded interval does not stand in for a preset
+        Assert.Equal([januaryToFebruary, today], withPresets.Toggle(recent).Intervals);
+        Assert.Equal(withPresets, withPresets.Toggle(recent).Toggle(recent));
+
+        // Carving out: the middle month leaves the two around it; a preset is untouched by an interval.
+        var quarter = new DateSelection([january, february, march, recent]);
+        Assert.Equal([DateInterval.Between(january.From, march.To), recent], quarter.Intervals);
+        Assert.True(quarter.Contains(february));
+        Assert.Equal([january, march, recent], quarter.Toggle(february).Intervals);
+        Assert.Equal([DateInterval.Between(february.From, march.To), recent], quarter.Toggle(january).Intervals);
+        Assert.Equal(quarter, quarter.Toggle(february).Toggle(february));
+        Assert.Equal([recent], quarter.Remove(DateInterval.Between(null, null)).Intervals);
+        Assert.Same(quarter, quarter.Remove(DateInterval.Between(march.To, null)));
+        Assert.False(quarter.Contains(DateInterval.Between(january.From, march.To!.Value.AddDays(1))));
     }
 
     [Fact]
