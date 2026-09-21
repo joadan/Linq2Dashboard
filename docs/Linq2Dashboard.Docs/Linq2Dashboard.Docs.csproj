@@ -24,11 +24,12 @@
     <ProjectReference Include="..\..\samples\Linq2Dashboard.SampleData\Linq2Dashboard.SampleData.csproj" />
   </ItemGroup>
 
-  <!-- The concept and design documents are rendered by the site; copy them from the repository root so they never drift. -->
+  <!-- The concept and design documents are rendered by the site and the logo is shared with the packages and the README; copy them from the repository root so they never drift. -->
   <ItemGroup>
     <RepositoryDocument Include="..\..\Linq2Dashboard-concept.md" Name="concept.md" />
     <RepositoryDocument Include="..\..\Linq2Dashboard-design.md" Name="design.md" />
     <RepositoryDocument Include="..\..\Linq2Dashboard-usage.md" Name="usage.md" />
+    <RepositoryDocument Include="..\..\assets\logo.svg" Name="..\logo.svg" />
   </ItemGroup>
 
   <Target Name="CopyRepositoryDocuments" BeforeTargets="ResolveStaticWebAssetsInputs;BeforeBuild">

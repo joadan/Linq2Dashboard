@@ -1,3 +1,5 @@
+<img src="https://raw.githubusercontent.com/joadan/Linq2Dashboard/master/assets/icon.png" alt="" width="64" align="left" />
+
 # Linq2Dashboard
 
 [![CI](https://github.com/joadan/Linq2Dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/joadan/Linq2Dashboard/actions/workflows/ci.yml)

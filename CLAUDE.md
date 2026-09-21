@@ -13,6 +13,7 @@
 ## Layout
 
 ```text
+assets/                        logo.svg (the mark), favicon.svg (three-bar cut for 16 px), icon.png (NuGet, 128 px); the docs site copies logo.svg at build time
 src/Linq2Dashboard/            core, net10.0, no dependencies, package id Linq2Dashboard
   Indexing/                    RowSet, columns, caches, sort order (internal)
   Facets/                      definitions, builders, indexes, state

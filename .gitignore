@@ -361,5 +361,6 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
-# Docs site: markdown copied from the repository root at build time
+# Docs site: markdown and the logo copied from the repository root at build time
 docs/Linq2Dashboard.Docs/wwwroot/docs/
+docs/Linq2Dashboard.Docs/wwwroot/logo.svg
