@@ -182,6 +182,25 @@ public class ActiveSelectionsTests : BunitContext
         Assert.Equal(Selections.Empty, raised);
     }
 
+    /// <summary>Concept §5: two neighbouring bars are one interval, so the chip shows one span with the formatter's interval text and removing it clears the facet.</summary>
+    [Fact]
+    public void Adjacent_bars_show_as_one_interval_chip()
+    {
+        Selections? raised = null;
+        var amount = (RangeFacetState)BuildDashboard().Calculate().Facet("Amount");
+        var selections = Selections.Empty
+            .ToggleInterval("Amount", amount.Buckets[1].ToInterval())   // [100, 500)
+            .ToggleInterval("Amount", amount.Buckets[2].ToInterval());  // [500, 1000)
+        var cut = RenderChips(selections, s => raised = s);
+
+        var chip = Chips(cut).Single();
+        Assert.DoesNotContain("l2d-chip-group", chip.ClassName);
+        Assert.Equal("100 – 1,000", Label(chip));
+
+        chip.QuerySelector(".l2d-chip-remove")!.Click();
+        Assert.Equal(Selections.Empty, raised);
+    }
+
     [Fact]
     public void Date_parts_are_grouped_with_preset_and_period_labels()
     {

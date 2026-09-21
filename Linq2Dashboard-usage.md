@@ -90,7 +90,7 @@ The UI owns the selections. The dashboard holds none. `Selections` is an immutab
 var s = Selections.Empty
     .Toggle("Country", "SE")                                  // add if absent, remove if present
     .With("Amount", RangeSelection.Between(100, 1000))        // replace the facet's selection
-    .ToggleInterval("Amount", RangeInterval.AtLeast(5000))    // add or remove one interval: the click on a bar
+    .ToggleInterval("Amount", RangeInterval.AtLeast(5000))    // the click on a bar: carve the interval out when covered, else add it and join neighbours
     .With("OrderDate", DateSelection.Relative(DatePreset.Last30Days))
     .With("search", new TextSelection("acme"))
     .Clear("Country");                                        // remove one facet's selection
@@ -99,8 +99,8 @@ var s = Selections.Empty
 | Facet kind | Selection type | Constructors |
 |---|---|---|
 | Value, Boolean | `ValueSelection` | `ValueSelection.Of(a, b)`, `.Add`, `.Remove`; a `null` value selects the null facet value |
-| Range | `RangeSelection` | a set of `RangeInterval`s, OR-ed: `new RangeSelection([a, b])`, `.Toggle(interval)`, `.ToggleNull()`; `Between(from, to)`, `AtLeast(from)`, `AtMost(to)` for one; `OnlyNull`; `IncludeNull` adds the null rows |
-| Date | `DateSelection` | a set of `DateInterval`s, OR-ed, each `DateInterval.Between(from, to)` (half-open instants) or `DateInterval.Relative(preset)`; `Between`, `Relative` for one; `OnlyNull` |
+| Range | `RangeSelection` | a set of `RangeInterval`s, OR-ed and kept canonical (sorted, adjacent or overlapping ones joined): `new RangeSelection([a, b])`, `.Toggle(interval)` (coverage: carve out or add), `.Contains` (covered), `.Remove` (set difference), `.ToggleNull()`; `Between(from, to)`, `AtLeast(from)`, `AtMost(to)` for one; `OnlyNull`; `IncludeNull` adds the null rows |
+| Date | `DateSelection` | a set of `DateInterval`s, OR-ed, each `DateInterval.Between(from, to)` (half-open instants, joined when adjacent) or `DateInterval.Relative(preset)` (never merged); `Between`, `Relative` for one; `OnlyNull` |
 | Text | `TextSelection` | `new TextSelection(text)`; whitespace-only clears |
 
 Bookmarks: `dashboard.Serializer.ToJson(selections)` and `FromJson(json)`. Reading is lenient. Unknown facets and unreadable values are dropped, so a stale bookmark gives fewer selections, never an error.
@@ -196,7 +196,7 @@ These are decisions from the concept, not options.
 - **A multi-valued facet has no "Other".** Its rows overlap, so a remainder cannot be computed by subtraction. `Top(n)` still limits the list and pins selected values; `Other` is null.
 - **Zero-count values stay in the state.** Hiding them is the UI's choice (`HideZeroCounts`).
 - **Ranking picks the values, the UI orders them.** `RankBy` in the builder decides which values Top N presents; `Sort` on `ValueFacet` decides the order on screen: by rank (default), label or value, optionally reversed. Null stays last.
-- **Buckets are fixed at build.** Only their counts change. A bucket click toggles exactly its interval, so bars select like values: "below 100 or 1 000 and above" is one selection, and the null bar toggles beside them.
+- **Buckets are fixed at build.** Only their counts change. A bucket click toggles its interval, so bars select like values: "below 100 or 1 000 and above" is one selection, and the null bar toggles beside them. Neighbouring bars join into one interval ("100 – 300", not "100 – 200" and "200 – 300"), and clicking a bar inside a joined interval carves it out again; a date preset never merges with an interval.
 - **Searching within a facet is not a selection.** It narrows the list shown, nothing else.
 - **Metrics skip null.** Averages divide by rows that have a value. Distinct counts non-null values.
 - **The data is fixed at creation.** New data means a new dashboard; selections carry over through JSON. A subset of the data is not new data: `dashboard.ScopeTo(...)` scopes without a rebuild.
