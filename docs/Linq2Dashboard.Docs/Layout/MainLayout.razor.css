@@ -29,6 +29,10 @@
     height: 1.5rem;
 }
 
+.site-brand-accent {
+    color: var(--docs-accent);
+}
+
 .site-nav {
     display: flex;
     flex-wrap: wrap;
