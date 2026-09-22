@@ -17,9 +17,6 @@ public partial class ValueFacet<T>
     private bool collapsed;
     private bool? lastCollapsedParameter;
 
-    /// <summary>The facet key, as defined in the builder. Must be a value, boolean or multi-valued facet.</summary>
-    [Parameter, EditorRequired]
-    public string Key { get; set; } = default!;
 
     /// <summary>Overrides the name given in the builder, which is only a default display name, for example with a localised string (concept §7).</summary>
     [Parameter]
@@ -90,8 +87,8 @@ public partial class ValueFacet<T>
 
     private string HeaderName => Name ?? Facet.Name;
 
-    private ValueFacetState Facet => State.Facet(Key) as ValueFacetState
-        ?? throw new InvalidOperationException($"Facet '{Key}' is not a value, boolean or multi-valued facet; use the component for its kind.");
+    private ValueFacetState Facet => State.Facet(ResolvedKey) as ValueFacetState
+        ?? throw WrongKind(State.Facet(ResolvedKey));
 
     private bool IsSearching => Facet.IsSearchable && searchText.Length > 0;
 
@@ -136,7 +133,7 @@ public partial class ValueFacet<T>
     {
         if (a.Value is not IComparable left)
         {
-            throw new InvalidOperationException($"Facet '{Key}' cannot be sorted by value: {a.Value?.GetType().Name} does not implement IComparable. Use FacetSort.Label instead.");
+            throw new InvalidOperationException($"Facet '{ResolvedKey}' cannot be sorted by value: {a.Value?.GetType().Name} does not implement IComparable. Use FacetSort.Label instead.");
         }
 
         return left.CompareTo(b.Value);
@@ -145,6 +142,7 @@ public partial class ValueFacet<T>
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
+        base.OnParametersSet();
         if (Collapsed != lastCollapsedParameter)
         {
             lastCollapsedParameter = Collapsed;

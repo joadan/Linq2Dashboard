@@ -244,6 +244,6 @@ public class RangeFacetTests : BunitContext
     {
         var error = Assert.ThrowsAny<Exception>(() => RenderFacet("Country"));
 
-        Assert.Contains("not a range facet", error.Message);
+        Assert.Contains("is a Value facet, which RangeFacet does not render; use ValueFacet", error.Message);
     }
 }

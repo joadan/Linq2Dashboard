@@ -50,7 +50,7 @@ public partial class Home
     }
 
     protected override void OnInitialized() =>
-        countries = ((ValueFacetState)Dashboard.Calculate().Facet("Country")).Values
+        countries = ((ValueFacetState)Dashboard.Calculate().Facet(FacetKey.Of<SampleOrder>(x => x.Country))).Values
             .Select(v => v.Value)
             .OfType<string>()
             .Order(StringComparer.Ordinal)

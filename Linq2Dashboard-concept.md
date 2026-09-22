@@ -342,6 +342,7 @@ dashboard.AddFacet("shipTo", x => x.Address.Country);  // explicit key
 - An explicit key is required when the selector is not a simple member access, or when two facets would otherwise get the same key.
 - Keys must be unique within a dashboard. Defining a duplicate is an error at initialisation, not a silent overwrite.
 - Keys are case-sensitive and are the identity used in selections, state, bookmarks and templates.
+- The derivation is public, `FacetKey.Of<Order>(x => x.Country)`, so code and a UI can name a derived facet by its selector and get the same key the builder did. The string stays the identity; the selector is one way to spell it.
 
 Because facets are identified by string keys and selections are serialisable, a full set of selections can be stored, bookmarked, put in a URL, or restored later without the core changing.
 

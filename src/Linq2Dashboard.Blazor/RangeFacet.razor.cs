@@ -8,9 +8,6 @@ public partial class RangeFacet<T>
     private bool collapsed;
     private bool? lastCollapsedParameter;
 
-    /// <summary>The facet key, as defined in the builder. Must be a range facet.</summary>
-    [Parameter, EditorRequired]
-    public string Key { get; set; } = default!;
 
     /// <summary>Overrides the name given in the builder, which is only a default display name, for example with a localised string (concept §7).</summary>
     [Parameter]
@@ -81,8 +78,8 @@ public partial class RangeFacet<T>
 
     private string HeaderName => Name ?? Facet.Name;
 
-    private RangeFacetState Facet => State.Facet(Key) as RangeFacetState
-        ?? throw new InvalidOperationException($"Facet '{Key}' is not a range facet; use the component for its kind.");
+    private RangeFacetState Facet => State.Facet(ResolvedKey) as RangeFacetState
+        ?? throw WrongKind(State.Facet(ResolvedKey));
 
     /// <summary>The facet's selection, or the empty one to toggle from.</summary>
     private RangeSelection Current => Facet.Selection as RangeSelection ?? RangeSelection.Empty;
@@ -100,27 +97,28 @@ public partial class RangeFacet<T>
         {
             RangeBucket captured = bucket;
             bars.Add(new BucketBar(Formatter.FormatRangeBucket(bucket), bucket.TotalCount, bucket.FilteredCount, bucket.Selected, false, () => ClickBucket(captured),
-                LinkTo(s => s.ToggleInterval(Key, captured.ToInterval()))));
+                LinkTo(s => s.ToggleInterval(ResolvedKey, captured.ToInterval()))));
         }
 
         if (facet.Null.TotalCount > 0)
         {
             bars.Add(new BucketBar(Formatter.NullLabel, facet.Null.TotalCount, facet.Null.FilteredCount, facet.Null.Selected, true, ClickNull,
-                LinkTo(s => s.With(Key, Current.ToggleNull()))));
+                LinkTo(s => s.With(ResolvedKey, Current.ToggleNull()))));
         }
 
         return bars;
     }
 
     /// <summary>A click toggles the bucket's interval in the facet's set of intervals (concept §5); removing the last part clears the facet.</summary>
-    private Task ClickBucket(RangeBucket bucket) => Context.ToggleIntervalAsync(Key, bucket.ToInterval());
+    private Task ClickBucket(RangeBucket bucket) => Context.ToggleIntervalAsync(ResolvedKey, bucket.ToInterval());
 
     /// <summary>The null bar toggles the null rows beside the intervals (concept §4.8).</summary>
-    private Task ClickNull() => Context.SelectAsync(Key, Current.ToggleNull());
+    private Task ClickNull() => Context.SelectAsync(ResolvedKey, Current.ToggleNull());
 
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
+        base.OnParametersSet();
         if (Collapsed != lastCollapsedParameter)
         {
             lastCollapsedParameter = Collapsed;
@@ -141,5 +139,5 @@ public partial class RangeFacet<T>
     /// The slider's interval replaces the facet's selection, including any bars toggled before it.
     /// </summary>
     private Task ApplySlider((double? From, double? To) bounds) =>
-        bounds is (null, null) ? Context.ClearAsync(Key) : Context.SelectAsync(Key, new RangeSelection(bounds.From, bounds.To));
+        bounds is (null, null) ? Context.ClearAsync(ResolvedKey) : Context.SelectAsync(ResolvedKey, new RangeSelection(bounds.From, bounds.To));
 }

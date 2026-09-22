@@ -47,7 +47,7 @@ public sealed class DashboardState<T>
     public FacetState Facet(string key) =>
         facetsByKey.TryGetValue(key, out FacetState? facet)
             ? facet
-            : throw new ArgumentException($"Unknown facet key '{key}'.", nameof(key));
+            : throw new ArgumentException(UnknownKey("facet", key, facetsByKey.Keys), nameof(key));
 
     /// <summary>Gets the state of the facet with <paramref name="key"/>; false for an unknown key.</summary>
     public bool TryGetFacet(string key, out FacetState facet) => facetsByKey.TryGetValue(key, out facet!);
@@ -56,7 +56,7 @@ public sealed class DashboardState<T>
     public MetricState Metric(string key) =>
         metricsByKey.TryGetValue(key, out MetricState? metric)
             ? metric
-            : throw new ArgumentException($"Unknown metric key '{key}'.", nameof(key));
+            : throw new ArgumentException(UnknownKey("metric", key, metricsByKey.Keys), nameof(key));
 
     /// <summary>
     /// Matching rows <paramref name="skip"/> to <paramref name="skip"/> + <paramref name="take"/> in the
@@ -80,4 +80,15 @@ public sealed class DashboardState<T>
     public IReadOnlyList<T> Items => items;
 
     internal RowSet Matching => matching;
+
+    /// <summary>
+    /// Names the known keys and, since keys are case-sensitive, the one that differs from <paramref name="key"/>
+    /// only in case, which is the usual slip in a component's <c>Key</c> (design §9).
+    /// </summary>
+    private static string UnknownKey(string what, string key, IEnumerable<string> known)
+    {
+        string? similar = known.FirstOrDefault(k => string.Equals(k, key, StringComparison.OrdinalIgnoreCase));
+        string hint = similar is null ? string.Empty : $" Did you mean '{similar}'? Keys are case-sensitive.";
+        return $"Unknown {what} key '{key}'.{hint} Known {what} keys: {string.Join(", ", known)}.";
+    }
 }

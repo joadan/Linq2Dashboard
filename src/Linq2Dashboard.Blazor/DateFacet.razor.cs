@@ -8,9 +8,6 @@ public partial class DateFacet<T>
     private bool collapsed;
     private bool? lastCollapsedParameter;
 
-    /// <summary>The facet key, as defined in the builder. Must be a date facet.</summary>
-    [Parameter, EditorRequired]
-    public string Key { get; set; } = default!;
 
     /// <summary>Overrides the name given in the builder, which is only a default display name, for example with a localised string (concept §7).</summary>
     [Parameter]
@@ -58,8 +55,8 @@ public partial class DateFacet<T>
 
     private string HeaderName => Name ?? Facet.Name;
 
-    private DateFacetState Facet => State.Facet(Key) as DateFacetState
-        ?? throw new InvalidOperationException($"Facet '{Key}' is not a date facet; use the component for its kind.");
+    private DateFacetState Facet => State.Facet(ResolvedKey) as DateFacetState
+        ?? throw WrongKind(State.Facet(ResolvedKey));
 
     /// <summary>The facet's selection, or the empty one to toggle from.</summary>
     private DateSelection Current => Facet.Selection as DateSelection ?? DateSelection.Empty;
@@ -72,30 +69,31 @@ public partial class DateFacet<T>
         {
             DateBucket captured = bucket;
             bars.Add(new BucketBar(Formatter.FormatDateBucket(bucket, facet.Granularity), bucket.TotalCount, bucket.FilteredCount, bucket.Selected, false, () => ClickBucket(captured),
-                LinkTo(s => s.ToggleInterval(Key, captured.ToInterval()))));
+                LinkTo(s => s.ToggleInterval(ResolvedKey, captured.ToInterval()))));
         }
 
         if (facet.Null.TotalCount > 0)
         {
             bars.Add(new BucketBar(Formatter.NullLabel, facet.Null.TotalCount, facet.Null.FilteredCount, facet.Null.Selected, true, ClickNull,
-                LinkTo(s => s.With(Key, Current.ToggleNull()))));
+                LinkTo(s => s.With(ResolvedKey, Current.ToggleNull()))));
         }
 
         return bars;
     }
 
     /// <summary>A click toggles the period in the facet's set of parts (concept §5); removing the last part clears the facet.</summary>
-    private Task ClickBucket(DateBucket bucket) => Context.ToggleIntervalAsync(Key, bucket.ToInterval());
+    private Task ClickBucket(DateBucket bucket) => Context.ToggleIntervalAsync(ResolvedKey, bucket.ToInterval());
 
     /// <summary>A click toggles the relative preset as a part of its own, beside any periods.</summary>
-    private Task ClickPreset(PresetState preset) => Context.ToggleIntervalAsync(Key, preset.ToInterval());
+    private Task ClickPreset(PresetState preset) => Context.ToggleIntervalAsync(ResolvedKey, preset.ToInterval());
 
     /// <summary>The null bar toggles the null rows beside the parts (concept §4.8).</summary>
-    private Task ClickNull() => Context.SelectAsync(Key, Current.ToggleNull());
+    private Task ClickNull() => Context.SelectAsync(ResolvedKey, Current.ToggleNull());
 
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
+        base.OnParametersSet();
         if (Collapsed != lastCollapsedParameter)
         {
             lastCollapsedParameter = Collapsed;

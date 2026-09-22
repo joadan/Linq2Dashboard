@@ -1,14 +1,14 @@
 @typeparam T
-@inherits DashboardComponentBase<T>
+@inherits FacetComponentBase<T>
 
-<section @attributes="AdditionalAttributes" class="@RootClass($"l2d-facet l2d-date-facet l2d-date-{Layout.ToString().ToLowerInvariant()}{(collapsed ? " l2d-collapsed" : "")}")" data-key="@Key">
+<section @attributes="AdditionalAttributes" class="@RootClass($"l2d-facet l2d-date-facet l2d-date-{Layout.ToString().ToLowerInvariant()}{(collapsed ? " l2d-collapsed" : "")}")" data-key="@ResolvedKey">
     @if (HeaderTemplate is not null)
     {
         @HeaderTemplate(Facet)
     }
     else
     {
-        <FacetHeader Name="@HeaderName" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)" ClearHref="@LinkTo(s => s.Clear(Key))"
+        <FacetHeader Name="@HeaderName" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(ResolvedKey)" ClearHref="@LinkTo(s => s.Clear(ResolvedKey))"
                      Collapsible="Collapsible" Collapsed="collapsed" OnToggle="ToggleCollapsed" />
     }
 
@@ -23,7 +23,7 @@
                 <li @key="preset.Preset" class="l2d-preset @(preset.Selected ? "l2d-selected" : null) @(preset.FilteredCount == 0 ? "l2d-zero" : null)">
                     <Clickable Class="l2d-preset-button" Pressed="preset.Selected"
                                Title="@CountText.Tooltip(Formatter, Formatter.FormatPreset(preset.Preset), preset.FilteredCount, preset.TotalCount)"
-                               Href="@LinkTo(s => s.ToggleInterval(Key, preset.ToInterval()))" OnClick="() => ClickPreset(preset)">
+                               Href="@LinkTo(s => s.ToggleInterval(ResolvedKey, preset.ToInterval()))" OnClick="() => ClickPreset(preset)">
                         <span class="l2d-preset-label">@Formatter.FormatPreset(preset.Preset)</span>
                         @if (ShowCounts)
                         {

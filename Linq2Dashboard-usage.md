@@ -19,13 +19,13 @@ Interactive exploration of a large in-memory collection: facets with counts, met
 2. **Register as a singleton.** The dashboard is immutable and thread-safe; one instance serves every user. Either the dashboard itself, `builder.Services.AddSingleton<Dashboard<Order>>(_ => Dashboard.Create(...))`, or a singleton service that loads the rows and builds it on first request and caches the instance. `Dashboard<T>` is marked `[ImmutableObject(true)]`, so `HybridCache` stores the instance itself; set `HybridCacheEntryFlags.DisableDistributedCache`, since a dashboard cannot be serialised. The [five-minute walkthrough](https://joadan.github.io/Linq2Dashboard/five-minutes) shows such a service.
 3. **Add both usings** to `_Imports.razor`: `@using Linq2Dashboard` and `@using Linq2Dashboard.Blazor`, plus your grid's (`@using Microsoft.AspNetCore.Components.QuickGrid` below).
 4. **Reference the app's scoped-CSS bundle** in the host page, `YourApp.styles.css`. The components' styles are bundled into it. No other stylesheet or script is needed.
-5. **Wrap the page in `DashboardView`**, inject the dashboard, bind `Selections`, name the context and place components inside. Every component takes `T`, the row type, and a `Key` from the builder. The rows go to your grid through `dash.Items`, a queryable, or `dash.State.Items`, a list.
+5. **Wrap the page in `DashboardView`**, inject the dashboard, bind `Selections`, name the context and place components inside. Every component takes `T`, the row type, and names its facet or metric: a facet declared from a member by the same selector, `For="x => x.Country"`, anything else by its `Key` from the builder. The rows go to your grid through `dash.Items`, a queryable, or `dash.State.Items`, a list.
 
 ```razor
 @inject Dashboard<Order> Dashboard
 
 <DashboardView T="Order" Context="dash" Dashboard="Dashboard" @bind-Selections="selections">
-    <ValueFacet T="Order" Key="Country" />
+    <ValueFacet T="Order" For="x => x.Country" />
     <Metric T="Order" Key="orders" />
     <QuickGrid Items="dash.Items" Virtualize="true">   @* any grid; dash.Items is one IQueryable<T> per state *@
         <PropertyColumn Property="o => o.Id" Sortable="true" />
@@ -73,6 +73,7 @@ var dashboard = Dashboard.Create(orders, b =>
 Rules of the builder:
 
 - A facet declared from a member expression takes the member's name as its key. Anything else needs an explicit key. Keys are case-sensitive and must be unique among facets and among metrics.
+- Spell every explicit key once. Metrics and explicitly keyed facets have no C# identity, so put their keys in a constants class, `OrderKeys.Revenue`, and use it in the builder, in formulas (`m[OrderKeys.Revenue]`), in markup (`Key="@OrderKeys.Revenue"`) and in code. A facet declared from a member needs no constant: `FacetKey.Of<Order>(x => x.Country)` gives its key in code, and the components take the selector itself through `For`.
 - Range facets accept any numeric type or its nullable form. Date facets accept `DateTime`, `DateTimeOffset`, `DateOnly` or their nullable forms.
 - Value facet options: `Name`, `Top(n)` with an "Other" remainder, `RankBy(RankMode.TotalCount)` for a stable list, `Searchable()`, `Label(row => text)`, `Comparer(...)`, `Serialize(format, parse)` for value types JSON cannot round-trip by default.
 - Multi-valued facet options: the same, except that `Label(value => text)` reads the value, since a row has several, and `Top(n)` presents no "Other". A row counts once under each distinct value in its collection; a null, empty or all-null collection is the null value. The item type is inferred from the collection, so a `List<string>` gives a facet over `string`.
@@ -147,7 +148,7 @@ state.Items;                                      // IReadOnlyList<T>: every mat
 state.GetItems(skip: 200, take: 50);              // a slice, the same rows as Items.Skip(200).Take(50)
 ```
 
-Cast `state.Facet(key)` by the facet's kind: `ValueFacetState` for value, boolean and multi-valued facets (`IsMultiValued` tells the last apart), `RangeFacetState`, `DateFacetState`, `TextFacetState`. `FacetState.Kind` says which.
+Cast `state.Facet(key)` by the facet's kind: `ValueFacetState` for value, boolean and multi-valued facets (`IsMultiValued` tells the last apart), `RangeFacetState`, `DateFacetState`, `TextFacetState`. `FacetState.Kind` says which. `state.Facet(FacetKey.Of<Order>(x => x.Country))` names a facet declared from a member without retyping the string. An unknown key throws and lists the known keys, pointing out one that differs only in case.
 
 ## Scoping
 
@@ -165,15 +166,16 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 | Component | Renders | Notable parameters |
 |---|---|---|
 | `DashboardView` | Owns selections and state, cascades them; its content is a template over the context. | `Dashboard`, `Context`, `@bind-Selections`, `StateChanged`, `Formatter`, `Key`, `SyncUrl` |
-| `ValueFacet` | Values with counts, the null value, "Other", search. Also boolean and multi-valued facets. | `Key`, `Name`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate`, `InputClass` |
-| `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `Key`, `Name`, `Layout`, `ShowSlider`, `ShowSliderInputs`, `SliderStep`, `ShowBounds`, `InputClass` |
-| `DateFacet` | Presets with counts, one bar per period. | `Key`, `Name`, `Layout`, `ShowPresets` |
+| `ValueFacet` | Values with counts, the null value, "Other", search. Also boolean and multi-valued facets. | `For` or `Key`, `Name`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate`, `InputClass` |
+| `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `For` or `Key`, `Name`, `Layout`, `ShowSlider`, `ShowSliderInputs`, `SliderStep`, `ShowBounds`, `InputClass` |
+| `DateFacet` | Presets with counts, one bar per period. | `For` or `Key`, `Name`, `Layout`, `ShowPresets` |
 | `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`, `DebounceMilliseconds`, `Placeholder`, `InputClass` |
 | `ActiveSelections` | One chip per facet with every part removable (a value, an interval, a preset, the null value), clear all. | `ShowFacetName`, `GroupValues` |
 | `Metric` | One tile by key with its share of the total; a dash when there is no value. A `CountMetric` is the matching row count. | `Key`, `Name`, `MetricTemplate` |
 | `StateSummary` | Everything in the state as plain clickable lists: counts, metrics, every facet. The default content of `DashboardView`, for a first look before laying out a page. | the texts |
 
 - **Rows.** The library renders no rows; they go to the grid you already use. `Context="dash"` names the view's context in your markup. The rows come in two shapes for the two kinds of grid: `dash.Items` is one `IQueryable<T>` per state for a grid that queries its source, QuickGrid among them, and `dash.State.Items` is the same rows as a counted, indexable list (`IReadOnlyList<T>` and `IList<T>`) for a grid that takes a list. Either reference changes exactly when the state does, so a grid that rebuilds when its source changes does so after every click and never in between; paging, virtualising, sorting and counting cost the slice, not a pass over every row. Do not hand a grid `ToList()` of either: that copies the rows on every render of the page and gives the grid a new source every time, so it rebuilds itself on every render. The view re-renders its content after every click, so no callback is needed. Naming the context is required only when a template inside would otherwise reuse the implicit `context`.
+- **Keys.** `ValueFacet`, `RangeFacet` and `DateFacet` take either `For`, the selector the facet was declared from, or `Key`, never both. `For="x => x.Amount"` derives the key by the builder's rule, so the member is checked by the compiler, completed by the editor and renamed with the property; a value-type member is boxed into the expression and that is looked through. `Key` is for explicitly keyed facets, `TextFacet` and `Metric`, which have no selector to name them; keep those keys in a constants class. A wrong key throws at render time and names the known keys; a key on a component of the wrong kind names the kind and the component for it.
 - **Names.** The `Name` given in the builder is the default display name and travels with the state, so plain-C# consumers, `ActiveSelections` and `StateSummary` have a name for every key. Each facet component and `Metric` take a `Name` parameter that replaces it in that component only, for example with a localised string, so one dashboard serves every language.
 - **Facet templates.** `ValueTemplate` on `ValueFacet` receives the `FacetValue`: the raw `Value` (null for the null value), `Label` when the facet defines one, `FilteredCount`, `TotalCount` and `Selected`. It replaces the label and count inside the value's button, so the click, the hover and the selected state stay the library's and the template renders its own label, badge or count; format counts through the formatter to match the other facets. `HeaderTemplate` on every facet receives the facet state and replaces the header, including the clear link and the collapse toggle, so a facet with a header template collapses only through `Collapsed`. The docs demo's Status facet renders a coloured dot per status through `ValueTemplate`.
 - **Tile templates.** `MetricTemplate` on `Metric` receives a `MetricTileContent`: the formatted `Name`, `Value` and `Share` (null when the metric has none), `IsEmpty`, and the raw `Metric` state. The template replaces the whole tile: the library renders no wrapping element, so your markup is the root and carries its own classes and hooks (`Class` and extra attributes apply to the default tile only). A Bootstrap `card` or any framework tile therefore has nothing of the library's to override.
@@ -209,6 +211,6 @@ These are decisions from the concept, not options.
 - Discarding the result of a `Selections` method. Every call returns a new instance. `==` compares two instances by value.
 - Using a `TextFacet` to search a value list. `ValueFacet` with `Searchable()` does that without a scan.
 - Mutating the source collection after `Create`. The dashboard indexed a snapshot.
-- A `Key` that does not match the builder, or a facet component of the wrong kind for its key. Both throw at render time and name the key. Leaving out `T="Order"` is a compile error.
+- A `Key` that does not match the builder, or a facet component of the wrong kind for its key. Both throw at render time: the first lists the known keys, the second names the kind and the component for it. Prefer `For` for a facet declared from a member; then the compiler catches the typo. Leaving out `T="Order"` is a compile error.
 - Placing a component outside `DashboardView`. It throws on initialisation.
 - Hard-coding colours or sizes in a stylesheet that targets the components' markup. Use the `--l2d-*` properties.
