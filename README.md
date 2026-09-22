@@ -1,4 +1,4 @@
-<img src="https://raw.githubusercontent.com/joadan/Linq2Dashboard/master/assets/icon.png" alt="" width="64" align="left" />
+<img src="https://raw.githubusercontent.com/joadan/Linq2Dashboard/master/assets/icon.png" alt="" width="54" align="left" />
 
 # Linq2Dashboard
 
