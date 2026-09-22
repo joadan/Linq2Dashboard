@@ -187,4 +187,21 @@ public class UrlSyncTests : BunitContext
         Assert.Equal("1", Matching(cut));
         Assert.Equal("http://localhost/page?o.Country=SE", Navigation.Uri);
     }
+
+    [Fact]
+    public void A_click_survives_the_re_render_its_own_navigation_causes_when_Selections_is_not_bound()
+    {
+        // A page that does not bind Selections: the view's navigation makes the router re-render the page, which sets
+        // the view's parameters again with Selections still null. That is not the host clearing the selections (design §9).
+        Navigation.NavigateTo("page");
+        var cut = RenderView();
+
+        ValueButton(cut, "Country", "SE").Click();
+        Assert.Equal("http://localhost/page?o.Country=SE", Navigation.Uri);
+
+        cut.Render(_ => { });
+
+        Assert.Equal("3", Matching(cut));
+        Assert.Equal("http://localhost/page?o.Country=SE", Navigation.Uri);
+    }
 }

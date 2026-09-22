@@ -339,4 +339,25 @@ public class DashboardViewTests : BunitContext
             builder.CloseElement();
         }
     }
+
+    [Fact]
+    public void Clicks_survive_a_re_render_and_a_dashboard_switch_when_Selections_is_not_bound()
+    {
+        // Only a changed Selections parameter applies (design §9): a host that leaves it out re-renders with null after
+        // every click, and that must not undo the click, whether the host re-renders as it is or hands over a scope.
+        var dashboard = BuildDashboard();
+        var cut = RenderView(dashboard);
+        Selections clicked = Selections.Empty.With("Country", ValueSelection.Of("SE"));
+
+        ValueButton(cut, "Country", "SE").Click();
+        Assert.Equal("3", cut.Find(".l2d-matching").TextContent);
+
+        cut.Render(_ => { });
+        Assert.Equal("3", cut.Find(".l2d-matching").TextContent);
+        Assert.Equal(clicked, cut.Instance.Context.Selections);
+
+        cut.Render(parameters => parameters.Add(p => p.Dashboard, dashboard.ScopeTo(Selections.Empty.With("Status", ValueSelection.Of("Open")))));
+        Assert.Equal("2", cut.Find(".l2d-matching").TextContent);
+        Assert.Equal(clicked, cut.Instance.Context.Selections);
+    }
 }

@@ -19,7 +19,9 @@ public partial class DashboardView<T> : IDisposable
 
     /// <summary>
     /// The current selections. Bindable: <c>@@bind-Selections</c> keeps the host informed of every
-    /// click, and setting it from the host applies new selections, for example from a bookmark.
+    /// click, and setting it from the host applies new selections, for example from a bookmark. Optional: only a
+    /// changed value applies, so a host that leaves it out, or re-renders with the same value, never undoes a
+    /// click (design §9).
     /// </summary>
     [Parameter]
     public Selections? Selections { get; set; }
@@ -125,7 +127,6 @@ public partial class DashboardView<T> : IDisposable
             lastSelectionsParameter = Selections;
             if (!initial.Equals(selections))
             {
-                lastSelectionsParameter = initial;
                 await SelectionsChanged.InvokeAsync(initial);
             }
 
@@ -136,22 +137,26 @@ public partial class DashboardView<T> : IDisposable
 
         ConfigureLinks();
 
+        // The parameter is compared with the value it last had, not with the current selections: a host that does not
+        // bind Selections re-renders with the same value after every click, through the router when SyncUrl navigates,
+        // and that must not read as the host clearing the selections.
+        bool parameterChanged = !Equals(Selections, lastSelectionsParameter);
+        lastSelectionsParameter = Selections;
+
         // Another dashboard, typically a scope of the first (concept §4.10), or another formatter: the same context
         // adopts it, so the components inside, which subscribed to this context once, all follow the change.
-        // With the URL in charge the selections stay what the URL says; otherwise the parameter decides.
+        // With the URL in charge the selections stay what the URL says; otherwise a changed parameter decides.
         if (!ReferenceEquals(contextDashboard, Dashboard) || !ReferenceEquals(contextFormatter, formatter))
         {
             contextDashboard = Dashboard;
             contextFormatter = formatter;
-            lastSelectionsParameter = Selections;
-            await context.RebindAsync(Dashboard, formatter, SyncUrl ? context.Selections : selections);
+            await context.RebindAsync(Dashboard, formatter, SyncUrl || !parameterChanged ? context.Selections : selections);
             WriteUrl();
             return;
         }
 
-        if (!Equals(Selections, lastSelectionsParameter))
+        if (parameterChanged)
         {
-            lastSelectionsParameter = Selections;
             await context.SyncAsync(selections);
             WriteUrl();
         }
@@ -159,7 +164,6 @@ public partial class DashboardView<T> : IDisposable
 
     private async Task OnSelectionsChangedAsync(Selections selections)
     {
-        lastSelectionsParameter = selections;
         WriteUrl();
         await SelectionsChanged.InvokeAsync(selections);
         StateHasChanged();
