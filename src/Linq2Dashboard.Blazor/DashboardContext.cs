@@ -42,7 +42,7 @@ public sealed class DashboardContext<T>
     /// <summary>
     /// <see cref="DashboardState{T}.Items"/> as one <see cref="IQueryable{T}"/> per state, for a data grid's items
     /// parameter (design §9). The reference changes exactly when the state does, so a grid that re-queries when its
-    /// source changes does so once per calculation and not on every render of the page. The list behind it is counted
+    /// source changes, QuickGrid among them, does so once per calculation and not on every render of the page. The list behind it is counted
     /// and indexable, so the grid's count, page, viewport and sort stay cheap (design §4.7). A grid that takes a list
     /// gets <see cref="DashboardState{T}.Items"/> through <see cref="State"/> directly; never a <c>ToList()</c> of
     /// either, which copies the rows and hands the grid a new source on every render.
