@@ -79,6 +79,35 @@ public abstract class DashboardComponentBase<T> : ComponentBase, IDisposable
     {
     }
 
+    /// <summary>
+    /// The error for a facet of another kind than this component renders: names the kind and the component for it, so a
+    /// key that is right but on the wrong component is a one-line fix (design §9).
+    /// </summary>
+    protected InvalidOperationException WrongKind(FacetState facet)
+    {
+        string? component = facet.Kind switch
+        {
+            FacetKind.Value or FacetKind.Boolean or FacetKind.MultiValue => "ValueFacet",
+            FacetKind.Range => "RangeFacet",
+            FacetKind.Date => "DateFacet",
+            FacetKind.Text => "TextFacet",
+            _ => null,
+        };
+        string use = component is null ? "a component for that kind" : component;
+        return new InvalidOperationException($"Facet '{facet.Key}' is a {facet.Kind} facet, which {ComponentName} does not render; use {use}.");
+    }
+
+    /// <summary>The component's name without the generic arity suffix, for messages.</summary>
+    protected string ComponentName
+    {
+        get
+        {
+            string name = GetType().Name;
+            int tick = name.IndexOf('`');
+            return tick < 0 ? name : name[..tick];
+        }
+    }
+
     private void OnStateChanged() => InvokeAsync(() =>
     {
         OnDashboardStateChanged();

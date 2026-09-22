@@ -64,10 +64,10 @@ public partial class GettingStarted
         <DashboardView T="Order" Context="dash" Dashboard="Dashboard" @bind-Selections="selections">
             <aside>
                 <TextFacet  T="Order" Key="search" />
-                <ValueFacet T="Order" Key="Country" />
+                <ValueFacet T="Order" For="x => x.Country" />
                 <ValueFacet T="Order" Key="Customer" />
-                <RangeFacet T="Order" Key="Amount" ShowSlider="true" />
-                <DateFacet  T="Order" Key="OrderDate" />
+                <RangeFacet T="Order" For="x => x.Amount" ShowSlider="true" />
+                <DateFacet  T="Order" For="x => x.OrderDate" />
             </aside>
             <main>
                 <Metric T="Order" Key="orders" />

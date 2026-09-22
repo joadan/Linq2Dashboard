@@ -101,11 +101,11 @@ The components are styled with scoped CSS, which Blazor bundles into the app's o
 
 <DashboardView T="Order" Context="dash" Dashboard="Dashboard" @bind-Selections="selections">
     <aside>
-        <TextFacet  T="Order" Key="search" />             @* free text, applied after a pause *@
-        <ValueFacet T="Order" Key="Country" />
-        <ValueFacet T="Order" Key="Customer" />           @* searchable, with an "Other" row *@
-        <RangeFacet T="Order" Key="Amount" />             @* histogram; bars keep their shape *@
-        <DateFacet  T="Order" Key="OrderDate" />          @* presets and periods *@
+        <TextFacet  T="Order" Key="search" />                @* free text, applied after a pause *@
+        <ValueFacet T="Order" For="x => x.Country" />
+        <ValueFacet T="Order" Key="Customer" />              @* searchable, with an "Other" row *@
+        <RangeFacet T="Order" For="x => x.Amount" />         @* histogram; bars keep their shape *@
+        <DateFacet  T="Order" For="x => x.OrderDate" />      @* presets and periods *@
     </aside>
     <main>
         <Metric T="Order" Key="orders" />
@@ -124,7 +124,7 @@ The components are styled with scoped CSS, which Blazor bundles into the app's o
 }
 ```
 
-`Key` is the facet or metric key given in the builder; a facet declared from a member expression takes the member's name (`x => x.Country` is `"Country"`). `T` is the row type on every component.
+A facet declared from a member is named by the same selector, `For="x => x.Country"`, so the compiler checks it; `Key` is the string key given in the builder, for explicitly keyed facets and for every metric. `T` is the row type on every component.
 
 - **One formatter.** An `IDashboardFormatter` cascades from `DashboardView`; culture, number formats, the null label and preset names all come from it. Pass your own for other wording.
 - **Two callbacks.** `SelectionsChanged` gives the host every click for bookmarking; `StateChanged` gives it the new `DashboardState<T>` after every calculation, the initial one included, for rendering a chart or summary of its own.

@@ -79,22 +79,22 @@ public static class SampleOrders
             b.ValueFacet(x => x.Status);
             b.ValueFacet(x => x.Channel).Top(10);
             b.MultiValueFacet(x => x.Tags);   // a row counts under every tag it has; counts overlap, no Other
-            b.ValueFacet("Customer", x => x.CustomerId).Label(x => x.Customer).Top(10).Searchable();
+            b.ValueFacet(SampleOrderKeys.Customer, x => x.CustomerId).Label(x => x.Customer).Top(10).Searchable();
             b.BooleanFacet(x => x.IsActive).Name("Active");
             b.RangeFacet(x => x.Amount);   // default: about ten round buckets derived from the data, open at both ends
             b.DateFacet(x => x.OrderDate)   // default: the period is derived from the data, months over these two years
              .Name("Order date")
              .TimeZone(TimeZoneInfo.FindSystemTimeZoneById("Europe/Stockholm"))
              .Presets(DatePreset.Last30Days, DatePreset.ThisYear);
-            b.TextFacet("search", (x, text) =>
+            b.TextFacet(SampleOrderKeys.Search, (x, text) =>
                 (x.Customer?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false)
                 || x.Channel.Contains(text, StringComparison.OrdinalIgnoreCase))
              .Name("Search");
-            b.CountMetric("orders").Name("Orders");
-            b.SumMetric("revenue", x => x.Amount).Name("Revenue");
-            b.AverageMetric("average", x => x.Amount).Name("Average order");
-            b.DistinctMetric("customers", x => x.Customer).Name("Customers");
-            b.CalculatedMetric("perCustomer", m => m["revenue"] / m["customers"]).Name("Revenue per customer");
+            b.CountMetric(SampleOrderKeys.Orders).Name("Orders");
+            b.SumMetric(SampleOrderKeys.Revenue, x => x.Amount).Name("Revenue");
+            b.AverageMetric(SampleOrderKeys.Average, x => x.Amount).Name("Average order");
+            b.DistinctMetric(SampleOrderKeys.Customers, x => x.Customer).Name("Customers");
+            b.CalculatedMetric(SampleOrderKeys.PerCustomer, m => m[SampleOrderKeys.Revenue] / m[SampleOrderKeys.Customers]).Name("Revenue per customer");
             b.OrderByDescending(x => x.OrderDate);
         });
 

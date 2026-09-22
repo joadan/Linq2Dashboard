@@ -233,6 +233,6 @@ public class DateFacetTests : BunitContext
     {
         var error = Assert.ThrowsAny<Exception>(() => RenderFacet("Country"));
 
-        Assert.Contains("not a date facet", error.Message);
+        Assert.Contains("is a Value facet, which DateFacet does not render; use ValueFacet", error.Message);
     }
 }

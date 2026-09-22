@@ -1,14 +1,14 @@
 @typeparam T
-@inherits DashboardComponentBase<T>
+@inherits FacetComponentBase<T>
 
-<section @attributes="AdditionalAttributes" class="@RootClass($"l2d-facet l2d-range-facet l2d-range-{Layout.ToString().ToLowerInvariant()}{(collapsed ? " l2d-collapsed" : "")}")" data-key="@Key">
+<section @attributes="AdditionalAttributes" class="@RootClass($"l2d-facet l2d-range-facet l2d-range-{Layout.ToString().ToLowerInvariant()}{(collapsed ? " l2d-collapsed" : "")}")" data-key="@ResolvedKey">
     @if (HeaderTemplate is not null)
     {
         @HeaderTemplate(Facet)
     }
     else
     {
-        <FacetHeader Name="@HeaderName" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)" ClearHref="@LinkTo(s => s.Clear(Key))"
+        <FacetHeader Name="@HeaderName" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(ResolvedKey)" ClearHref="@LinkTo(s => s.Clear(ResolvedKey))"
                      Collapsible="Collapsible" Collapsed="collapsed" OnToggle="ToggleCollapsed">
             @if (ShowBounds && !double.IsNaN(Facet.Min))
             {

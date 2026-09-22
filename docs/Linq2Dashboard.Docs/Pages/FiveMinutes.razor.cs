@@ -109,10 +109,10 @@ public partial class FiveMinutes
             <DashboardView T="Order" Context="dash" Dashboard="dashboard" @bind-Selections="selections" SyncUrl="true">
                 <div style="display: grid; grid-template-columns: 16rem 1fr; gap: 1rem;">
                     <aside>
-                        <ValueFacet T="Order" Key="Country" />
-                        <ValueFacet T="Order" Key="Status" />
-                        <RangeFacet T="Order" Key="Amount" />
-                        <DateFacet  T="Order" Key="OrderDate" />
+                        <ValueFacet T="Order" For="x => x.Country" />
+                        <ValueFacet T="Order" For="x => x.Status" />
+                        <RangeFacet T="Order" For="x => x.Amount" />
+                        <DateFacet  T="Order" For="x => x.OrderDate" />
                     </aside>
                     <main>
                         <div style="display: flex; gap: 0.5rem;">

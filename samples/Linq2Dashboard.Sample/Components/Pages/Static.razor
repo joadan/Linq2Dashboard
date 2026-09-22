@@ -16,22 +16,22 @@
 <DashboardView T="SampleOrder" Context="dash" Dashboard="Dashboard" SyncUrl="true" ResetOnChange="page">
     <div class="static-layout">
         <aside class="static-facets">
-            <ValueFacet T="SampleOrder" Key="Country" Collapsible="false" style="--l2d-facet-max-height: 12rem" />
-            <ValueFacet T="SampleOrder" Key="Status" Collapsible="false" />
-            <ValueFacet T="SampleOrder" Key="Channel" Collapsible="false" />
-            <ValueFacet T="SampleOrder" Key="Tags" Collapsible="false" />
-            <ValueFacet T="SampleOrder" Key="IsActive" Collapsible="false" HideZeroCounts="true" />
-            <RangeFacet T="SampleOrder" Key="Amount" Collapsible="false" />
-            <DateFacet T="SampleOrder" Key="OrderDate" Collapsible="false" />
+            <ValueFacet T="SampleOrder" For="x => x.Country" Collapsible="false" style="--l2d-facet-max-height: 12rem" />
+            <ValueFacet T="SampleOrder" For="x => x.Status" Collapsible="false" />
+            <ValueFacet T="SampleOrder" For="x => x.Channel" Collapsible="false" />
+            <ValueFacet T="SampleOrder" For="x => x.Tags" Collapsible="false" />
+            <ValueFacet T="SampleOrder" For="x => x.IsActive" Collapsible="false" HideZeroCounts="true" />
+            <RangeFacet T="SampleOrder" For="x => x.Amount" Collapsible="false" />
+            <DateFacet T="SampleOrder" For="x => x.OrderDate" Collapsible="false" />
         </aside>
         <main class="static-main">
             <ActiveSelections T="SampleOrder" />
 
             <div class="static-metrics">
-                <Metric T="SampleOrder" Key="orders" />
-                <Metric T="SampleOrder" Key="revenue" />
-                <Metric T="SampleOrder" Key="average" />
-                <Metric T="SampleOrder" Key="customers" />
+                <Metric T="SampleOrder" Key="@SampleOrderKeys.Orders" />
+                <Metric T="SampleOrder" Key="@SampleOrderKeys.Revenue" />
+                <Metric T="SampleOrder" Key="@SampleOrderKeys.Average" />
+                <Metric T="SampleOrder" Key="@SampleOrderKeys.Customers" />
             </div>
 
             @{

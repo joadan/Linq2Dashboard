@@ -213,7 +213,7 @@ public class ValueFacetTests : BunitContext
     public void Wrong_kind_or_unknown_key_fails_clearly()
     {
         var wrongKind = Assert.ThrowsAny<Exception>(() => RenderFacet("Amount"));
-        Assert.Contains("not a value, boolean or multi-valued facet", wrongKind.Message);
+        Assert.Contains("is a Range facet, which ValueFacet does not render; use RangeFacet", wrongKind.Message);
 
         var unknown = Assert.ThrowsAny<Exception>(() => RenderFacet("Nope"));
         Assert.Contains("Nope", unknown.Message);

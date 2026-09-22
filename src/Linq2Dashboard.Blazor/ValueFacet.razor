@@ -1,14 +1,14 @@
 @typeparam T
-@inherits DashboardComponentBase<T>
+@inherits FacetComponentBase<T>
 
-<section @attributes="AdditionalAttributes" class="@RootClass($"l2d-facet l2d-value-facet{(Facet.IsMultiValued ? " l2d-multi-value-facet" : "")}{(collapsed ? " l2d-collapsed" : "")}")" data-key="@Key">
+<section @attributes="AdditionalAttributes" class="@RootClass($"l2d-facet l2d-value-facet{(Facet.IsMultiValued ? " l2d-multi-value-facet" : "")}{(collapsed ? " l2d-collapsed" : "")}")" data-key="@ResolvedKey">
     @if (HeaderTemplate is not null)
     {
         @HeaderTemplate(Facet)
     }
     else
     {
-        <FacetHeader Name="@HeaderName" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(Key)" ClearHref="@LinkTo(s => s.Clear(Key))"
+        <FacetHeader Name="@HeaderName" ShowClear="Facet.HasSelection" ClearText="@ClearText" OnClear="() => Context.ClearAsync(ResolvedKey)" ClearHref="@LinkTo(s => s.Clear(ResolvedKey))"
                      Collapsible="Collapsible" Collapsed="collapsed" OnToggle="ToggleCollapsed" />
     }
 
@@ -26,7 +26,7 @@
                 <li @key="value.Value ?? NullKey" class="l2d-facet-value @(value.Selected ? "l2d-selected" : null) @(value.FilteredCount == 0 ? "l2d-zero" : null) @(value.IsNull ? "l2d-null" : null)">
                     <Clickable Class="l2d-facet-value-button" Pressed="value.Selected"
                                Title="@CountText.Tooltip(Formatter, Formatter.FormatValue(Facet, value.Value), value.FilteredCount, value.TotalCount)"
-                               Href="@LinkTo(s => s.Toggle(Key, value.Value))" OnClick="() => Context.ToggleAsync(Key, value.Value)">
+                               Href="@LinkTo(s => s.Toggle(ResolvedKey, value.Value))" OnClick="() => Context.ToggleAsync(ResolvedKey, value.Value)">
                         @if (ValueTemplate is not null)
                         {
                             @ValueTemplate(value)

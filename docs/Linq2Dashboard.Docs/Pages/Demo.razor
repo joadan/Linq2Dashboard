@@ -43,37 +43,37 @@ else
     <DashboardView T="SampleOrder" @ref="view" Context="dash" Dashboard="dashboard" Formatter="DemoFormatter.Instance" SyncUrl="true" Selections="selections" SelectionsChanged="OnSelectionsChanged" StateChanged="OnStateChanged">
         <div class="demo-layout">
             <aside class="demo-facets">
-                <TextFacet T="SampleOrder" Key="search" Placeholder="Customer or channel" />
+                <TextFacet T="SampleOrder" Key="@SampleOrderKeys.Search" Placeholder="Customer or channel" />
                 @* A per-facet cap: the list scrolls inside itself, the header stays. Set the property on the dashboard instead to cap every facet. *@
-                <ValueFacet T="SampleOrder" Key="Country" style="--l2d-facet-max-height: 12rem" />
+                <ValueFacet T="SampleOrder" For="x => x.Country" style="--l2d-facet-max-height: 12rem" />
                 @* A value template: the page renders the inside of each value button, the library keeps the button, its click and its selected state. *@
-                <ValueFacet T="SampleOrder" Key="Status">
+                <ValueFacet T="SampleOrder" For="x => x.Status">
                     <ValueTemplate Context="value"><DemoStatus Value="value" /></ValueTemplate>
                 </ValueFacet>
-                <ValueFacet T="SampleOrder" Key="Channel" />
+                <ValueFacet T="SampleOrder" For="x => x.Channel" />
                 @* A multi-valued facet over a collection property: an order counts under every tag it has, so the counts overlap and there is no Other. Same component. *@
-                <ValueFacet T="SampleOrder" Key="Tags" />
-                <ValueFacet T="SampleOrder" Key="Customer" Collapsed="true" />
-                <ValueFacet T="SampleOrder" Key="IsActive" HideZeroCounts="true" />
-                <RangeFacet T="SampleOrder" Key="Amount" ShowSlider="true" />
-                <DateFacet T="SampleOrder" Key="OrderDate" />
+                <ValueFacet T="SampleOrder" For="x => x.Tags" />
+                <ValueFacet T="SampleOrder" Key="@SampleOrderKeys.Customer" Collapsed="true" />
+                <ValueFacet T="SampleOrder" For="x => x.IsActive" HideZeroCounts="true" />
+                <RangeFacet T="SampleOrder" For="x => x.Amount" ShowSlider="true" />
+                <DateFacet T="SampleOrder" For="x => x.OrderDate" />
             </aside>
             <div class="demo-main">
                 <ActiveSelections T="SampleOrder" />
                 <div class="demo-metrics">
-                    <Metric T="SampleOrder" Key="orders" Name="Orders matching">
+                    <Metric T="SampleOrder" Key="@SampleOrderKeys.Orders" Name="Orders matching">
                         <MetricTemplate Context="tile"><DemoTile Content="tile" Icon="cart" /></MetricTemplate>
                     </Metric>
-                    <Metric T="SampleOrder" Key="revenue">
+                    <Metric T="SampleOrder" Key="@SampleOrderKeys.Revenue">
                         <MetricTemplate Context="tile"><DemoTile Content="tile" Icon="banknote" /></MetricTemplate>
                     </Metric>
-                    <Metric T="SampleOrder" Key="average">
+                    <Metric T="SampleOrder" Key="@SampleOrderKeys.Average">
                         <MetricTemplate Context="tile"><DemoTile Content="tile" Icon="receipt" /></MetricTemplate>
                     </Metric>
-                    <Metric T="SampleOrder" Key="customers">
+                    <Metric T="SampleOrder" Key="@SampleOrderKeys.Customers">
                         <MetricTemplate Context="tile"><DemoTile Content="tile" Icon="users" /></MetricTemplate>
                     </Metric>
-                    <Metric T="SampleOrder" Key="perCustomer">
+                    <Metric T="SampleOrder" Key="@SampleOrderKeys.PerCustomer">
                         <MetricTemplate Context="tile"><DemoTile Content="tile" Icon="trend" /></MetricTemplate>
                     </Metric>
                 </div>

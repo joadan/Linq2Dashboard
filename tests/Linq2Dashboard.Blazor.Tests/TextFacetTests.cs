@@ -200,6 +200,6 @@ public class TextFacetTests : BunitContext
     {
         var ex = Assert.ThrowsAny<Exception>(() => RenderFacet(key: "Country"));
 
-        Assert.Contains("not a text facet", ex.Message);
+        Assert.Contains("is a Value facet, which TextFacet does not render; use ValueFacet", ex.Message);
     }
 }

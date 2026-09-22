@@ -64,7 +64,7 @@ public partial class TextFacet<T>
     private string HeaderName => Name ?? Facet.Name;
 
     private TextFacetState Facet => State.Facet(Key) as TextFacetState
-        ?? throw new InvalidOperationException($"Facet '{Key}' is not a text facet; use the component for its kind.");
+        ?? throw WrongKind(State.Facet(Key));
 
     /// <inheritdoc />
     protected override void OnInitialized()
