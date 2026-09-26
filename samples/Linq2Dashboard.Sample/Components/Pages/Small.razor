@@ -23,10 +23,13 @@
 <DashboardView T="SampleOrder" Context="dash" Items="Rows" SyncUrl="true">
     <div class="small-layout">
         <aside class="small-facets">
+            <TextFacet T="SampleOrder" Key="search" Match="MatchesCustomer" Name="Customer or channel" />
             <ValueFacet T="SampleOrder" For="x => x.Status" />
             <ValueFacet T="SampleOrder" For="x => x.Channel" Top="5" Name="Sales channel" />
             <ValueFacet T="SampleOrder" For="x => x.Tags" Multiple="true" />
             <ValueFacet T="SampleOrder" For="x => x.IsActive" Name="Active customer" />
+            <RangeFacet T="SampleOrder" For="x => x.Amount" Buckets="AmountCuts" />
+            <DateFacet T="SampleOrder" For="x => x.OrderDate" Granularity="DateGranularity.Quarter" Presets="DatePresets" />
         </aside>
         <main class="small-main">
             <ActiveSelections T="SampleOrder" />

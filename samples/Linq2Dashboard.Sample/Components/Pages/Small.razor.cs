@@ -15,7 +15,15 @@ public partial class Small
 
     private static readonly string[] Countries = [.. RowsByCountry.Keys.Order(StringComparer.Ordinal)];
 
+    private static readonly double[] AmountCuts = [50, 100, 250, 500, 1000];
+
+    private static readonly DatePreset[] DatePresets = [DatePreset.Last30Days, DatePreset.ThisYear, DatePreset.LastYear];
+
     private string country = Countries[0];
 
     private SampleOrder[] Rows => RowsByCountry[country];
+
+    /// <summary>The text facet's match function: a customer name or a channel containing the text.</summary>
+    private static bool MatchesCustomer(SampleOrder order, string text) =>
+        (order.Customer?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false) || order.Channel.Contains(text, StringComparison.OrdinalIgnoreCase);
 }

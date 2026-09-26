@@ -218,7 +218,7 @@ Under `Items`, the components can define what they show, so `Build` keeps only w
 ```
 
 - A component with `For` defines its facet when neither `Build` nor another component does, and displays it. A `bool` member gives a boolean facet. `Key` and `For` together give a selector without a member name, such as `x => x.OrderDate.Year`, its key.
-- Definition parameters, marked "Items mode only" in their documentation: `Top`, `RankBy`, `Searchable`, `Label` and `Multiple` on `ValueFacet`. `Define` reaches any other builder option; write the builder type in the lambda, `ValueFacetBuilder<Order, string>` or `MultiValueFacetBuilder<Order, string>`, since the component cannot infer it.
+- Definition parameters, marked "Items mode only" in their documentation: `Top`, `RankBy`, `Searchable`, `Label` and `Multiple` on `ValueFacet`; `Buckets` or `AutoBuckets` on `RangeFacet`; `TimeZone`, `Granularity` or `AutoGranularity`, `Presets` and `SkipEmptyPresets` on `DateFacet`; `Match` on `TextFacet`, which defines it, since a text facet has no selector: `<TextFacet T="Order" Key="search" Match="Matches" />`. `Define` reaches any other builder option. On `ValueFacet` write the builder type in the lambda, `ValueFacetBuilder<Order, string>` or `MultiValueFacetBuilder<Order, string>`, since the component cannot infer it; on the others it is plain, `f => ...`.
 - One place per definition. Definition parameters on a facet that `Build` or another component defines throw; a component with only `For` displays a facet defined elsewhere.
 - Values are watched, code is not. Changing `Top` or `Name` rebuilds; a new `Label` or `Define` lambda does not, so give the view a `RebuildKey` when code reads page state.
 - Nothing is removed. A facet behind an `@if` or in a lazy tab is defined the first time it shows, with one build, and stays defined, so selections for it, from the URL or a bookmark, apply when it appears.
@@ -231,9 +231,9 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 |---|---|---|
 | `DashboardView` | Owns selections and state, cascades them; its content is a template over the context. | `Dashboard`, or `Items` with `Build` and `RebuildKey`; `Context`, `@bind-Selections`, `StateChanged`, `Formatter`, `Key`, `SyncUrl` |
 | `ValueFacet` | Values with counts, the null value, "Other", search. Also boolean and multi-valued facets. | `For` or `Key`, `Name`; under `Items` also `Top`, `RankBy`, `Searchable`, `Label`, `Multiple`, `Define`; `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate`, `InputClass` |
-| `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `For` or `Key`, `Name`, `Layout`, `ShowSlider`, `ShowSliderInputs`, `SliderStep`, `ShowBounds`, `InputClass` |
-| `DateFacet` | Presets with counts, one bar per period. | `For` or `Key`, `Name`, `Layout`, `ShowPresets` |
-| `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`, `DebounceMilliseconds`, `Placeholder`, `InputClass` |
+| `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `For` or `Key`, `Name`; under `Items` also `Buckets`, `AutoBuckets`, `Define`; `Layout`, `ShowSlider`, `ShowSliderInputs`, `SliderStep`, `ShowBounds`, `InputClass` |
+| `DateFacet` | Presets with counts, one bar per period. | `For` or `Key`, `Name`; under `Items` also `TimeZone`, `Granularity`, `AutoGranularity`, `Presets`, `SkipEmptyPresets`, `Define`; `Layout`, `ShowPresets` |
+| `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`; under `Items` also `Match`, `Define`; `DebounceMilliseconds`, `Placeholder`, `InputClass` |
 | `ActiveSelections` | One chip per facet with every part removable (a value, an interval, a preset, the null value), clear all. | `ShowFacetName`, `GroupValues` |
 | `Metric` | One tile by key with its share of the total; a dash when there is no value. A `CountMetric` is the matching row count. | `Key`, `Name`, `MetricTemplate` |
 | `StateSummary` | Everything in the state as plain clickable lists: counts, metrics, every facet. The default content of `DashboardView`, for a first look before laying out a page. | the texts |
@@ -278,5 +278,5 @@ These are decisions from the concept, not options.
 - Mutating the source collection after `Create`. The dashboard indexed a snapshot.
 - A `Key` that does not match the builder, or a facet component of the wrong kind for its key. Both throw at render time: the first lists the known keys, the second names the kind and the component for it. Prefer `For` for a facet declared from a member; then the compiler catches the typo. Leaving out `T="Order"` is a compile error.
 - Placing a component outside `DashboardView`. It throws on initialisation.
-- Definition parameters (`Top`, `Multiple`, `Define`, ...) under a view given a `Dashboard`. They throw: that dashboard is defined where it is built. Use `Items`, or define the facet in the builder.
+- Definition parameters (`Top`, `Buckets`, `Match`, `Define`, ...) under a view given a `Dashboard`. They throw: that dashboard is defined where it is built. Use `Items`, or define the facet in the builder.
 - Hard-coding colours or sizes in a stylesheet that targets the components' markup. Use the `--l2d-*` properties.
