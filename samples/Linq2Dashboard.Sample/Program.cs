@@ -1,14 +1,15 @@
-using Linq2Dashboard;
+using Linq2Dashboard.Sample;
 using Linq2Dashboard.Sample.Components;
-using Linq2Dashboard.SampleData;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddRazorComponents()
     .AddInteractiveServerComponents();
 
-// One dashboard for the whole application: immutable, thread-safe, built once at startup (concept §4.9).
-builder.Services.AddSingleton<Dashboard<SampleOrder>>(_ => SampleOrders.BuildDashboard(rows: 200_000));
+// The shared dashboard behind Home and Static comes from a cache service: built on the first request, shared by every
+// user, rebuilt after it expires (concept §7). The /small page builds its own and needs nothing here.
+builder.Services.AddHybridCache();
+builder.Services.AddSingleton<OrdersDashboardService>();
 
 var app = builder.Build();
 

@@ -1,12 +1,18 @@
 @page "/"
 @rendermode InteractiveServer
-@inject Dashboard<SampleOrder> Dashboard
+@inject OrdersDashboardService Dashboards
 
 <PageTitle>Linq2Dashboard sample</PageTitle>
 
 <h1>Orders</h1>
 
-<p class="sample-links">Interactive Server. The same dashboard under <a href="/static">static server-side rendering</a>, where every click is a link, and <a href="/small">a small dataset per page</a>, built by the view with its facets defined in markup.</p>
+@if (dashboard is null)
+{
+    <p>Loading orders...</p>
+    return;
+}
+
+<p class="sample-links">Interactive Server, over one dashboard that a cache service, <code>OrdersDashboardService</code>, builds on the first request and shares with every user. The same dashboard under <a href="/static">static server-side rendering</a>, where every click is a link. For the simple case, <a href="/small">a small dataset per page</a>: the view builds its own dashboard with the facets defined in markup, and nothing is cached.</p>
 
 <div class="sample-scope">
     <label>
