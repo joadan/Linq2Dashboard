@@ -5,13 +5,14 @@
 <h1>Try it in five minutes</h1>
 
 <p>
-    A dashboard over a hand-written list of orders, in a fresh Blazor app, with nothing to download. Every step is a
-    copy-paste. When it runs, replace the list with your own collection and keep the rest.
+    A dashboard over a hand-written list of orders, in a fresh Blazor app, with nothing to download. The whole dashboard is written
+    in the page's markup: each facet and metric is defined where it is shown. Every step is a copy-paste. When it runs, replace the
+    list with your own rows and keep the rest.
 </p>
 
 <h2>1. A new app and the packages</h2>
 
-<p>A Blazor Web App with server interactivity, <code>Linq2Dashboard.Blazor</code>, which brings the <code>Linq2Dashboard</code> engine with it as a dependency, QuickGrid for the rows and <code>HybridCache</code>, which the service in step 3 uses. The commands are the same on Windows, macOS and Linux.</p>
+<p>A Blazor Web App with server interactivity, <code>Linq2Dashboard.Blazor</code>, which brings the <code>Linq2Dashboard</code> engine with it as a dependency, and QuickGrid for the rows. The commands are the same on Windows, macOS and Linux.</p>
 
 <pre><code>@CreateAppExample</code></pre>
 
@@ -21,38 +22,28 @@
 
 <pre><code>@RowsExample</code></pre>
 
-<h2>3. The service</h2>
-
-<p>
-    Add <code>DashboardService.cs</code> at the project root. Real data is not in memory at startup, so the service loads the rows
-    and builds the dashboard the first time a page asks, and caches the result. The dashboard is immutable and thread-safe, so one
-    instance serves every user until the entry expires; the next request after that builds a new one over fresh rows.
-    <code>HybridCache</code> does the hard parts: concurrent first requests share one build, and a failed load is not cached.
-    The <code>DisableDistributedCache</code> flag matters: a dashboard is an in-memory index and cannot be serialised, so it must
-    never be written to a distributed cache, even when the app later gets one.
-</p>
-
-<pre><code>@ServiceExample</code></pre>
-
-<p>Register the service as a singleton in <code>Program.cs</code>, next to the existing service calls.</p>
-
-<pre><code>@ProgramExample</code></pre>
-
-<h2>4. The usings</h2>
+<h2>3. The usings</h2>
 
 <p>Append three lines to <code>Components/_Imports.razor</code> so every page sees the engine, the components and the grid.</p>
 
 <pre><code>@ImportsExample</code></pre>
 
-<h2>5. The page</h2>
+<h2>4. The page</h2>
 
 <p>
-    Replace the contents of <code>Components/Pages/Home.razor</code>. The page asks the service for the dashboard when it
-    initialises and shows a line of text until it arrives. The line after the route is the one people forget:
-    without <code>@@rendermode InteractiveServer</code> the page renders once and clicks do nothing.
+    Replace the contents of <code>Components/Pages/Home.razor</code>. The line after the route is the one people forget: without
+    <code>@@rendermode InteractiveServer</code> the page renders once and clicks do nothing.
 </p>
 
 <pre><code>@PageExample</code></pre>
+
+<p>
+    <code>Items</code> hands the view the rows, and the view builds the dashboard itself. Each component inside defines what it
+    shows: a facet component with <code>For</code> defines that facet, with options such as <code>Buckets</code> and
+    <code>Presets</code> as parameters, and a <code>Metric</code> with <code>Count</code> or <code>Sum</code> defines that metric.
+    What is not shown on the page, here the order of the rows, goes in <code>Build</code>, which takes the same builder as
+    <code>Dashboard.Create</code>.
+</p>
 
 <p>
     The rows are QuickGrid's, Microsoft's grid for Blazor, and could be any other grid. <code>Context="dash"</code> names
@@ -63,31 +54,25 @@
 
 <p>
     The template's <code>App.razor</code> already links <code>Shop.styles.css</code>, the app's scoped-CSS bundle. The components' styles
-    are bundled into it, so there is no stylesheet or script to add.
+    are bundled into it, so there is no stylesheet or script to add, and nothing to register in <code>Program.cs</code>.
 </p>
 
-<h2>6. Run it</h2>
+<h2>5. Run it</h2>
 
 <pre><code>dotnet run</code></pre>
 
 <p>
-    Open the address it prints. The first request waits a second for the stand-in load, then the dashboard appears. Reload the
-    page: it is instant, because the cache hands out the dashboard it already built. Blazor also renders the page twice, once
-    for the first HTML and once when the circuit connects; the second call gets the cached dashboard too.
-</p>
-
-<p>
-    Click <em>SE</em> under Country: the other countries keep their counts, Status and Amount narrow to
+    Open the address it prints. Click <em>SE</em> under Country: the other countries keep their counts, Status and Amount narrow to
     Swedish orders, the tiles and the table follow, and the URL gains <code>?Country=SE</code>. Click the null value to see the order
-    with no country. Remove the chip under the tiles to clear it.
+    with no country. Remove the chip under the tiles to clear it. Reload the page: the selection comes back from the URL.
 </p>
 
 <h2>What to change next</h2>
 
 <ul>
-    <li><strong>Your data.</strong> Replace the body of <code>LoadOrdersAsync</code> with your query, and the selectors with your properties. Anything that yields an <code>IEnumerable&lt;T&gt;</code> works. Build takes about a second per million rows.</li>
-    <li><strong>The lifetime.</strong> Ten minutes is a placeholder. Make it as long as your data stays useful, and call <code>ClearAsync</code> from the code that changes the orders so the next request rebuilds at once. If a rebuild must not make anyone wait, build the next one in the background and swap it in when it is ready: <code>DashboardView</code> follows a new <code>Dashboard</code> parameter and keeps the selections.</li>
-    <li><strong>More facets and metrics.</strong> The <a href="getting-started">getting started</a> page shows the whole builder: labels, top-N with search, date presets, text search, calculated metrics.</li>
-    <li><strong>Layout and styling.</strong> Every component takes <code>Class</code> and every colour and size is a <code>--l2d-*</code> custom property. The <a href="usage">usage</a> guide lists them and the rules that surprise.</li>
-    <li><strong>A larger starting point.</strong> The <a href="https://github.com/joadan/Linq2Dashboard/tree/master/samples/Linq2Dashboard.Sample" target="_blank" rel="noopener">sample project</a> in the repository is the same wiring over 200 000 generated rows, with scopes, a virtualised QuickGrid and a custom formatter.</li>
+    <li><strong>Your data.</strong> Load your rows into a field, for example in <code>OnInitializedAsync</code>, and give the view that field: <code>Items="orders"</code>. The view builds again whenever the list reference changes, so never create the list in the markup. A build costs about 3 ms at 1 000 rows and 10 ms at 10 000, so building on every visit is fine for a user's own rows.</li>
+    <li><strong>A large or shared dataset.</strong> When every user sees the same rows, or there are more than about 100 000, build once and cache: <a href="cached-dashboard">cache a shared dashboard</a> turns this app into that.</li>
+    <li><strong>More facets and metrics.</strong> <code>ValueFacet</code> also takes <code>Top</code>, <code>Searchable</code>, <code>Label</code> and <code>Multiple</code> for a collection; <code>TextFacet</code> takes a <code>Match</code> function; <code>Metric</code> takes <code>Average</code>, <code>Distinct</code> or a <code>Formula</code> over other metrics. The <a href="usage">usage</a> guide lists every parameter and the rules: each facet is defined in one place, and a changed value such as <code>Top</code> rebuilds the dashboard.</li>
+    <li><strong>Layout and styling.</strong> Every component takes <code>Class</code> and every colour and size is a <code>--l2d-*</code> custom property.</li>
+    <li><strong>A larger starting point.</strong> The <a href="https://github.com/joadan/Linq2Dashboard/tree/master/samples/Linq2Dashboard.Sample" target="_blank" rel="noopener">sample project</a> in the repository has a page like this one over one country's orders, and a shared dashboard over 200 000 generated rows with scopes and a custom formatter.</li>
 </ul>
