@@ -44,21 +44,21 @@ public partial class FiveMinutes
 
         <PageTitle>Orders</PageTitle>
 
-        <DashboardView T="Order" Context="dash" Items="Order.All" Build="b => b.OrderByDescending(x => x.OrderDate)"
+        <DashboardView Context="dash" Items="Order.All" Build="b => b.OrderByDescending(x => x.OrderDate)"
                        @bind-Selections="selections" SyncUrl="true">
             <div style="display: grid; grid-template-columns: 16rem 1fr; gap: 1rem;">
                 <aside>
-                    <ValueFacet T="Order" For="x => x.Country" />
-                    <ValueFacet T="Order" For="x => x.Status" />
-                    <RangeFacet T="Order" For="x => x.Amount" Buckets="[100, 500, 1000]" />
-                    <DateFacet  T="Order" For="x => x.OrderDate" Presets="[DatePreset.ThisYear]" />
+                    <ValueFacet For="x => x.Country" />
+                    <ValueFacet For="x => x.Status" />
+                    <RangeFacet For="x => x.Amount" Buckets="[100, 500, 1000]" />
+                    <DateFacet For="x => x.OrderDate" Presets="[DatePreset.ThisYear]" />
                 </aside>
                 <main>
                     <div style="display: flex; gap: 0.5rem;">
-                        <Metric T="Order" Key="orders" Count="true" Name="Orders" />
-                        <Metric T="Order" Key="revenue" Sum="x => x.Amount" Name="Revenue" />
+                        <Metric Key="orders" Count="true" Name="Orders" />
+                        <Metric Key="revenue" Sum="x => x.Amount" Name="Revenue" />
                     </div>
-                    <ActiveSelections T="Order" />
+                    <ActiveSelections />
                     <QuickGrid Items="dash.Items" Pagination="pagination">
                         <PropertyColumn Property="o => o.Id" Sortable="true" />
                         <PropertyColumn Property="o => o.Country" Sortable="true" />

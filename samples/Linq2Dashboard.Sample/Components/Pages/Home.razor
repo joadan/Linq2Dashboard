@@ -33,29 +33,29 @@
     <span class="sample-scope-note">The same dashboard over a subset of the rows, through <code>Dashboard.ScopeTo</code>. Totals follow the scope; selections carry over. <code>ScopeTo(selections)</code> turns the current view into a dashboard of its own.</span>
 </div>
 
-<DashboardView T="SampleOrder" Context="dash" Dashboard="Scoped" SyncUrl="true" @bind-Selections="selections">
+<DashboardView Context="dash" Dashboard="Scoped" SyncUrl="true" @bind-Selections="selections">
     <div class="sample-layout">
         <aside class="sample-facets">
-            <TextFacet T="SampleOrder" Key="@SampleOrderKeys.Search" Placeholder="Customer or channel" />
-            <ValueFacet T="SampleOrder" For="x => x.Country" style="--l2d-facet-max-height: 12rem" />
-            <ValueFacet T="SampleOrder" For="x => x.Status" />
-            <ValueFacet T="SampleOrder" For="x => x.Channel" />
-            <ValueFacet T="SampleOrder" For="x => x.Tags" />
-            <ValueFacet T="SampleOrder" Key="@SampleOrderKeys.Customer" Collapsed="true" />
-            <ValueFacet T="SampleOrder" For="x => x.IsActive" HideZeroCounts="true" />
-            <RangeFacet T="SampleOrder" For="x => x.Amount" ShowSlider="true" />
-            <DateFacet T="SampleOrder" For="x => x.OrderDate" />
+            <TextFacet Key="@SampleOrderKeys.Search" Placeholder="Customer or channel" />
+            <ValueFacet For="x => x.Country" style="--l2d-facet-max-height: 12rem" />
+            <ValueFacet For="x => x.Status" />
+            <ValueFacet For="x => x.Channel" />
+            <ValueFacet For="x => x.Tags" />
+            <ValueFacet Key="@SampleOrderKeys.Customer" Collapsed="true" />
+            <ValueFacet For="x => x.IsActive" HideZeroCounts="true" />
+            <RangeFacet For="x => x.Amount" ShowSlider="true" />
+            <DateFacet For="x => x.OrderDate" />
         </aside>
         <main class="sample-main">
            
-            <ActiveSelections T="SampleOrder" />
+            <ActiveSelections />
 
             <div class="sample-metrics">
-                <Metric T="SampleOrder" Key="@SampleOrderKeys.Orders" />
-                <Metric T="SampleOrder" Key="@SampleOrderKeys.Revenue" />
-                <Metric T="SampleOrder" Key="@SampleOrderKeys.Average" />
-                <Metric T="SampleOrder" Key="@SampleOrderKeys.Customers" />
-                <Metric T="SampleOrder" Key="@SampleOrderKeys.PerCustomer" />
+                <Metric Key="@SampleOrderKeys.Orders" />
+                <Metric Key="@SampleOrderKeys.Revenue" />
+                <Metric Key="@SampleOrderKeys.Average" />
+                <Metric Key="@SampleOrderKeys.Customers" />
+                <Metric Key="@SampleOrderKeys.PerCustomer" />
             </div>
                         
             <div class="sample-grid">
@@ -72,7 +72,7 @@
 
             <details>
                 <summary>Raw state</summary>
-                <StateSummary T="SampleOrder" />
+                <StateSummary />
             </details>
         </main>
     </div>

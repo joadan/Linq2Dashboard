@@ -1,0 +1,7 @@
+<DashboardView Context="dash" Items="Items" Formatter="Formatter">
+    <ValueFacet For="x => x.Status" Top="2" />
+    <TextFacet Key="search" Match="(order, text) => order.Status.Contains(text)" />
+    <TextFacet T="Order" Key="country" Match="MatchesCountry" />
+    <Metric Key="orders" Count="true" />
+    <Metric Key="revenue" Sum="x => x.Amount" />
+</DashboardView>

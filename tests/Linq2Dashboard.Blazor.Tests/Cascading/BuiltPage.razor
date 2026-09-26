@@ -1,0 +1,11 @@
+<DashboardView Context="dash" Dashboard="Dashboard" Formatter="Formatter">
+    <div class="panel">
+        <ValueFacet For="x => x.Country" />
+        <RangeFacet For="x => x.Amount" />
+        <TextFacet Key="search" />
+        <Metric Key="orders" />
+        <ActiveSelections />
+        <StateSummary />
+    </div>
+    <span class="count">@dash.State.Items.Count</span>
+</DashboardView>

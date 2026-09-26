@@ -20,25 +20,25 @@
     </select>
 </label>
 
-<DashboardView T="SampleOrder" Context="dash" Items="Rows" SyncUrl="true">
+<DashboardView Context="dash" Items="Rows" SyncUrl="true">
     <div class="small-layout">
         <aside class="small-facets">
             <TextFacet T="SampleOrder" Key="search" Match="MatchesCustomer" Name="Customer or channel" />
-            <ValueFacet T="SampleOrder" For="x => x.Status" />
-            <ValueFacet T="SampleOrder" For="x => x.Channel" Top="5" Name="Sales channel" />
-            <ValueFacet T="SampleOrder" For="x => x.Tags" Multiple="true" />
-            <ValueFacet T="SampleOrder" For="x => x.IsActive" Name="Active customer" />
-            <RangeFacet T="SampleOrder" For="x => x.Amount" Buckets="AmountCuts" />
-            <DateFacet T="SampleOrder" For="x => x.OrderDate" Granularity="DateGranularity.Quarter" Presets="DatePresets" />
+            <ValueFacet For="x => x.Status" />
+            <ValueFacet For="x => x.Channel" Top="5" Name="Sales channel" />
+            <ValueFacet For="x => x.Tags" Multiple="true" />
+            <ValueFacet For="x => x.IsActive" Name="Active customer" />
+            <RangeFacet For="x => x.Amount" Buckets="AmountCuts" />
+            <DateFacet For="x => x.OrderDate" Granularity="DateGranularity.Quarter" Presets="DatePresets" />
         </aside>
         <main class="small-main">
-            <ActiveSelections T="SampleOrder" />
+            <ActiveSelections />
             <div class="small-metrics">
-                <Metric T="SampleOrder" Key="orders" Count="true" Name="Orders" />
-                <Metric T="SampleOrder" Key="revenue" Sum="x => x.Amount" Name="Revenue" />
-                <Metric T="SampleOrder" Key="average" Average="x => x.Amount" Name="Average order" />
-                <Metric T="SampleOrder" Key="customers" Distinct="x => x.CustomerId" Name="Customers" />
-                <Metric T="SampleOrder" Key="perCustomer" Formula="PerCustomer" Name="Revenue per customer" />
+                <Metric Key="orders" Count="true" Name="Orders" />
+                <Metric Key="revenue" Sum="x => x.Amount" Name="Revenue" />
+                <Metric Key="average" Average="x => x.Amount" Name="Average order" />
+                <Metric Key="customers" Distinct="x => x.CustomerId" Name="Customers" />
+                <Metric Key="perCustomer" Formula="PerCustomer" Name="Revenue per customer" />
             </div>
             <p>@dash.State.MatchingCount.ToString("N0") of @dash.State.TotalCount.ToString("N0") orders.</p>
             <div class="small-grid">

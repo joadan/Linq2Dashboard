@@ -19,14 +19,14 @@ Interactive exploration of a large in-memory collection: facets with counts, met
 2. **Register as a singleton.** The dashboard is immutable and thread-safe; one instance serves every user. Either the dashboard itself, `builder.Services.AddSingleton<Dashboard<Order>>(_ => Dashboard.Create(...))`, or a singleton service that loads the rows and builds it on first request and caches the instance. `Dashboard<T>` is marked `[ImmutableObject(true)]`, so `HybridCache` stores the instance itself; set `HybridCacheEntryFlags.DisableDistributedCache`, since a dashboard cannot be serialised. [Cache a shared dashboard](https://joadan.github.io/Linq2Dashboard/cached-dashboard) on the docs site shows such a service. A small dataset of one user's own rows needs no registration: build it in the page, as in Small datasets below.
 3. **Add both usings** to `_Imports.razor`: `@using Linq2Dashboard` and `@using Linq2Dashboard.Blazor`, plus your grid's (`@using Microsoft.AspNetCore.Components.QuickGrid` below).
 4. **Reference the app's scoped-CSS bundle** in the host page, `YourApp.styles.css`. The components' styles are bundled into it. No other stylesheet or script is needed.
-5. **Wrap the page in `DashboardView`**, inject the dashboard, bind `Selections`, name the context and place components inside. Every component takes `T`, the row type, and names its facet or metric: a facet declared from a member by the same selector, `For="x => x.Country"`, anything else by its `Key` from the builder. The rows go to your grid through `dash.Items`, a queryable, or `dash.State.Items`, a list.
+5. **Wrap the page in `DashboardView`**, inject the dashboard, bind `Selections`, name the context and place components inside. The view infers the row type from the dashboard and hands it to the components inside, so none of them takes `T`; each names its facet or metric: a facet declared from a member by the same selector, `For="x => x.Country"`, anything else by its `Key` from the builder. The rows go to your grid through `dash.Items`, a queryable, or `dash.State.Items`, a list.
 
 ```razor
 @inject Dashboard<Order> Dashboard
 
-<DashboardView T="Order" Context="dash" Dashboard="Dashboard" @bind-Selections="selections">
-    <ValueFacet T="Order" For="x => x.Country" />
-    <Metric T="Order" Key="orders" />
+<DashboardView Context="dash" Dashboard="Dashboard" @bind-Selections="selections">
+    <ValueFacet For="x => x.Country" />
+    <Metric Key="orders" />
     <QuickGrid Items="dash.Items" Virtualize="true">   @* any grid; dash.Items is one IQueryable<T> per state *@
         <PropertyColumn Property="o => o.Id" Sortable="true" />
     </QuickGrid>
@@ -170,9 +170,9 @@ Give `DashboardView` the rows as `Items` and the definition as `Build`, and the 
 
 @if (orders is not null)
 {
-    <DashboardView T="Order" Context="dash" Items="orders" Build="Define" @bind-Selections="selections">
-        <ValueFacet T="Order" For="x => x.Status" />
-        <Metric T="Order" Key="orders" />
+    <DashboardView Context="dash" Items="orders" Build="Define" @bind-Selections="selections">
+        <ValueFacet For="x => x.Status" />
+        <Metric Key="orders" />
     </DashboardView>
 }
 
@@ -208,20 +208,20 @@ Give `DashboardView` the rows as `Items` and the definition as `Build`, and the 
 Under `Items`, the components can define what they show, so `Build` keeps only what is not on the page:
 
 ```razor
-<DashboardView T="Order" Context="dash" Items="orders" SyncUrl="true">
-    <ValueFacet T="Order" For="x => x.Status" />                          @* defines a value facet with defaults *@
-    <ValueFacet T="Order" For="x => x.Channel" Top="5" Name="Channel" />  @* definition parameters set its options *@
-    <ValueFacet T="Order" For="x => x.Tags" Multiple="true" />            @* a collection: a multi-valued facet *@
-    <ValueFacet T="Order" For="x => x.Country"
+<DashboardView Context="dash" Items="orders" SyncUrl="true">
+    <ValueFacet For="x => x.Status" />                          @* defines a value facet with defaults *@
+    <ValueFacet For="x => x.Channel" Top="5" Name="Channel" />  @* definition parameters set its options *@
+    <ValueFacet For="x => x.Tags" Multiple="true" />            @* a collection: a multi-valued facet *@
+    <ValueFacet For="x => x.Country"
                 Define="(ValueFacetBuilder<Order, string> f) => f.Comparer(StringComparer.Ordinal)" />
-    <Metric T="Order" Key="orders" Count="true" />
-    <Metric T="Order" Key="revenue" Sum="x => x.Amount" />
-    <Metric T="Order" Key="perOrder" Formula=@(m => m["revenue"] / m["orders"]) />   @* formulas come after plain metrics, wherever declared *@
+    <Metric Key="orders" Count="true" />
+    <Metric Key="revenue" Sum="x => x.Amount" />
+    <Metric Key="perOrder" Formula=@(m => m["revenue"] / m["orders"]) />   @* formulas come after plain metrics, wherever declared *@
 </DashboardView>
 ```
 
 - A component with `For` defines its facet when neither `Build` nor another component does, and displays it. A `bool` member gives a boolean facet. `Key` and `For` together give a selector without a member name, such as `x => x.OrderDate.Year`, its key.
-- Definition parameters, marked "Items mode only" in their documentation: `Top`, `RankBy`, `Searchable`, `Label` and `Multiple` on `ValueFacet`; `Buckets` or `AutoBuckets` on `RangeFacet`; `TimeZone`, `Granularity` or `AutoGranularity`, `Presets` and `SkipEmptyPresets` on `DateFacet`; `Match` on `TextFacet`, which defines it, since a text facet has no selector: `<TextFacet T="Order" Key="search" Match="Matches" />`. On `Metric` exactly one of `Count`, `Sum`, `Average`, `Min`, `Max`, `Distinct` or `Formula`; every plain metric is defined before any formula, so a formula may read one declared later on the page. `Define` reaches any other builder option. On `ValueFacet` write the builder type in the lambda, `ValueFacetBuilder<Order, string>` or `MultiValueFacetBuilder<Order, string>`, since the component cannot infer it; on the others it is plain, `f => ...`.
+- Definition parameters, marked "Items mode only" in their documentation: `Top`, `RankBy`, `Searchable`, `Label` and `Multiple` on `ValueFacet`; `Buckets` or `AutoBuckets` on `RangeFacet`; `TimeZone`, `Granularity` or `AutoGranularity`, `Presets` and `SkipEmptyPresets` on `DateFacet`; `Match` on `TextFacet`, which defines it, since a text facet has no selector: `<TextFacet T="Order" Key="search" Match="Matches" />`, with `T` because the compiler cannot read the row type from a method group; a lambda needs none. On `Metric` exactly one of `Count`, `Sum`, `Average`, `Min`, `Max`, `Distinct` or `Formula`; every plain metric is defined before any formula, so a formula may read one declared later on the page. `Define` reaches any other builder option. On `ValueFacet` write the builder type in the lambda, `ValueFacetBuilder<Order, string>` or `MultiValueFacetBuilder<Order, string>`, since the component cannot infer it; on the others it is plain, `f => ...`.
 - One place per definition. Definition parameters on a facet that `Build` or another component defines throw; a component with only `For` displays a facet defined elsewhere.
 - Values are watched, code is not. Changing `Top` or `Name` rebuilds; a new `Label` or `Define` lambda does not, so give the view a `RebuildKey` when code reads page state.
 - Nothing is removed. A facet behind an `@if` or in a lazy tab is defined the first time it shows, with one build, and stays defined, so selections for it, from the URL or a bookmark, apply when it appears.
@@ -279,7 +279,7 @@ These are decisions from the concept, not options.
 - Discarding the result of a `Selections` method. Every call returns a new instance. `==` compares two instances by value.
 - Using a `TextFacet` to search a value list. `ValueFacet` with `Searchable()` does that without a scan.
 - Mutating the source collection after `Create`. The dashboard indexed a snapshot.
-- A `Key` that does not match the builder, or a facet component of the wrong kind for its key. Both throw at render time: the first lists the known keys, the second names the kind and the component for it. Prefer `For` for a facet declared from a member; then the compiler catches the typo. Leaving out `T="Order"` is a compile error.
+- A `Key` that does not match the builder, or a facet component of the wrong kind for its key. Both throw at render time: the first lists the known keys, the second names the kind and the component for it. Prefer `For` for a facet declared from a member; then the compiler catches the typo. A component in a file of its own, such as a panel you wrap facets in, is outside the view's markup: give each component there `T="Order"`, or the compiler says the type could not be inferred. Inside a view, another library's component whose type parameter is also named `T` keeps what its own parameters infer, and takes the row type only when nothing does. A method group where a component expects a delegate over the row, `Match="Matches"` on `TextFacet`, `Label` on `ValueFacet` or `StateChanged="OnState"` on the view, does not tell the compiler the row type either: give that component `T`, or pass a lambda.
 - Placing a component outside `DashboardView`. It throws on initialisation.
 - Definition parameters (`Top`, `Buckets`, `Match`, `Define`, ...) under a view given a `Dashboard`. They throw: that dashboard is defined where it is built. Use `Items`, or define the facet in the builder.
 - Hard-coding colours or sizes in a stylesheet that targets the components' markup. Use the `--l2d-*` properties.
