@@ -713,6 +713,21 @@ Every target is met with margin, so per-value bitmaps stay out (§3.4). What the
 - **The no-selection state is unusually cheap** because a full context copies the precomputed totals instead of counting. It is not representative of a click.
 - **A text facet's scan is the one cost the library does not own** (added 2026-09-14). Two case-insensitive `Contains` over a million rows take about 80 ms serially and 20 ms with parallel counting on four cores, so a new text is four to eight times a cold click and the Blazor input debounces. Only a new text pays; the row set is cached by the text afterwards. An application with a heavy predicate or a large dataset should turn parallel counting on, or precompute what the predicate reads.
 
+### Measured, small datasets built per visit
+
+Recorded 2026-09-26, same machine and toolchain, BenchmarkDotNet medium job. The question is whether a dashboard can be built on every page visit, with no cache, when the dataset is small: the same §8 definition (eight facets, a text facet, three metrics, a sort order) over the first rows of the generated dataset. Run with `-- --job medium --filter *SmallCreate*`.
+
+| Rows | `Create` | `Create` + first `Calculate` | Allocated by `Create` | `Calculate`, 3 facets, cold caches |
+|---|---|---|---|---|
+| 0 | 1.7 ms | 1.8 ms | 93 KB | 3 µs |
+| 1 000 | 2.6 ms | 2.6 ms | 432 KB | 78 µs |
+| 10 000 | 9.6 ms | 10.5 ms | 2.7 MB | 0.4 ms |
+| 100 000 | 90 ms | 98 ms | 16 MB | 3.0 ms |
+
+- **The fixed cost is 1.7 ms**: what a definition costs with no rows, mainly compiling the selectors. It dominates only below about 1 000 rows, where the whole build is under 3 ms anyway. The worry that compilation would make small builds expensive does not hold.
+- **Above that the build is linear, at 0.8 to 0.9 µs per row**, a little under the rate at a million rows (1 087 ms, where the sort's n log n weighs more). Up to about 10 000 rows a build per visit is around 10 ms, well inside a page request; at 100 000 it is about 100 ms, noticeable but not by itself a reason to cache.
+- **A click stays proportionally cheap**: a cold three-facet calculation is 3 to 4 % of a build at every size.
+
 ---
 
 ## 9. Blazor package plan
