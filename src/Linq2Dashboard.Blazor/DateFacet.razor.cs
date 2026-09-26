@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
@@ -9,7 +10,10 @@ public partial class DateFacet<T>
     private bool? lastCollapsedParameter;
 
 
-    /// <summary>Overrides the name given in the builder, which is only a default display name, for example with a localised string (concept §7).</summary>
+    /// <summary>
+    /// Overrides the name given in the builder, which is only a default display name, for example with a localised string
+    /// (concept §7). When this component defines the facet under a view with <c>Items</c>, it is the facet's name (design §9).
+    /// </summary>
     [Parameter]
     public string? Name { get; set; }
 
@@ -89,6 +93,45 @@ public partial class DateFacet<T>
 
     /// <summary>The null bar toggles the null rows beside the parts (concept §4.8).</summary>
     private Task ClickNull() => Context.SelectAsync(ResolvedKey, Current.ToggleNull());
+
+    /// <inheritdoc />
+    /// <summary>Items mode only: the time zone that periods and presets are read in, as <c>TimeZone</c> in the builder (concept §5, design §9). Watched by id: a change rebuilds.</summary>
+    [Parameter]
+    public TimeZoneInfo? TimeZone { get; set; }
+
+    /// <summary>Items mode only: one bar per this period, as <c>Granularity</c> in the builder; left out, the period is derived from the data (concept §5, design §9). Watched: a change rebuilds.</summary>
+    [Parameter]
+    public DateGranularity? Granularity { get; set; }
+
+    /// <summary>Items mode only: the finest period that keeps to about this many bars, as <c>AutoGranularity</c> in the builder, the default with 30 (concept §5, design §9). Watched: a change rebuilds.</summary>
+    [Parameter]
+    public int? AutoGranularity { get; set; }
+
+    /// <summary>Items mode only: the relative presets offered above the bars, as <c>Presets</c> in the builder (concept §5, design §9). Watched by content: a change rebuilds.</summary>
+    [Parameter]
+    public DatePreset[]? Presets { get; set; }
+
+    /// <summary>Items mode only: leaves out a preset no row falls in, as <c>SkipEmptyPresets</c> in the builder (concept §5, design §9). Watched: a change rebuilds.</summary>
+    [Parameter]
+    public bool? SkipEmptyPresets { get; set; }
+
+    /// <summary>Items mode only: any other option of the facet's builder. Code, so read when the facet is defined and not watched (design §9).</summary>
+    [Parameter]
+    public Action<DateFacetBuilder<T>>? Define { get; set; }
+
+    /// <inheritdoc />
+    private protected override bool HasDefinitionParameters =>
+        TimeZone is not null || Granularity is not null || AutoGranularity is not null || Presets is not null || SkipEmptyPresets is not null || Define is not null;
+
+    /// <inheritdoc />
+    private protected override MarkupDefinition<T> Definition(string key, LambdaExpression selector)
+    {
+        var parameters = new DateFacetParameters<T>(Name, TimeZone, Granularity, AutoGranularity, Presets, SkipEmptyPresets, Define);
+        return new MarkupDefinition<T>(
+            this, ComponentName, IsMetric: false, key, HasDefinitionParameters,
+            [selector.ReturnType, Name, TimeZone?.Id, Granularity, AutoGranularity, Presets, SkipEmptyPresets],
+            b => MarkupFacets.Date(b, key, selector, parameters));
+    }
 
     /// <inheritdoc />
     protected override void OnParametersSet()

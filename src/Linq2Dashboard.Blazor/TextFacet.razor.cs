@@ -15,11 +15,26 @@ public partial class TextFacet<T>
     private bool collapsed;
     private bool? lastCollapsedParameter;
 
-    /// <summary>The facet key, as defined in the builder. Must be a text facet.</summary>
+    /// <summary>The facet key, as defined in the builder or, with <see cref="Match"/>, as this component defines it. Must be a text facet.</summary>
     [Parameter, EditorRequired]
     public string Key { get; set; } = default!;
 
-    /// <summary>Overrides the name given in the builder, which is only a default display name, for example with a localised string (concept §7).</summary>
+    /// <summary>
+    /// Items mode only: defines the text facet with this function, which says whether a row matches the typed text, as
+    /// <c>TextFacet</c> in the builder (concept §5, design §9). It must be pure and thread-safe. Code, so read when the facet is
+    /// defined and not watched.
+    /// </summary>
+    [Parameter]
+    public Func<T, string, bool>? Match { get; set; }
+
+    /// <summary>Items mode only: any other option of the facet's builder, beside <see cref="Match"/>. Code, so read when the facet is defined (design §9).</summary>
+    [Parameter]
+    public Action<TextFacetBuilder<T>>? Define { get; set; }
+
+    /// <summary>
+    /// Overrides the name given in the builder, which is only a default display name, for example with a localised string
+    /// (concept §7). When this component defines the facet under a view with <c>Items</c>, it is the facet's name (design §9).
+    /// </summary>
     [Parameter]
     public string? Name { get; set; }
 
@@ -66,16 +81,36 @@ public partial class TextFacet<T>
     private TextFacetState Facet => State.Facet(Key) as TextFacetState
         ?? throw WrongKind(State.Facet(Key));
 
+    /// <summary>True while the view has yet to define this facet; the component renders nothing meanwhile (design §9).</summary>
+    private bool Waiting => AwaitingDefinition(isMetric: false, Key);
+
     /// <inheritdoc />
     protected override void OnInitialized()
     {
         base.OnInitialized();
-        text = Facet.Text ?? string.Empty;
+        if (Context.Dashboard.Facets.Any(f => f.Key == Key))
+        {
+            text = Facet.Text ?? string.Empty;
+        }
     }
 
     /// <inheritdoc />
     protected override void OnParametersSet()
     {
+        if (Match is { } match)
+        {
+            string key = Key;
+            string? name = Name;
+            Action<TextFacetBuilder<T>>? define = Define;
+            Register(new MarkupDefinition<T>(
+                this, ComponentName, IsMetric: false, key, Explicit: true, [name],
+                b => MarkupFacets.Text(b, key, match, name, define)));
+        }
+        else if (Define is not null)
+        {
+            throw new InvalidOperationException($"TextFacet '{Key}' has Define but no Match: a text facet is defined by its match function, so give it Match.");
+        }
+
         if (Collapsed != lastCollapsedParameter)
         {
             lastCollapsedParameter = Collapsed;
@@ -86,6 +121,11 @@ public partial class TextFacet<T>
     /// <summary>Follows the applied text when it changed elsewhere (a chip removed, the host set new selections), unless the user is mid-typing.</summary>
     protected override void OnDashboardStateChanged()
     {
+        if (Waiting)
+        {
+            return;
+        }
+
         string applied = Facet.Text ?? string.Empty;
         if (pending is null && new TextSelection(text).Text != applied)
         {

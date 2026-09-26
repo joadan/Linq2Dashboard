@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
@@ -9,7 +10,10 @@ public partial class RangeFacet<T>
     private bool? lastCollapsedParameter;
 
 
-    /// <summary>Overrides the name given in the builder, which is only a default display name, for example with a localised string (concept §7).</summary>
+    /// <summary>
+    /// Overrides the name given in the builder, which is only a default display name, for example with a localised string
+    /// (concept §7). When this component defines the facet under a view with <c>Items</c>, it is the facet's name (design §9).
+    /// </summary>
     [Parameter]
     public string? Name { get; set; }
 
@@ -114,6 +118,34 @@ public partial class RangeFacet<T>
 
     /// <summary>The null bar toggles the null rows beside the intervals (concept §4.8).</summary>
     private Task ClickNull() => Context.SelectAsync(ResolvedKey, Current.ToggleNull());
+
+    /// <summary>
+    /// Items mode only: defines the facet with these cut points, strictly ascending, as <c>Buckets</c> in the builder: "below the
+    /// first", one bucket between each pair and "the last and above" (concept §5, design §9). Watched by content: a change rebuilds.
+    /// </summary>
+    [Parameter]
+    public double[]? Buckets { get; set; }
+
+    /// <summary>Items mode only: about this many buckets on round edges derived from the data, as <c>AutoBuckets</c> in the builder, the default with 10 (concept §5, design §9). Watched: a change rebuilds.</summary>
+    [Parameter]
+    public int? AutoBuckets { get; set; }
+
+    /// <summary>Items mode only: any other option of the facet's builder. Code, so read when the facet is defined and not watched (design §9).</summary>
+    [Parameter]
+    public Action<RangeFacetBuilder<T>>? Define { get; set; }
+
+    /// <inheritdoc />
+    private protected override bool HasDefinitionParameters => Buckets is not null || AutoBuckets is not null || Define is not null;
+
+    /// <inheritdoc />
+    private protected override MarkupDefinition<T> Definition(string key, LambdaExpression selector)
+    {
+        var parameters = new RangeFacetParameters<T>(Name, Buckets, AutoBuckets, Define);
+        return new MarkupDefinition<T>(
+            this, ComponentName, IsMetric: false, key, HasDefinitionParameters,
+            [selector.ReturnType, Name, Buckets, AutoBuckets],
+            b => MarkupFacets.Range(b, key, selector, parameters));
+    }
 
     /// <inheritdoc />
     protected override void OnParametersSet()

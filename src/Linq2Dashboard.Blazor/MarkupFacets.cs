@@ -138,6 +138,97 @@ internal static class MarkupFacets
         ApplyDefine(options.Define, facet, key);
     }
 
+    /// <summary>Defines a range facet from a <see cref="RangeFacet{T}"/>'s parameters; the core checks that the selector is numeric.</summary>
+    public static void Range<T>(DashboardBuilder<T> builder, string key, LambdaExpression selector, RangeFacetParameters<T> options)
+    {
+        if (options.Buckets is not null && options.AutoBuckets is not null)
+        {
+            throw new InvalidOperationException($"RangeFacet '{key}' takes Buckets or AutoBuckets, not both.");
+        }
+
+        Invoke(nameof(RangeOf), [typeof(T), selector.ReturnType], builder, key, selector, options);
+    }
+
+    private static void RangeOf<T, TProp>(DashboardBuilder<T> builder, string key, LambdaExpression selector, RangeFacetParameters<T> options)
+    {
+        RangeFacetBuilder<T> facet = builder.RangeFacet(key, (Expression<Func<T, TProp>>)selector);
+        if (options.Name is not null)
+        {
+            facet.Name(options.Name);
+        }
+
+        if (options.Buckets is not null)
+        {
+            facet.Buckets(options.Buckets);
+        }
+
+        if (options.AutoBuckets is int count)
+        {
+            facet.AutoBuckets(count);
+        }
+
+        options.Define?.Invoke(facet);
+    }
+
+    /// <summary>Defines a date facet from a <see cref="DateFacet{T}"/>'s parameters; the core checks that the selector is a date type.</summary>
+    public static void Date<T>(DashboardBuilder<T> builder, string key, LambdaExpression selector, DateFacetParameters<T> options)
+    {
+        if (options.Granularity is not null && options.AutoGranularity is not null)
+        {
+            throw new InvalidOperationException($"DateFacet '{key}' takes Granularity or AutoGranularity, not both.");
+        }
+
+        Invoke(nameof(DateOf), [typeof(T), selector.ReturnType], builder, key, selector, options);
+    }
+
+    private static void DateOf<T, TDate>(DashboardBuilder<T> builder, string key, LambdaExpression selector, DateFacetParameters<T> options)
+    {
+        DateFacetBuilder<T> facet = builder.DateFacet(key, (Expression<Func<T, TDate>>)selector);
+        if (options.Name is not null)
+        {
+            facet.Name(options.Name);
+        }
+
+        if (options.TimeZone is not null)
+        {
+            facet.TimeZone(options.TimeZone);
+        }
+
+        if (options.Granularity is DateGranularity granularity)
+        {
+            facet.Granularity(granularity);
+        }
+
+        if (options.AutoGranularity is int maxPeriods)
+        {
+            facet.AutoGranularity(maxPeriods);
+        }
+
+        if (options.Presets is not null)
+        {
+            facet.Presets(options.Presets);
+        }
+
+        if (options.SkipEmptyPresets is bool skip)
+        {
+            facet.SkipEmptyPresets(skip);
+        }
+
+        options.Define?.Invoke(facet);
+    }
+
+    /// <summary>Defines a text facet from a <see cref="TextFacet{T}"/>'s parameters.</summary>
+    public static void Text<T>(DashboardBuilder<T> builder, string key, Func<T, string, bool> match, string? name, Action<TextFacetBuilder<T>>? define)
+    {
+        TextFacetBuilder<T> facet = builder.TextFacet(key, match);
+        if (name is not null)
+        {
+            facet.Name(name);
+        }
+
+        define?.Invoke(facet);
+    }
+
     /// <summary>
     /// Runs a <c>Define</c> delegate on the typed facet builder. The component cannot type the parameter, since the value
     /// type comes from the selector, so the delegate names the builder type itself and a mismatch fails when the facet is defined.
@@ -193,3 +284,16 @@ internal static class MarkupFacets
 
 /// <summary>The definition parameters of a <see cref="ValueFacet{T}"/>, read when the facet is defined (design §9).</summary>
 internal sealed record ValueFacetParameters<T>(string? Name, int? Top, RankMode? RankBy, bool? Searchable, Func<T, string?>? Label, bool Multiple, Delegate? Define);
+
+/// <summary>The definition parameters of a <see cref="RangeFacet{T}"/>, read when the facet is defined (design §9).</summary>
+internal sealed record RangeFacetParameters<T>(string? Name, double[]? Buckets, int? AutoBuckets, Action<RangeFacetBuilder<T>>? Define);
+
+/// <summary>The definition parameters of a <see cref="DateFacet{T}"/>, read when the facet is defined (design §9).</summary>
+internal sealed record DateFacetParameters<T>(
+    string? Name,
+    TimeZoneInfo? TimeZone,
+    DateGranularity? Granularity,
+    int? AutoGranularity,
+    DatePreset[]? Presets,
+    bool? SkipEmptyPresets,
+    Action<DateFacetBuilder<T>>? Define);
