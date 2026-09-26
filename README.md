@@ -81,35 +81,31 @@ Selections fromUrl = dashboard.Serializer.FromQueryString(query);
 
 ## Blazor
 
-`Linq2Dashboard.Blazor` renders a dashboard and turns clicks into selections. It never counts anything itself. Three things wire it into an app:
-
-```csharp
-// Program.cs: one dashboard for the whole application, built once at startup
-builder.Services.AddSingleton<Dashboard<Order>>(_ => Dashboard.Create(orders, b => { /* as above */ }));
-```
+`Linq2Dashboard.Blazor` renders a dashboard and turns clicks into selections. It never counts anything itself. Add the two namespaces to `_Imports.razor`; the engine's types and the components live in different ones:
 
 ```razor
-@* _Imports.razor: the engine's types and the components live in different namespaces *@
 @using Linq2Dashboard
 @using Linq2Dashboard.Blazor
 ```
 
-The components are styled with scoped CSS, which Blazor bundles into the app's own stylesheet. The host page needs the usual `<link rel="stylesheet" href="YourApp.styles.css" />` (or `@Assets["YourApp.styles.css"]`); no other stylesheet or script is required. Then, on a page:
+The components are styled with scoped CSS, which Blazor bundles into the app's own stylesheet. The host page needs the usual `<link rel="stylesheet" href="YourApp.styles.css" />` (or `@Assets["YourApp.styles.css"]`); no other stylesheet or script is required.
+
+The quickest start is to give the view the rows and define the dashboard in the page itself. Each facet and metric is defined where it is shown:
 
 ```razor
-@inject Dashboard<Order> Dashboard
+@inject OrderService Orders
 
-<DashboardView T="Order" Context="dash" Dashboard="Dashboard" @bind-Selections="selections">
+<DashboardView T="Order" Context="dash" Items="orders" @bind-Selections="selections" SyncUrl="true">
     <aside>
-        <TextFacet  T="Order" Key="search" />                @* free text, applied after a pause *@
+        <TextFacet  T="Order" Key="search" Match="Matches" />                  @* free text, applied after a pause *@
         <ValueFacet T="Order" For="x => x.Country" />
-        <ValueFacet T="Order" Key="Customer" />              @* searchable, with an "Other" row *@
-        <RangeFacet T="Order" For="x => x.Amount" />         @* histogram; bars keep their shape *@
-        <DateFacet  T="Order" For="x => x.OrderDate" />      @* presets and periods *@
+        <ValueFacet T="Order" For="x => x.Customer" Top="20" Searchable="true" /> @* a search box and an "Other" row *@
+        <RangeFacet T="Order" For="x => x.Amount" Buckets="[100, 500, 1000]" />  @* histogram; bars keep their shape *@
+        <DateFacet  T="Order" For="x => x.OrderDate" Presets="[DatePreset.Last30Days, DatePreset.ThisYear]" />
     </aside>
     <main>
-        <Metric T="Order" Key="orders" />
-        <Metric T="Order" Key="revenue" />
+        <Metric T="Order" Key="orders" Count="true" />
+        <Metric T="Order" Key="revenue" Sum="x => x.Amount" />
         <ActiveSelections T="Order" />
         <QuickGrid Items="dash.Items" Virtualize="true">   @* your grid; dash.Items is one IQueryable<T> per state *@
             <PropertyColumn Property="o => o.Id" Sortable="true" />
@@ -120,11 +116,37 @@ The components are styled with scoped CSS, which Blazor bundles into the app's o
 </DashboardView>
 
 @code {
+    private IReadOnlyList<Order> orders = [];
     private Selections selections = Selections.Empty;
+
+    // The view builds its dashboard when this list changes, so load it into a field, never in the markup.
+    protected override async Task OnInitializedAsync() => orders = await Orders.LoadAsync();
+
+    private static bool Matches(Order order, string text) => order.Customer.Contains(text, StringComparison.OrdinalIgnoreCase);
 }
 ```
 
-A facet declared from a member is named by the same selector, `For="x => x.Country"`, so the compiler checks it; `Key` is the string key given in the builder, for explicitly keyed facets and for every metric. `T` is the row type on every component.
+A facet component with `For` defines that facet, and parameters such as `Top`, `Buckets` and `Presets` set its options; a `Metric` with `Count`, `Sum`, `Average`, `Min`, `Max`, `Distinct` or `Formula` defines that metric. What the page does not show, such as a fixed filter or the row order, goes in `Build`, which takes the same builder as `Dashboard.Create`. The view builds on every visit, which costs about 10 ms at 10 000 rows: right for a user's own rows.
+
+For a large dataset every user shares, build once with the builder above, register the dashboard, and give it to the view. The components then only display what the builder defined, named by the same selector or key:
+
+```csharp
+// Program.cs: one dashboard for the whole application, built once
+builder.Services.AddSingleton<Dashboard<Order>>(_ => Dashboard.Create(orders, b => { /* as above */ }));
+```
+
+```razor
+@inject Dashboard<Order> Dashboard
+
+<DashboardView T="Order" Context="dash" Dashboard="Dashboard" @bind-Selections="selections">
+    <ValueFacet T="Order" For="x => x.Country" />
+    <ValueFacet T="Order" For="x => x.Customer" />
+    <Metric T="Order" Key="revenue" />
+    @* ... the same layout as above, without the definition parameters *@
+</DashboardView>
+```
+
+A facet declared from a member is named by the same selector, `For="x => x.Country"`, so the compiler checks it; `Key` is the string key, for explicitly keyed facets and for every metric. `T` is the row type on every component. A view takes either `Items` or `Dashboard`, and definition parameters under a `Dashboard` throw, since that dashboard is defined where it is built.
 
 - **One formatter.** An `IDashboardFormatter` cascades from `DashboardView`; culture, number formats, the null label and preset names all come from it. Pass your own for other wording.
 - **Two callbacks.** `SelectionsChanged` gives the host every click for bookmarking; `StateChanged` gives it the new `DashboardState<T>` after every calculation, the initial one included, for rendering a chart or summary of its own.
@@ -136,7 +158,7 @@ A facet declared from a member is named by the same selector, `For="x => x.Count
 - **Styling.** Plain CSS. Every `--l2d-*` custom property is declared on `.l2d-dashboard`; set them on that element or any ancestor to restyle without touching markup. Dark-scheme neutrals are built in.
 - **Hosting.** Blazor Server is the primary target. WebAssembly works unchanged; the browser's memory sets the dataset size.
 
-The sample in `samples/` runs the components over 200 000 generated rows.
+The sample in `samples/` runs the components over 200 000 generated rows, and has a page that defines its dashboard in markup over one country's orders. The [five-minute walkthrough](https://joadan.github.io/Linq2Dashboard/five-minutes) builds a markup-defined dashboard in a fresh app.
 
 ## How it behaves
 
