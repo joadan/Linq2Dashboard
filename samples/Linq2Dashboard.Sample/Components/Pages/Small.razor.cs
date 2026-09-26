@@ -23,6 +23,9 @@ public partial class Small
 
     private SampleOrder[] Rows => RowsByCountry[country];
 
+    /// <summary>A calculated metric over two plain ones, which the view defines first wherever they are declared.</summary>
+    private static double? PerCustomer(MetricValues m) => m["revenue"] / m["customers"];
+
     /// <summary>The text facet's match function: a customer name or a channel containing the text.</summary>
     private static bool MatchesCustomer(SampleOrder order, string text) =>
         (order.Customer?.Contains(text, StringComparison.OrdinalIgnoreCase) ?? false) || order.Channel.Contains(text, StringComparison.OrdinalIgnoreCase);

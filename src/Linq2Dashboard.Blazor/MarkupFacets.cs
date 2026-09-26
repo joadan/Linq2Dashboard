@@ -297,3 +297,72 @@ internal sealed record DateFacetParameters<T>(
     DatePreset[]? Presets,
     bool? SkipEmptyPresets,
     Action<DateFacetBuilder<T>>? Define);
+
+/// <summary>Turns a <see cref="Metric{T}"/>'s parameters into a typed builder call (design §9).</summary>
+internal static class MarkupMetrics
+{
+    /// <summary>Defines the metric; exactly one aggregation is set, which the component has checked.</summary>
+    public static void Define<T>(DashboardBuilder<T> builder, string key, MetricParameters<T> options)
+    {
+        MetricBuilder<T> metric = options switch
+        {
+            { Count: true } => builder.CountMetric(key),
+            { Formula: { } formula } => builder.CalculatedMetric(key, formula),
+            { Sum: { } sum } => Aggregate(nameof(Sum), builder, key, sum),
+            { Average: { } average } => Aggregate(nameof(Average), builder, key, average),
+            { Min: { } min } => Aggregate(nameof(Min), builder, key, min),
+            { Max: { } max } => Aggregate(nameof(Max), builder, key, max),
+            { Distinct: { } distinct } => Aggregate(nameof(DistinctOf), builder, key, distinct),
+            _ => throw new InvalidOperationException($"Metric '{key}' has no aggregation."),
+        };
+
+        if (options.Name is not null)
+        {
+            metric.Name(options.Name);
+        }
+
+        options.Define?.Invoke(metric);
+    }
+
+    private static MetricBuilder<T> Aggregate<T>(string method, DashboardBuilder<T> builder, string key, LambdaExpression selector)
+    {
+        MethodInfo generic = typeof(MarkupMetrics).GetMethod(method, BindingFlags.NonPublic | BindingFlags.Static)!
+            .MakeGenericMethod(typeof(T), selector.ReturnType);
+        try
+        {
+            return (MetricBuilder<T>)generic.Invoke(null, [builder, key, selector])!;
+        }
+        catch (TargetInvocationException e) when (e.InnerException is not null)
+        {
+            ExceptionDispatchInfo.Capture(e.InnerException).Throw();
+            throw;
+        }
+    }
+
+    private static MetricBuilder<T> Sum<T, TProp>(DashboardBuilder<T> builder, string key, LambdaExpression selector) =>
+        builder.SumMetric(key, (Expression<Func<T, TProp>>)selector);
+
+    private static MetricBuilder<T> Average<T, TProp>(DashboardBuilder<T> builder, string key, LambdaExpression selector) =>
+        builder.AverageMetric(key, (Expression<Func<T, TProp>>)selector);
+
+    private static MetricBuilder<T> Min<T, TProp>(DashboardBuilder<T> builder, string key, LambdaExpression selector) =>
+        builder.MinMetric(key, (Expression<Func<T, TProp>>)selector);
+
+    private static MetricBuilder<T> Max<T, TProp>(DashboardBuilder<T> builder, string key, LambdaExpression selector) =>
+        builder.MaxMetric(key, (Expression<Func<T, TProp>>)selector);
+
+    private static MetricBuilder<T> DistinctOf<T, TProp>(DashboardBuilder<T> builder, string key, LambdaExpression selector) =>
+        builder.DistinctMetric(key, (Expression<Func<T, TProp>>)selector);
+}
+
+/// <summary>The definition parameters of a <see cref="Metric{T}"/>, with the selectors unboxed, read when the metric is defined (design §9).</summary>
+internal sealed record MetricParameters<T>(
+    string? Name,
+    bool Count,
+    LambdaExpression? Sum,
+    LambdaExpression? Average,
+    LambdaExpression? Min,
+    LambdaExpression? Max,
+    LambdaExpression? Distinct,
+    Func<MetricValues, double?>? Formula,
+    Action<MetricBuilder<T>>? Define);

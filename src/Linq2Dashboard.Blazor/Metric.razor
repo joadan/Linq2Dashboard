@@ -1,6 +1,11 @@
 @typeparam T
 @inherits DashboardComponentBase<T>
 
+@if (Waiting)
+{
+    return;
+}
+
 @if (MetricTemplate is not null)
 {
     @MetricTemplate(Content)

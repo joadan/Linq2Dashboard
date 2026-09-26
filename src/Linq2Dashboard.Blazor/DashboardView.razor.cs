@@ -292,7 +292,17 @@ public partial class DashboardView<T> : IDisposable, IMarkupRegistry<T>
                 .Concat(definitions.Where(d => d.IsMetric && !d.IsCalculated))
                 .Concat(definitions.Where(d => d.IsCalculated)))
             {
-                definition.Apply(b);
+                try
+                {
+                    definition.Apply(b);
+                }
+                catch (ArgumentException e) when (definition.IsCalculated)
+                {
+                    throw new InvalidOperationException(
+                        $"{e.Message} In markup every plain metric is defined before any formula, so the missing metric is defined " +
+                        "nowhere yet, or it is a formula placed after this one, or it is on a part of the page that has not rendered, " +
+                        "such as a lazy tab; define it in Build or next to this one.", e);
+                }
             }
         });
         settledVersion = definitionVersion;
