@@ -61,18 +61,18 @@ public partial class GettingStarted
     private const string BlazorExample = """
         @inject Dashboard<Order> Dashboard
 
-        <DashboardView T="Order" Context="dash" Dashboard="Dashboard" @bind-Selections="selections">
+        <DashboardView Context="dash" Dashboard="Dashboard" @bind-Selections="selections">
             <aside>
-                <TextFacet  T="Order" Key="search" />
-                <ValueFacet T="Order" For="x => x.Country" />
-                <ValueFacet T="Order" Key="Customer" />
-                <RangeFacet T="Order" For="x => x.Amount" ShowSlider="true" />
-                <DateFacet  T="Order" For="x => x.OrderDate" />
+                <TextFacet Key="search" />
+                <ValueFacet For="x => x.Country" />
+                <ValueFacet Key="Customer" />
+                <RangeFacet For="x => x.Amount" ShowSlider="true" />
+                <DateFacet For="x => x.OrderDate" />
             </aside>
             <main>
-                <Metric T="Order" Key="orders" />
-                <Metric T="Order" Key="revenue" />
-                <ActiveSelections T="Order" />
+                <Metric Key="orders" />
+                <Metric Key="revenue" />
+                <ActiveSelections />
                 <QuickGrid Items="dash.Items" Virtualize="true">
                     <PropertyColumn Property="o => o.Id" Sortable="true" />
                     <PropertyColumn Property="o => o.Country" Sortable="true" />

@@ -19,25 +19,25 @@
     page, so the facets here are fixed open. <a href="/">Interactive version</a>
 </p>
 
-<DashboardView T="SampleOrder" Context="dash" Dashboard="Dashboard" SyncUrl="true" ResetOnChange="page">
+<DashboardView Context="dash" Dashboard="Dashboard" SyncUrl="true" ResetOnChange="page">
     <div class="static-layout">
         <aside class="static-facets">
-            <ValueFacet T="SampleOrder" For="x => x.Country" Collapsible="false" style="--l2d-facet-max-height: 12rem" />
-            <ValueFacet T="SampleOrder" For="x => x.Status" Collapsible="false" />
-            <ValueFacet T="SampleOrder" For="x => x.Channel" Collapsible="false" />
-            <ValueFacet T="SampleOrder" For="x => x.Tags" Collapsible="false" />
-            <ValueFacet T="SampleOrder" For="x => x.IsActive" Collapsible="false" HideZeroCounts="true" />
-            <RangeFacet T="SampleOrder" For="x => x.Amount" Collapsible="false" />
-            <DateFacet T="SampleOrder" For="x => x.OrderDate" Collapsible="false" />
+            <ValueFacet For="x => x.Country" Collapsible="false" style="--l2d-facet-max-height: 12rem" />
+            <ValueFacet For="x => x.Status" Collapsible="false" />
+            <ValueFacet For="x => x.Channel" Collapsible="false" />
+            <ValueFacet For="x => x.Tags" Collapsible="false" />
+            <ValueFacet For="x => x.IsActive" Collapsible="false" HideZeroCounts="true" />
+            <RangeFacet For="x => x.Amount" Collapsible="false" />
+            <DateFacet For="x => x.OrderDate" Collapsible="false" />
         </aside>
         <main class="static-main">
-            <ActiveSelections T="SampleOrder" />
+            <ActiveSelections />
 
             <div class="static-metrics">
-                <Metric T="SampleOrder" Key="@SampleOrderKeys.Orders" />
-                <Metric T="SampleOrder" Key="@SampleOrderKeys.Revenue" />
-                <Metric T="SampleOrder" Key="@SampleOrderKeys.Average" />
-                <Metric T="SampleOrder" Key="@SampleOrderKeys.Customers" />
+                <Metric Key="@SampleOrderKeys.Orders" />
+                <Metric Key="@SampleOrderKeys.Revenue" />
+                <Metric Key="@SampleOrderKeys.Average" />
+                <Metric Key="@SampleOrderKeys.Customers" />
             </div>
 
             @{

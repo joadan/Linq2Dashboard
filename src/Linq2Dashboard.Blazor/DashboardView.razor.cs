@@ -3,7 +3,8 @@ using Microsoft.AspNetCore.Components.Routing;
 
 namespace Linq2Dashboard.Blazor;
 
-/// <summary>The root of a dashboard UI (design §9). Owns the selections and the state, cascades a <see cref="DashboardContext{T}"/> to every component inside, and counts nothing itself.</summary>
+/// <summary>The root of a dashboard UI (design §9). Owns the selections and the state, cascades a <see cref="DashboardContext{T}"/> to every component inside, and counts nothing itself. Its type parameter cascades too, so components written inside it need no <c>T</c>.</summary>
+[CascadingTypeParameter(nameof(T))]
 public partial class DashboardView<T> : IDisposable, IMarkupRegistry<T>
 {
     private DashboardContext<T>? context;

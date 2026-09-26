@@ -73,20 +73,20 @@ public partial class CachedDashboard
         }
         else
         {
-            <DashboardView T="Order" Context="dash" Dashboard="dashboard" @bind-Selections="selections" SyncUrl="true">
+            <DashboardView Context="dash" Dashboard="dashboard" @bind-Selections="selections" SyncUrl="true">
                 <div style="display: grid; grid-template-columns: 16rem 1fr; gap: 1rem;">
                     <aside>
-                        <ValueFacet T="Order" For="x => x.Country" />
-                        <ValueFacet T="Order" For="x => x.Status" />
-                        <RangeFacet T="Order" For="x => x.Amount" />
-                        <DateFacet  T="Order" For="x => x.OrderDate" />
+                        <ValueFacet For="x => x.Country" />
+                        <ValueFacet For="x => x.Status" />
+                        <RangeFacet For="x => x.Amount" />
+                        <DateFacet For="x => x.OrderDate" />
                     </aside>
                     <main>
                         <div style="display: flex; gap: 0.5rem;">
-                            <Metric T="Order" Key="orders" />
-                            <Metric T="Order" Key="revenue" />
+                            <Metric Key="orders" />
+                            <Metric Key="revenue" />
                         </div>
-                        <ActiveSelections T="Order" />
+                        <ActiveSelections />
                         <QuickGrid Items="dash.Items" Pagination="pagination">
                             <PropertyColumn Property="o => o.Id" Sortable="true" />
                             <PropertyColumn Property="o => o.Country" Sortable="true" />

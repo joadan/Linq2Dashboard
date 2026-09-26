@@ -95,18 +95,18 @@ The quickest start is to give the view the rows and define the dashboard in the 
 ```razor
 @inject OrderService Orders
 
-<DashboardView T="Order" Context="dash" Items="orders" @bind-Selections="selections" SyncUrl="true">
+<DashboardView Context="dash" Items="orders" @bind-Selections="selections" SyncUrl="true">
     <aside>
-        <TextFacet  T="Order" Key="search" Match="Matches" />                  @* free text, applied after a pause *@
-        <ValueFacet T="Order" For="x => x.Country" />
-        <ValueFacet T="Order" For="x => x.Customer" Top="20" Searchable="true" /> @* a search box and an "Other" row *@
-        <RangeFacet T="Order" For="x => x.Amount" Buckets="[100, 500, 1000]" />  @* histogram; bars keep their shape *@
-        <DateFacet  T="Order" For="x => x.OrderDate" Presets="[DatePreset.Last30Days, DatePreset.ThisYear]" />
+        <TextFacet Key="search" Match="(o, text) => o.Customer.Contains(text, StringComparison.OrdinalIgnoreCase)" /> @* free text, applied after a pause *@
+        <ValueFacet For="x => x.Country" />
+        <ValueFacet For="x => x.Customer" Top="20" Searchable="true" /> @* a search box and an "Other" row *@
+        <RangeFacet For="x => x.Amount" Buckets="[100, 500, 1000]" />  @* histogram; bars keep their shape *@
+        <DateFacet For="x => x.OrderDate" Presets="[DatePreset.Last30Days, DatePreset.ThisYear]" />
     </aside>
     <main>
-        <Metric T="Order" Key="orders" Count="true" />
-        <Metric T="Order" Key="revenue" Sum="x => x.Amount" />
-        <ActiveSelections T="Order" />
+        <Metric Key="orders" Count="true" />
+        <Metric Key="revenue" Sum="x => x.Amount" />
+        <ActiveSelections />
         <QuickGrid Items="dash.Items" Virtualize="true">   @* your grid; dash.Items is one IQueryable<T> per state *@
             <PropertyColumn Property="o => o.Id" Sortable="true" />
             <PropertyColumn Property="o => o.Country" Sortable="true" />
@@ -121,8 +121,6 @@ The quickest start is to give the view the rows and define the dashboard in the 
 
     // The view builds its dashboard when this list changes, so load it into a field, never in the markup.
     protected override async Task OnInitializedAsync() => orders = await Orders.LoadAsync();
-
-    private static bool Matches(Order order, string text) => order.Customer.Contains(text, StringComparison.OrdinalIgnoreCase);
 }
 ```
 
@@ -138,15 +136,15 @@ builder.Services.AddSingleton<Dashboard<Order>>(_ => Dashboard.Create(orders, b 
 ```razor
 @inject Dashboard<Order> Dashboard
 
-<DashboardView T="Order" Context="dash" Dashboard="Dashboard" @bind-Selections="selections">
-    <ValueFacet T="Order" For="x => x.Country" />
-    <ValueFacet T="Order" For="x => x.Customer" />
-    <Metric T="Order" Key="revenue" />
+<DashboardView Context="dash" Dashboard="Dashboard" @bind-Selections="selections">
+    <ValueFacet For="x => x.Country" />
+    <ValueFacet For="x => x.Customer" />
+    <Metric Key="revenue" />
     @* ... the same layout as above, without the definition parameters *@
 </DashboardView>
 ```
 
-A facet declared from a member is named by the same selector, `For="x => x.Country"`, so the compiler checks it; `Key` is the string key, for explicitly keyed facets and for every metric. `T` is the row type on every component. A view takes either `Items` or `Dashboard`, and definition parameters under a `Dashboard` throw, since that dashboard is defined where it is built.
+A facet declared from a member is named by the same selector, `For="x => x.Country"`, so the compiler checks it; `Key` is the string key, for explicitly keyed facets and for every metric. The view infers the row type from `Items` or `Dashboard` and hands it to the components inside, so none of them takes `T` unless it sits in a component of your own. A view takes either `Items` or `Dashboard`, and definition parameters under a `Dashboard` throw, since that dashboard is defined where it is built.
 
 - **One formatter.** An `IDashboardFormatter` cascades from `DashboardView`; culture, number formats, the null label and preset names all come from it. Pass your own for other wording.
 - **Two callbacks.** `SelectionsChanged` gives the host every click for bookmarking; `StateChanged` gives it the new `DashboardState<T>` after every calculation, the initial one included, for rendering a chart or summary of its own.
