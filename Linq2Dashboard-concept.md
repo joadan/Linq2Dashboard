@@ -323,6 +323,15 @@ Who builds the dashboard is the host's choice, one of two per view (added 2026-0
 
 A view takes exactly one of the two. Asking the view to build a dashboard the host already built is an error, not a merge.
 
+When the view builds, the components inside it can define what they show (added 2026-09-26), so a small dashboard is written where it is laid out:
+
+- A facet component with a selector defines that facet when nothing else does, and its definition parameters (top N, buckets, granularity and so on) set the facet's options. The same component then displays it.
+- Every facet and metric is defined in one place: the view's own definition or one component. A second definition of the same key is an error; a component that only names the selector displays the facet defined elsewhere.
+- Nothing defined in markup is removed. A component that leaves the page leaves its facet defined, so its selection, a bookmark and the URL stay valid, and showing it again costs nothing.
+- Definition values are watched: a changed top N rebuilds the dashboard. Code, such as a label function, is read when the facet is defined.
+- Selections that name a facet the markup has yet to define, from the URL or the host, wait for it instead of being dropped.
+- Definition parameters on a component under a host-built dashboard are an error, since that dashboard is defined where it is built.
+
 ### The contract between them
 
 The UI consumes a **UI-friendly state** and produces **selections**. It never sees selectors, expressions, or indexes.
@@ -436,3 +445,4 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **"Other" is measured against the facet's own counting context.** Not against the matching rows. See §6.
 - **The matching rows are a list, not pages.** The state exposes them counted and indexable in the application-defined order. Paging, virtualisation and display sorting belong to the grid that shows them; the core never tries to be that grid and offers no page API, and the Blazor package renders no rows either: it hands them to the application's grid. Decided 2026-09-19. See §3, §4.4, §7.
 - **A view either renders a dashboard the host built or builds its own from rows.** The host building once and sharing is the way for large or shared data; the view building over the user's own rows on every visit is the way for small data, measured at about 10 ms for 10 000 rows (design §8). One or the other per view, never both; the view rebuilds when the rows change and carries the selections over as a bookmark would. Decided 2026-09-26. See §7.
+- **Under a view that builds its own dashboard, the facet and metric components define what they show.** The same components as for display, not separate definition components; one place per definition; nothing removed; values watched, code read once; waiting selections. Not under a host-built dashboard. Decided 2026-09-26. See §7.

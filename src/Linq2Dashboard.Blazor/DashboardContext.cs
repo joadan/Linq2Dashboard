@@ -83,6 +83,12 @@ public sealed class DashboardContext<T>
         this.hrefFor = hrefFor;
     }
 
+    /// <summary>The view, as the registry of facets and metrics defined in markup (design §9). Set by the view before any component renders.</summary>
+    internal IMarkupRegistry<T>? Registry { get; set; }
+
+    /// <summary>Tells the components to render again without a new state: a key they waited for turned out to be undefined.</summary>
+    internal void NotifyComponents() => StateChanged?.Invoke();
+
     /// <summary>Wall time of the most recent <c>Calculate</c>, including the initial one. A cache hit reads as near zero.</summary>
     public TimeSpan LastCalculation { get; private set; }
 

@@ -205,6 +205,24 @@ Give `DashboardView` the rows as `Items` and the definition as `Build`, and the 
 - New rows with the same definition keep the selections. A rebuild whose definition lost a facet drops that facet's selection and raises `SelectionsChanged`.
 - A view takes `Items` or `Dashboard`, never both. The dashboard lives and dies with the view: there is nothing to register, cache or dispose.
 
+Under `Items`, the components can define what they show, so `Build` keeps only what is not on the page:
+
+```razor
+<DashboardView T="Order" Context="dash" Items="orders" SyncUrl="true">
+    <ValueFacet T="Order" For="x => x.Status" />                          @* defines a value facet with defaults *@
+    <ValueFacet T="Order" For="x => x.Channel" Top="5" Name="Channel" />  @* definition parameters set its options *@
+    <ValueFacet T="Order" For="x => x.Tags" Multiple="true" />            @* a collection: a multi-valued facet *@
+    <ValueFacet T="Order" For="x => x.Country"
+                Define="(ValueFacetBuilder<Order, string> f) => f.Comparer(StringComparer.Ordinal)" />
+</DashboardView>
+```
+
+- A component with `For` defines its facet when neither `Build` nor another component does, and displays it. A `bool` member gives a boolean facet. `Key` and `For` together give a selector without a member name, such as `x => x.OrderDate.Year`, its key.
+- Definition parameters, marked "Items mode only" in their documentation: `Top`, `RankBy`, `Searchable`, `Label` and `Multiple` on `ValueFacet`. `Define` reaches any other builder option; write the builder type in the lambda, `ValueFacetBuilder<Order, string>` or `MultiValueFacetBuilder<Order, string>`, since the component cannot infer it.
+- One place per definition. Definition parameters on a facet that `Build` or another component defines throw; a component with only `For` displays a facet defined elsewhere.
+- Values are watched, code is not. Changing `Top` or `Name` rebuilds; a new `Label` or `Define` lambda does not, so give the view a `RebuildKey` when code reads page state.
+- Nothing is removed. A facet behind an `@if` or in a lazy tab is defined the first time it shows, with one build, and stays defined, so selections for it, from the URL or a bookmark, apply when it appears.
+
 ## The components
 
 All live inside `DashboardView<T>`, read the cascaded state and never count anything themselves.
@@ -212,7 +230,7 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 | Component | Renders | Notable parameters |
 |---|---|---|
 | `DashboardView` | Owns selections and state, cascades them; its content is a template over the context. | `Dashboard`, or `Items` with `Build` and `RebuildKey`; `Context`, `@bind-Selections`, `StateChanged`, `Formatter`, `Key`, `SyncUrl` |
-| `ValueFacet` | Values with counts, the null value, "Other", search. Also boolean and multi-valued facets. | `For` or `Key`, `Name`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate`, `InputClass` |
+| `ValueFacet` | Values with counts, the null value, "Other", search. Also boolean and multi-valued facets. | `For` or `Key`, `Name`; under `Items` also `Top`, `RankBy`, `Searchable`, `Label`, `Multiple`, `Define`; `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate`, `InputClass` |
 | `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `For` or `Key`, `Name`, `Layout`, `ShowSlider`, `ShowSliderInputs`, `SliderStep`, `ShowBounds`, `InputClass` |
 | `DateFacet` | Presets with counts, one bar per period. | `For` or `Key`, `Name`, `Layout`, `ShowPresets` |
 | `TextFacet` | A debounced input; the text becomes a `TextSelection`. | `Key`, `Name`, `DebounceMilliseconds`, `Placeholder`, `InputClass` |
@@ -260,4 +278,5 @@ These are decisions from the concept, not options.
 - Mutating the source collection after `Create`. The dashboard indexed a snapshot.
 - A `Key` that does not match the builder, or a facet component of the wrong kind for its key. Both throw at render time: the first lists the known keys, the second names the kind and the component for it. Prefer `For` for a facet declared from a member; then the compiler catches the typo. Leaving out `T="Order"` is a compile error.
 - Placing a component outside `DashboardView`. It throws on initialisation.
+- Definition parameters (`Top`, `Multiple`, `Define`, ...) under a view given a `Dashboard`. They throw: that dashboard is defined where it is built. Use `Items`, or define the facet in the builder.
 - Hard-coding colours or sizes in a stylesheet that targets the components' markup. Use the `--l2d-*` properties.
