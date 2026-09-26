@@ -316,6 +316,13 @@ Understands: how to render a state, how to turn a click into a new selection, te
 
 Does not understand: how counts are calculated. It never counts anything itself.
 
+Who builds the dashboard is the host's choice, one of two per view (added 2026-09-26):
+
+- **The host builds it** and gives it to the view. The view renders it and builds nothing. This is the way for a large dataset, or one every user shares: built once, cached and scoped per user or tenant (§4.10).
+- **The view builds it** from rows and a definition the host gives. This is the way for a small dataset of the user's own rows, built on every visit and never cached. The view builds again when the rows change, which is §4.9's "new data means a new dashboard", and carries the selections over as a bookmark would.
+
+A view takes exactly one of the two. Asking the view to build a dashboard the host already built is an error, not a merge.
+
 ### The contract between them
 
 The UI consumes a **UI-friendly state** and produces **selections**. It never sees selectors, expressions, or indexes.
@@ -428,3 +435,4 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **Adjacent and overlapping intervals are one interval.** Until 2026-09-21 two neighbouring bars stayed two intervals, so the active selections read "100 to 200, 200 to 300", a bookmark carried two parts and the slider fell back to its ends. A range or date selection is now kept in canonical form, sorted and disjoint with touching intervals joined, and a bar click toggles coverage: added and joined when the bar is not fully covered, carved out, splitting if needed, when it is. Presets never merge. Decided 2026-09-21. See §5.
 - **"Other" is measured against the facet's own counting context.** Not against the matching rows. See §6.
 - **The matching rows are a list, not pages.** The state exposes them counted and indexable in the application-defined order. Paging, virtualisation and display sorting belong to the grid that shows them; the core never tries to be that grid and offers no page API, and the Blazor package renders no rows either: it hands them to the application's grid. Decided 2026-09-19. See §3, §4.4, §7.
+- **A view either renders a dashboard the host built or builds its own from rows.** The host building once and sharing is the way for large or shared data; the view building over the user's own rows on every visit is the way for small data, measured at about 10 ms for 10 000 rows (design §8). One or the other per view, never both; the view rebuilds when the rows change and carries the selections over as a bookmark would. Decided 2026-09-26. See §7.

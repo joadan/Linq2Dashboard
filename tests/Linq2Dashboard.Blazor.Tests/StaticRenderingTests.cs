@@ -52,7 +52,7 @@ public class StaticRenderingTests : BunitContext
 
     /// <summary>The selections a link leads to, read back through the serializer, so the assertion does not depend on the query's spelling.</summary>
     private static Selections Target(IRenderedComponent<DashboardView<Order>> cut, IElement link, string prefix = "") =>
-        cut.Instance.Dashboard.Serializer.FromQueryString(link.GetAttribute("href")!, prefix);
+        cut.Instance.Context.Dashboard.Serializer.FromQueryString(link.GetAttribute("href")!, prefix);
 
     [Fact]
     public void Values_are_links_to_the_toggled_selections_when_the_view_is_not_interactive()
@@ -126,7 +126,7 @@ public class StaticRenderingTests : BunitContext
         Navigation.NavigateTo("page?Country=SE,NO&Discount=[10..100)");
 
         var cut = RenderView(p => p.AddContent<ActiveSelections<Order>>(_ => { }));
-        Selections discountOnly = cut.Instance.Dashboard.Serializer.FromQueryString("Discount=[10..100)");
+        Selections discountOnly = cut.Instance.Context.Dashboard.Serializer.FromQueryString("Discount=[10..100)");
 
         Assert.Empty(cut.FindAll("button:not(.l2d-facet-toggle)"));
         IReadOnlyList<IElement> removes = cut.FindAll("li[data-key='Country'] a.l2d-chip-value-remove");
