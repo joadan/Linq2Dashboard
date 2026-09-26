@@ -16,7 +16,7 @@ Interactive exploration of a large in-memory collection: facets with counts, met
 ## Wiring checklist
 
 1. **Build once.** `Dashboard.Create(rows, b => { ... })` indexes the collection. Facets, metrics and sort order are fixed here. It takes about a second per million rows, synchronously and without cancellation: run it on a background thread or in a hosted service if startup must stay responsive.
-2. **Register as a singleton.** The dashboard is immutable and thread-safe; one instance serves every user. Either the dashboard itself, `builder.Services.AddSingleton<Dashboard<Order>>(_ => Dashboard.Create(...))`, or a singleton service that loads the rows and builds it on first request and caches the instance. `Dashboard<T>` is marked `[ImmutableObject(true)]`, so `HybridCache` stores the instance itself; set `HybridCacheEntryFlags.DisableDistributedCache`, since a dashboard cannot be serialised. The [five-minute walkthrough](https://joadan.github.io/Linq2Dashboard/five-minutes) shows such a service.
+2. **Register as a singleton.** The dashboard is immutable and thread-safe; one instance serves every user. Either the dashboard itself, `builder.Services.AddSingleton<Dashboard<Order>>(_ => Dashboard.Create(...))`, or a singleton service that loads the rows and builds it on first request and caches the instance. `Dashboard<T>` is marked `[ImmutableObject(true)]`, so `HybridCache` stores the instance itself; set `HybridCacheEntryFlags.DisableDistributedCache`, since a dashboard cannot be serialised. The [five-minute walkthrough](https://joadan.github.io/Linq2Dashboard/five-minutes) shows such a service. A small dataset of one user's own rows needs no registration: build it in the page, as in Small datasets below.
 3. **Add both usings** to `_Imports.razor`: `@using Linq2Dashboard` and `@using Linq2Dashboard.Blazor`, plus your grid's (`@using Microsoft.AspNetCore.Components.QuickGrid` below).
 4. **Reference the app's scoped-CSS bundle** in the host page, `YourApp.styles.css`. The components' styles are bundled into it. No other stylesheet or script is needed.
 5. **Wrap the page in `DashboardView`**, inject the dashboard, bind `Selections`, name the context and place components inside. Every component takes `T`, the row type, and names its facet or metric: a facet declared from a member by the same selector, `For="x => x.Country"`, anything else by its `Key` from the builder. The rows go to your grid through `dash.Items`, a queryable, or `dash.State.Items`, a list.
@@ -159,6 +159,51 @@ Dashboard<Order> view = dashboard.ScopeTo(selections);                      // t
 
 A scoped dashboard is the cheap way to show the same dashboard over a subset: one tab per region, one page per customer, one dashboard per tenant. It shares the parent's indexes and costs milliseconds, not a rebuild. It behaves exactly like a dashboard built with the predicate as a fixed filter: `TotalCount`, total counts, "Other" and metric shares are against the subset, and a value no row in the subset has is not listed. Range and date buckets stay the parent's, so every scope has the same axes. The scope is not a selection: nothing shows it and JSON does not carry it. The same `Selections` and the same `Serializer` work for every scope, and scopes compose. `ScopeTo(selections)` scopes in the facets' own terms, so the current view or a saved bookmark can become a dashboard of its own: it starts with nothing selected, its facets list only the values in scope, and a relative date preset is frozen at that moment. Give the scoped dashboard to `DashboardView` as its `Dashboard`; switching the parameter recalculates every component inside with the same selections. Keep the scoped dashboards you switch between, since each caches its own states.
 
+## Small datasets
+
+When the rows are the user's own and few, such as one customer's orders, build the dashboard in the page on every visit and cache nothing. A build costs about 2 ms of fixed overhead plus under 1 µs per row: about 3 ms at 1 000 rows, 10 ms at 10 000 and 100 ms at 100 000 (design §8). Up to tens of thousands of rows that is well inside a page request; above about 100 000, or when every user sees the same rows, build once and share it as in the wiring checklist.
+
+```razor
+@inject OrderService Orders
+
+@if (dashboard is not null)
+{
+    <DashboardView T="Order" Context="dash" Dashboard="dashboard" @bind-Selections="selections">
+        <ValueFacet T="Order" For="x => x.Status" />
+        <Metric T="Order" Key="orders" />
+    </DashboardView>
+}
+
+@code {
+    [Parameter] public int CustomerId { get; set; }
+
+    private Dashboard<Order>? dashboard;
+    private int? builtFor;
+    private Selections selections = Selections.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (builtFor == CustomerId)
+        {
+            return;                                   // a re-render of the page, not new rows
+        }
+
+        List<Order> orders = await Orders.ForCustomerAsync(CustomerId);
+        dashboard = Dashboard.Create(orders, b =>
+        {
+            b.ValueFacet(x => x.Status);
+            b.CountMetric("orders");
+        });
+        builtFor = CustomerId;
+    }
+}
+```
+
+- Build when the rows change, never in markup or on every render. `OnParametersSetAsync` also runs when the parent re-renders, so compare what the rows came from.
+- Hold the dashboard in a field of the page. It lives and dies with the page; there is nothing to register, cache or dispose.
+- Load the rows asynchronously, then build synchronously: `Create` reads a list it already has.
+- New rows with the same definition keep the facet keys, so the page's `selections` still apply to the new dashboard.
+
 ## The components
 
 All live inside `DashboardView<T>`, read the cascaded state and never count anything themselves.
@@ -207,7 +252,8 @@ These are decisions from the concept, not options.
 ## Mistakes to avoid
 
 - Counting or filtering in the UI. Everything comes from the state.
-- Creating a dashboard per request or per user. Build once; register a singleton. Per-user or per-tenant subsets are scopes of it, `dashboard.ScopeTo(...)`, kept and reused.
+- Creating a large dashboard per request or per user. Above about 100 000 rows, or when every user sees the same rows, build once and register a singleton; per-user or per-tenant subsets are scopes of it, `dashboard.ScopeTo(...)`, kept and reused. A small dataset of the user's own rows is built in the page, as in Small datasets.
+- Building in markup or on every render. A dashboard built per visit is built when its rows change and held in a field.
 - Discarding the result of a `Selections` method. Every call returns a new instance. `==` compares two instances by value.
 - Using a `TextFacet` to search a value list. `ValueFacet` with `Searchable()` does that without a scan.
 - Mutating the source collection after `Create`. The dashboard indexed a snapshot.
