@@ -158,7 +158,7 @@ A facet declared from a member is named by the same selector, `For="x => x.Count
 - **Styling.** Plain CSS. Every `--l2d-*` custom property is declared on `.l2d-dashboard`; set them on that element or any ancestor to restyle without touching markup. Dark-scheme neutrals are built in.
 - **Hosting.** Blazor Server is the primary target. WebAssembly works unchanged; the browser's memory sets the dataset size.
 
-The sample in `samples/` runs the components over 200 000 generated rows, and has a page that defines its dashboard in markup over one country's orders. The [five-minute walkthrough](https://joadan.github.io/Linq2Dashboard/five-minutes) builds a markup-defined dashboard in a fresh app.
+The sample in `samples/` shows both: a shared dashboard over 200 000 generated rows from a `HybridCache` service, `OrdersDashboardService`, and a page that defines its own dashboard in markup over one country's orders. The [five-minute walkthrough](https://joadan.github.io/Linq2Dashboard/five-minutes) builds a markup-defined dashboard in a fresh app.
 
 ## How it behaves
 

@@ -1,10 +1,16 @@
 @page "/static"
-@inject Dashboard<SampleOrder> Dashboard
+@inject OrdersDashboardService Dashboards
 @inject NavigationManager Navigation
 
 <PageTitle>Linq2Dashboard sample: static rendering</PageTitle>
 
 <h1>Orders, rendered statically</h1>
+
+@if (dashboard is null)
+{
+    <p>Loading orders...</p>
+    return;
+}
 
 <p class="static-note">
     This page has no render mode, so it is static server-side rendering: no circuit, no state on the server, and the URL

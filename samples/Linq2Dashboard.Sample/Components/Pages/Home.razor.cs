@@ -5,6 +5,7 @@ namespace Linq2Dashboard.Sample.Components.Pages;
 public partial class Home
 {
     private readonly Dictionary<string, Dashboard<SampleOrder>> scopes = new(StringComparer.Ordinal);
+    private Dashboard<SampleOrder>? dashboard;
     private Selections selections = Selections.Empty;
     private string scope = "";
     private Dashboard<SampleOrder>? pinned;
@@ -49,10 +50,16 @@ public partial class Home
         scope = PinnedScope;
     }
 
-    protected override void OnInitialized() =>
-        countries = ((ValueFacetState)Dashboard.Calculate().Facet(FacetKey.Of<SampleOrder>(x => x.Country))).Values
+    /// <summary>The shared dashboard from the cache service; the page shows a loading line until it arrives.</summary>
+    private Dashboard<SampleOrder> Dashboard => dashboard ?? throw new InvalidOperationException("The dashboard has not loaded yet.");
+
+    protected override async Task OnInitializedAsync()
+    {
+        dashboard = await Dashboards.GetAsync();
+        countries = ((ValueFacetState)dashboard.Calculate().Facet(FacetKey.Of<SampleOrder>(x => x.Country))).Values
             .Select(v => v.Value)
             .OfType<string>()
             .Order(StringComparer.Ordinal)
             .ToList();
+    }
 }
