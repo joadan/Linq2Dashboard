@@ -163,12 +163,14 @@ A scoped dashboard is the cheap way to show the same dashboard over a subset: on
 
 When the rows are the user's own and few, such as one customer's orders, build the dashboard in the page on every visit and cache nothing. A build costs about 2 ms of fixed overhead plus under 1 µs per row: about 3 ms at 1 000 rows, 10 ms at 10 000 and 100 ms at 100 000 (design §8). Up to tens of thousands of rows that is well inside a page request; above about 100 000, or when every user sees the same rows, build once and share it as in the wiring checklist.
 
+Give `DashboardView` the rows as `Items` and the definition as `Build`, and the view builds the dashboard itself:
+
 ```razor
 @inject OrderService Orders
 
-@if (dashboard is not null)
+@if (orders is not null)
 {
-    <DashboardView T="Order" Context="dash" Dashboard="dashboard" @bind-Selections="selections">
+    <DashboardView T="Order" Context="dash" Items="orders" Build="Define" @bind-Selections="selections">
         <ValueFacet T="Order" For="x => x.Status" />
         <Metric T="Order" Key="orders" />
     </DashboardView>
@@ -177,32 +179,31 @@ When the rows are the user's own and few, such as one customer's orders, build t
 @code {
     [Parameter] public int CustomerId { get; set; }
 
-    private Dashboard<Order>? dashboard;
-    private int? builtFor;
+    private List<Order>? orders;
+    private int? loadedFor;
     private Selections selections = Selections.Empty;
 
     protected override async Task OnParametersSetAsync()
     {
-        if (builtFor == CustomerId)
+        if (loadedFor != CustomerId)                  // a re-render of the page is not new rows
         {
-            return;                                   // a re-render of the page, not new rows
+            orders = await Orders.ForCustomerAsync(CustomerId);
+            loadedFor = CustomerId;
         }
+    }
 
-        List<Order> orders = await Orders.ForCustomerAsync(CustomerId);
-        dashboard = Dashboard.Create(orders, b =>
-        {
-            b.ValueFacet(x => x.Status);
-            b.CountMetric("orders");
-        });
-        builtFor = CustomerId;
+    private static void Define(DashboardBuilder<Order> b)
+    {
+        b.ValueFacet(x => x.Status);
+        b.CountMetric("orders");
     }
 }
 ```
 
-- Build when the rows change, never in markup or on every render. `OnParametersSetAsync` also runs when the parent re-renders, so compare what the rows came from.
-- Hold the dashboard in a field of the page. It lives and dies with the page; there is nothing to register, cache or dispose.
-- Load the rows asynchronously, then build synchronously: `Create` reads a list it already has.
-- New rows with the same definition keep the facet keys, so the page's `selections` still apply to the new dashboard.
+- The view builds when the `Items` reference changes. Load the rows into a field when what they come from changes; a list made in the markup, `Items="orders.ToList()"`, is new on every render and rebuilds every time.
+- `Build` takes the same builder as `Dashboard.Create`, so fixed filters, the sort order and `UseTimeProvider` work there. It is read at each build, not watched: when it reads page state, such as the language of a label, give the view a `RebuildKey` that changes with it.
+- New rows with the same definition keep the selections. A rebuild whose definition lost a facet drops that facet's selection and raises `SelectionsChanged`.
+- A view takes `Items` or `Dashboard`, never both. The dashboard lives and dies with the view: there is nothing to register, cache or dispose.
 
 ## The components
 
@@ -210,7 +211,7 @@ All live inside `DashboardView<T>`, read the cascaded state and never count anyt
 
 | Component | Renders | Notable parameters |
 |---|---|---|
-| `DashboardView` | Owns selections and state, cascades them; its content is a template over the context. | `Dashboard`, `Context`, `@bind-Selections`, `StateChanged`, `Formatter`, `Key`, `SyncUrl` |
+| `DashboardView` | Owns selections and state, cascades them; its content is a template over the context. | `Dashboard`, or `Items` with `Build` and `RebuildKey`; `Context`, `@bind-Selections`, `StateChanged`, `Formatter`, `Key`, `SyncUrl` |
 | `ValueFacet` | Values with counts, the null value, "Other", search. Also boolean and multi-valued facets. | `For` or `Key`, `Name`, `Sort` (`Rank`, `Label`, `Value`), `SortDescending`, `ShowTotals`, `HideZeroCounts`, `Collapsible`, `@bind-Collapsed`, `HeaderTemplate`, `ValueTemplate`, `InputClass` |
 | `RangeFacet` | Fixed buckets as histogram or list, optional slider. | `For` or `Key`, `Name`, `Layout`, `ShowSlider`, `ShowSliderInputs`, `SliderStep`, `ShowBounds`, `InputClass` |
 | `DateFacet` | Presets with counts, one bar per period. | `For` or `Key`, `Name`, `Layout`, `ShowPresets` |
@@ -253,7 +254,7 @@ These are decisions from the concept, not options.
 
 - Counting or filtering in the UI. Everything comes from the state.
 - Creating a large dashboard per request or per user. Above about 100 000 rows, or when every user sees the same rows, build once and register a singleton; per-user or per-tenant subsets are scopes of it, `dashboard.ScopeTo(...)`, kept and reused. A small dataset of the user's own rows is built in the page, as in Small datasets.
-- Building in markup or on every render. A dashboard built per visit is built when its rows change and held in a field.
+- Building on every render. A dashboard built per visit is built when its rows change: give the view `Items` from a field, or hold your own dashboard in one.
 - Discarding the result of a `Selections` method. Every call returns a new instance. `==` compares two instances by value.
 - Using a `TextFacet` to search a value list. `ValueFacet` with `Searchable()` does that without a scan.
 - Mutating the source collection after `Create`. The dashboard indexed a snapshot.

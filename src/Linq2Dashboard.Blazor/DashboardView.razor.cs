@@ -12,10 +12,42 @@ public partial class DashboardView<T> : IDisposable
     private Selections? lastSelectionsParameter;
     private bool listening;
     private string? pagePath;
+    private Dashboard<T>? built;
+    private IReadOnlyList<T>? builtItems;
+    private object? builtRebuildKey;
 
-    /// <summary>The dashboard to render. Building it is the host's job (concept §4.9).</summary>
-    [Parameter, EditorRequired]
-    public Dashboard<T> Dashboard { get; set; } = default!;
+    /// <summary>
+    /// A dashboard built by the host, typically once and shared by every user (concept §7). The view renders it and
+    /// builds nothing. Give the view either this or <see cref="Items"/>, never both.
+    /// </summary>
+    [Parameter]
+    public Dashboard<T>? Dashboard { get; set; }
+
+    /// <summary>
+    /// Rows the view builds its own dashboard over, with <see cref="Build"/> as the definition: for a small dataset
+    /// of the user's own rows, built on every visit and never cached (concept §7, design §9). The view builds when the
+    /// list reference changes, so hold the list in a field; a list created in the markup is a new reference on every
+    /// render and rebuilds every time. Give the view either this or <see cref="Dashboard"/>, never both.
+    /// </summary>
+    [Parameter]
+    public IReadOnlyList<T>? Items { get; set; }
+
+    /// <summary>
+    /// The definition of the dashboard the view builds over <see cref="Items"/>: the same builder as
+    /// <see cref="Linq2Dashboard.Dashboard.Create{T}"/>, so fixed filters, sort order and the time provider work as
+    /// there. Read at every build, which happens when <see cref="Items"/> or <see cref="RebuildKey"/> changes, not when
+    /// the delegate does. Needs <see cref="Items"/>.
+    /// </summary>
+    [Parameter]
+    public Action<DashboardBuilder<T>>? Build { get; set; }
+
+    /// <summary>
+    /// Any value; when it changes, the view builds again over the same <see cref="Items"/>. For a <see cref="Build"/> that
+    /// reads page state, such as the current language for a label. Compared with <see cref="object.Equals(object?, object?)"/>.
+    /// Needs <see cref="Items"/>.
+    /// </summary>
+    [Parameter]
+    public object? RebuildKey { get; set; }
 
     /// <summary>
     /// The current selections. Bindable: <c>@@bind-Selections</c> keeps the host informed of every
@@ -96,7 +128,7 @@ public partial class DashboardView<T> : IDisposable
     /// <inheritdoc />
     protected override async Task OnParametersSetAsync()
     {
-        ArgumentNullException.ThrowIfNull(Dashboard);
+        Dashboard<T> dashboard = ResolveDashboard(out bool rebuilt);
         IDashboardFormatter formatter = Formatter ?? DefaultDashboardFormatter.Instance;
         Selections selections = Selections ?? Linq2Dashboard.Selections.Empty;
 
@@ -113,16 +145,16 @@ public partial class DashboardView<T> : IDisposable
             if (SyncUrl)
             {
                 pagePath = new Uri(Navigation.Uri).AbsolutePath;
-                Selections fromUrl = Dashboard.Serializer.FromQueryString(Navigation.Uri, QueryPrefix);
+                Selections fromUrl = dashboard.Serializer.FromQueryString(Navigation.Uri, QueryPrefix);
                 if (!fromUrl.IsEmpty)
                 {
                     initial = fromUrl;
                 }
             }
 
-            context = new DashboardContext<T>(Dashboard, initial, formatter, OnSelectionsChangedAsync, OnStateChangedAsync);
+            context = new DashboardContext<T>(dashboard, initial, formatter, OnSelectionsChangedAsync, OnStateChangedAsync);
             ConfigureLinks();
-            contextDashboard = Dashboard;
+            contextDashboard = dashboard;
             contextFormatter = formatter;
             lastSelectionsParameter = Selections;
             if (!initial.Equals(selections))
@@ -146,11 +178,21 @@ public partial class DashboardView<T> : IDisposable
         // Another dashboard, typically a scope of the first (concept §4.10), or another formatter: the same context
         // adopts it, so the components inside, which subscribed to this context once, all follow the change.
         // With the URL in charge the selections stay what the URL says; otherwise a changed parameter decides.
-        if (!ReferenceEquals(contextDashboard, Dashboard) || !ReferenceEquals(contextFormatter, formatter))
+        if (!ReferenceEquals(contextDashboard, dashboard) || !ReferenceEquals(contextFormatter, formatter))
         {
-            contextDashboard = Dashboard;
+            Selections next = SyncUrl || !parameterChanged ? context.Selections : selections;
+
+            // A dashboard the view built itself gets the selections the way a bookmark would carry them to new data
+            // (concept §4.9): what its definition cannot read is dropped, and a bound host hears about it.
+            Selections carried = rebuilt ? CarryOver(next, context.Dashboard, dashboard) : next;
+            contextDashboard = dashboard;
             contextFormatter = formatter;
-            await context.RebindAsync(Dashboard, formatter, SyncUrl || !parameterChanged ? context.Selections : selections);
+            await context.RebindAsync(dashboard, formatter, carried);
+            if (!carried.Equals(next))
+            {
+                await SelectionsChanged.InvokeAsync(carried);
+            }
+
             WriteUrl();
             return;
         }
@@ -161,6 +203,56 @@ public partial class DashboardView<T> : IDisposable
             WriteUrl();
         }
     }
+
+    /// <summary>
+    /// The dashboard to render: the host's <see cref="Dashboard"/>, or the one this view builds over <see cref="Items"/>
+    /// with <see cref="Build"/>, built again when the list reference or <see cref="RebuildKey"/> changes (design §9).
+    /// Exactly one of the two must be given; <see cref="Build"/> and <see cref="RebuildKey"/> belong to <see cref="Items"/>.
+    /// </summary>
+    private Dashboard<T> ResolveDashboard(out bool rebuilt)
+    {
+        rebuilt = false;
+        if (Dashboard is not null && Items is not null)
+        {
+            throw new InvalidOperationException(
+                "DashboardView takes either Dashboard, a dashboard the host built, or Items, rows the view builds a dashboard over; not both.");
+        }
+
+        if (Dashboard is not null)
+        {
+            if (Build is not null || RebuildKey is not null)
+            {
+                throw new InvalidOperationException(
+                    "Build and RebuildKey apply to Items. A Dashboard given to the view is already built; define it where it is created.");
+            }
+
+            return Dashboard;
+        }
+
+        if (Items is null)
+        {
+            throw new InvalidOperationException(
+                "DashboardView needs Dashboard, a dashboard the host built, or Items, rows the view builds a dashboard over.");
+        }
+
+        if (built is null || !ReferenceEquals(builtItems, Items) || !Equals(builtRebuildKey, RebuildKey))
+        {
+            rebuilt = built is not null;
+            built = Linq2Dashboard.Dashboard.Create(Items, Build ?? (_ => { }));
+            builtItems = Items;
+            builtRebuildKey = RebuildKey;
+        }
+
+        return built;
+    }
+
+    /// <summary>
+    /// <paramref name="selections"/> moved from one built dashboard to the next as a bookmark would move them: written by
+    /// the old serializer and read by the new, so a facet the new definition lacks, or a value it cannot read, is dropped
+    /// rather than thrown on (design §2.5). The same definition over new rows keeps every selection.
+    /// </summary>
+    private static Selections CarryOver(Selections selections, Dashboard<T> from, Dashboard<T> to) =>
+        selections.IsEmpty ? selections : to.Serializer.FromJson(from.Serializer.ToJson(selections));
 
     private async Task OnSelectionsChangedAsync(Selections selections)
     {
