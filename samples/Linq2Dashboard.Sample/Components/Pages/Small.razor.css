@@ -1,0 +1,40 @@
+.small-note {
+    max-width: 48rem;
+}
+
+.small-country {
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.small-layout {
+    display: grid;
+    grid-template-columns: 16rem 1fr;
+    gap: 2rem;
+    align-items: start;
+}
+
+.small-facets {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.small-main {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.small-grid {
+    max-height: 30rem;
+    overflow-y: auto;
+}
+
+@media (max-width: 48rem) {
+    .small-layout {
+        grid-template-columns: 1fr;
+    }
+}

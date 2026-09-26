@@ -1,6 +1,7 @@
 @typeparam T
 @inject NavigationManager Navigation
 
+@{ SettleDefinitions(); }
 <CascadingValue Value="context" IsFixed="true">
     <div @attributes="AdditionalAttributes" class="@RootClass" data-key="@Key">
         @if (ChildContent is null)

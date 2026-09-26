@@ -1,3 +1,4 @@
+using System.Linq.Expressions;
 using Microsoft.AspNetCore.Components;
 
 namespace Linq2Dashboard.Blazor;
@@ -18,9 +19,48 @@ public partial class ValueFacet<T>
     private bool? lastCollapsedParameter;
 
 
-    /// <summary>Overrides the name given in the builder, which is only a default display name, for example with a localised string (concept §7).</summary>
+    /// <summary>
+    /// Overrides the name given in the builder, which is only a default display name, for example with a localised string
+    /// (concept §7). When this component defines the facet under a view with <c>Items</c>, it is the facet's name (design §9).
+    /// </summary>
     [Parameter]
     public string? Name { get; set; }
+
+    /// <summary>Items mode only: defines the facet with at most this many values plus "Other", as <c>Top</c> in the builder (concept §6, design §9). Watched: a change rebuilds.</summary>
+    [Parameter]
+    public int? Top { get; set; }
+
+    /// <summary>Items mode only: which count picks the top values, as <c>RankBy</c> in the builder (concept §6, design §9). Watched: a change rebuilds.</summary>
+    [Parameter]
+    public RankMode? RankBy { get; set; }
+
+    /// <summary>Items mode only: whether the facet has a search box, as <c>Searchable</c> in the builder (concept §6, design §9). Watched: a change rebuilds.</summary>
+    [Parameter]
+    public bool? Searchable { get; set; }
+
+    /// <summary>
+    /// Items mode only: the text shown and searched for each value, read from the first row that has it, as <c>Label</c> in the
+    /// builder (concept §5, design §9). Code, so read when the facet is defined and not watched; a multi-valued facet sets its
+    /// label in <see cref="Define"/>, since it reads the value rather than the row.
+    /// </summary>
+    [Parameter]
+    public Func<T, string?>? Label { get; set; }
+
+    /// <summary>
+    /// Items mode only: the selector returns a collection and the facet counts a row under each of its values, as
+    /// <c>MultiValueFacet</c> in the builder (concept §5, design §9). Watched: a change rebuilds.
+    /// </summary>
+    [Parameter]
+    public bool Multiple { get; set; }
+
+    /// <summary>
+    /// Items mode only: any other option of the facet's builder, for example <c>Comparer</c> or <c>Serialize</c>. The component does
+    /// not know the value type, so the lambda names the builder type itself, <c>Define="(ValueFacetBuilder&lt;Order, string&gt; f) =&gt;
+    /// f.Comparer(StringComparer.Ordinal)"</c>, or <c>MultiValueFacetBuilder</c> with <see cref="Multiple"/>; a builder type that does
+    /// not match the selector throws when the facet is defined. Code, so read when the facet is defined and not watched (design §9).
+    /// </summary>
+    [Parameter]
+    public Delegate? Define { get; set; }
 
     /// <summary>Replaces the default header (name and clear button). Receives the facet state. Collapsing is then controlled only through <see cref="Collapsed"/>.</summary>
     [Parameter]
@@ -137,6 +177,20 @@ public partial class ValueFacet<T>
         }
 
         return left.CompareTo(b.Value);
+    }
+
+    /// <inheritdoc />
+    private protected override bool HasDefinitionParameters =>
+        Top is not null || RankBy is not null || Searchable is not null || Label is not null || Multiple || Define is not null;
+
+    /// <inheritdoc />
+    private protected override MarkupDefinition<T> Definition(string key, LambdaExpression selector)
+    {
+        var parameters = new ValueFacetParameters<T>(Name, Top, RankBy, Searchable, Label, Multiple, Define);
+        return new MarkupDefinition<T>(
+            this, ComponentName, IsMetric: false, key, HasDefinitionParameters,
+            [selector.ReturnType, Name, Top, RankBy, Searchable, Multiple],
+            b => MarkupFacets.Value(b, key, selector, parameters));
     }
 
     /// <inheritdoc />

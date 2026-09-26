@@ -1,6 +1,11 @@
 @typeparam T
 @inherits FacetComponentBase<T>
 
+@if (Pending)
+{
+    return;
+}
+
 <section @attributes="AdditionalAttributes" class="@RootClass($"l2d-facet l2d-value-facet{(Facet.IsMultiValued ? " l2d-multi-value-facet" : "")}{(collapsed ? " l2d-collapsed" : "")}")" data-key="@ResolvedKey">
     @if (HeaderTemplate is not null)
     {

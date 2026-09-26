@@ -45,6 +45,26 @@ public abstract class DashboardComponentBase<T> : ComponentBase, IDisposable
     protected string? LinkTo(Func<Selections, Selections> change) =>
         Context.Links ? Context.Href(change(Context.Selections)) : null;
 
+    /// <summary>Registers a facet or metric this component defines from its parameters with the view (design §9).</summary>
+    private protected void Register(MarkupDefinition<T> definition) => Context.Registry?.Define(definition);
+
+    /// <summary>
+    /// True while the component waits for the view to define <paramref name="key"/>, and renders nothing meanwhile. Only an
+    /// <c>Items</c> view makes a component wait: its definitions come from components that may render later in the same pass,
+    /// so a key the dashboard lacks is an error only once the view has settled after being asked for it (design §9).
+    /// </summary>
+    private protected bool AwaitingDefinition(bool isMetric, string key)
+    {
+        bool known = isMetric ? Context.Dashboard.Metrics.Any(m => m.Key == key) : Context.Dashboard.Facets.Any(f => f.Key == key);
+        IMarkupRegistry<T>? registry = Context.Registry;
+        if (known || registry is null || !registry.BuildsOwnDashboard)
+        {
+            return false;
+        }
+
+        return !registry.Settled || !registry.AskFor(isMetric, key);
+    }
+
     /// <summary>Subscribes to the context; throws when the component is not inside a <see cref="DashboardView{T}"/>.</summary>
     protected override void OnInitialized()
     {

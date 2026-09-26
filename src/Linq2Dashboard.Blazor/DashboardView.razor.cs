@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Components.Routing;
 namespace Linq2Dashboard.Blazor;
 
 /// <summary>The root of a dashboard UI (design §9). Owns the selections and the state, cascades a <see cref="DashboardContext{T}"/> to every component inside, and counts nothing itself.</summary>
-public partial class DashboardView<T> : IDisposable
+public partial class DashboardView<T> : IDisposable, IMarkupRegistry<T>
 {
     private DashboardContext<T>? context;
     private Dashboard<T>? contextDashboard;
@@ -15,6 +15,12 @@ public partial class DashboardView<T> : IDisposable
     private Dashboard<T>? built;
     private IReadOnlyList<T>? builtItems;
     private object? builtRebuildKey;
+    private readonly List<MarkupDefinition<T>> definitions = [];
+    private readonly HashSet<(bool IsMetric, string Key)> askedFor = [];
+    private int definitionVersion;
+    private int seenVersion;
+    private int settledVersion;
+    private bool buildPending;
 
     /// <summary>
     /// A dashboard built by the host, typically once and shared by every user (concept §7). The view renders it and
@@ -152,7 +158,11 @@ public partial class DashboardView<T> : IDisposable
                 }
             }
 
-            context = new DashboardContext<T>(dashboard, initial, formatter, OnSelectionsChangedAsync, OnStateChangedAsync);
+            // An Items view starts with the keys its definition has so far; the rest are held aside until the markup has defined them (design §9).
+            context = new DashboardContext<T>(dashboard, Items is null ? initial : Known(initial, dashboard), formatter, OnSelectionsChangedAsync, OnStateChangedAsync)
+            {
+                Registry = this,
+            };
             ConfigureLinks();
             contextDashboard = dashboard;
             contextFormatter = formatter;
@@ -199,7 +209,7 @@ public partial class DashboardView<T> : IDisposable
 
         if (parameterChanged)
         {
-            await context.SyncAsync(selections);
+            await context.SyncAsync(Items is null ? selections : Known(selections, context.Dashboard));
             WriteUrl();
         }
     }
@@ -238,7 +248,7 @@ public partial class DashboardView<T> : IDisposable
         if (built is null || !ReferenceEquals(builtItems, Items) || !Equals(builtRebuildKey, RebuildKey))
         {
             rebuilt = built is not null;
-            built = Linq2Dashboard.Dashboard.Create(Items, Build ?? (_ => { }));
+            built = CreateBuilt();
             builtItems = Items;
             builtRebuildKey = RebuildKey;
         }
@@ -253,6 +263,196 @@ public partial class DashboardView<T> : IDisposable
     /// </summary>
     private static Selections CarryOver(Selections selections, Dashboard<T> from, Dashboard<T> to) =>
         selections.IsEmpty ? selections : to.Serializer.FromJson(from.Serializer.ToJson(selections));
+
+    /// <summary>The selections whose keys <paramref name="dashboard"/> has; the rest wait for the markup to define them (design §9).</summary>
+    private static Selections Known(Selections selections, Dashboard<T> dashboard)
+    {
+        Selections known = selections;
+        foreach (string key in selections.Keys)
+        {
+            if (!dashboard.Facets.Any(f => f.Key == key))
+            {
+                known = known.Clear(key);
+            }
+        }
+
+        return known;
+    }
+
+    /// <summary>
+    /// Builds over <see cref="Items"/>: <see cref="Build"/> first, then the markup's facets, its plain metrics and its
+    /// calculated metrics, each in render order, so a formula can read any plain metric wherever it is declared (design §9).
+    /// </summary>
+    private Dashboard<T> CreateBuilt()
+    {
+        Dashboard<T> dashboard = Linq2Dashboard.Dashboard.Create(Items!, b =>
+        {
+            Build?.Invoke(b);
+            foreach (MarkupDefinition<T> definition in definitions.Where(d => !d.IsMetric)
+                .Concat(definitions.Where(d => d.IsMetric && !d.IsCalculated))
+                .Concat(definitions.Where(d => d.IsCalculated)))
+            {
+                definition.Apply(b);
+            }
+        });
+        settledVersion = definitionVersion;
+        buildPending = false;
+        return dashboard;
+    }
+
+    /// <inheritdoc />
+    bool IMarkupRegistry<T>.BuildsOwnDashboard => Items is not null;
+
+    /// <inheritdoc />
+    bool IMarkupRegistry<T>.Settled => Items is null || settledVersion == definitionVersion;
+
+    /// <inheritdoc />
+    void IMarkupRegistry<T>.Define(MarkupDefinition<T> definition)
+    {
+        if (Items is null)
+        {
+            if (definition.Explicit)
+            {
+                throw new InvalidOperationException(
+                    $"{definition.Component} for {definition.Describe()} has definition parameters, which need a DashboardView with Items. " +
+                    "This view renders a prebuilt Dashboard; define the facet or metric where that dashboard is built.");
+            }
+
+            return;
+        }
+
+        int index = definitions.FindIndex(d => d.IsMetric == definition.IsMetric && d.Key == definition.Key);
+        if (index >= 0)
+        {
+            MarkupDefinition<T> existing = definitions[index];
+            if (ReferenceEquals(existing.Owner, definition.Owner) || (definition.Explicit && !existing.Explicit))
+            {
+                // The same component with changed values, or a component with definition parameters taking over from one
+                // that only named the selector.
+                if (!ReferenceEquals(existing.Owner, definition.Owner) || !existing.SameValues(definition))
+                {
+                    definitions[index] = definition;
+                    DefinitionsChanged(build: true);
+                }
+            }
+            else if (definition.Explicit && existing.Explicit)
+            {
+                throw new InvalidOperationException(
+                    $"{definition.Component} and {existing.Component} both define {definition.Describe()}. " +
+                    "A facet or metric is defined in one place; leave the definition parameters off the other component, which then only displays it.");
+            }
+
+            return;
+        }
+
+        bool defined = definition.IsMetric
+            ? context?.Dashboard.Metrics.Any(m => m.Key == definition.Key) == true
+            : context?.Dashboard.Facets.Any(f => f.Key == definition.Key) == true;
+        if (defined)
+        {
+            // Defined by Build, since every markup definition is in the list above.
+            if (definition.Explicit)
+            {
+                throw new InvalidOperationException(
+                    $"{definition.Component} defines {definition.Describe()}, which Build already defines. " +
+                    "A facet or metric is defined in one place; leave the definition parameters off the component, which then only displays it.");
+            }
+
+            return;
+        }
+
+        definitions.Add(definition);
+        DefinitionsChanged(build: true);
+    }
+
+    /// <inheritdoc />
+    bool IMarkupRegistry<T>.AskFor(bool isMetric, string key)
+    {
+        if (Items is null || !askedFor.Add((isMetric, key)))
+        {
+            return true;
+        }
+
+        DefinitionsChanged(build: false);
+        return false;
+    }
+
+    /// <summary>Something for the view to settle: a definition to build, or a key a component asked for.</summary>
+    private void DefinitionsChanged(bool build)
+    {
+        definitionVersion++;
+        buildPending |= build;
+        StateHasChanged();
+    }
+
+    /// <summary>
+    /// Runs at the top of every render. While components keep registering, the view queues itself again, behind the
+    /// components queued so far and so behind their children; once a pass adds nothing, it builds once from everything
+    /// registered and hands the context the new dashboard, which re-renders every component in the same render batch.
+    /// This works under static rendering and prerendering too, since both process queued renders before responding (design §9).
+    /// </summary>
+    private void SettleDefinitions()
+    {
+        if (context is null || Items is null || settledVersion == definitionVersion)
+        {
+            return;
+        }
+
+        if (seenVersion != definitionVersion)
+        {
+            seenVersion = definitionVersion;
+            StateHasChanged();
+            return;
+        }
+
+        if (!buildPending)
+        {
+            settledVersion = definitionVersion;
+            context.NotifyComponents();
+            return;
+        }
+
+        Dashboard<T> previous = context.Dashboard;
+        built = CreateBuilt();
+        contextDashboard = built;
+
+        // The selections the host asked for were held aside until the markup had defined their facets. Under SyncUrl the
+        // URL is the state, so it is read again with the new definition; otherwise the Selections parameter applies again
+        // as long as the user has not changed anything since.
+        Selections next;
+        if (SyncUrl)
+        {
+            next = built.Serializer.FromQueryString(Navigation.Uri, QueryPrefix);
+        }
+        else if (lastSelectionsParameter is { } requested && context.Selections.Equals(Known(requested, previous)))
+        {
+            next = Known(requested, built);
+        }
+        else
+        {
+            next = CarryOver(context.Selections, previous, built);
+        }
+
+        bool selectionsChanged = !next.Equals(context.Selections);
+        _ = ObserveAsync(context.RebindAsync(built, context.Formatter, next));
+        if (selectionsChanged)
+        {
+            _ = ObserveAsync(SelectionsChanged.InvokeAsync(next));
+        }
+    }
+
+    /// <summary>Awaits a host callback raised during a render and hands a failure to the renderer, instead of losing it.</summary>
+    private async Task ObserveAsync(Task task)
+    {
+        try
+        {
+            await task;
+        }
+        catch (Exception e)
+        {
+            await DispatchExceptionAsync(e);
+        }
+    }
 
     private async Task OnSelectionsChangedAsync(Selections selections)
     {

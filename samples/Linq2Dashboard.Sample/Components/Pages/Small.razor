@@ -1,0 +1,45 @@
+@page "/small"
+@rendermode InteractiveServer
+
+<PageTitle>Linq2Dashboard sample: a small dataset per page</PageTitle>
+
+<h1>One country's orders</h1>
+
+<p class="small-note">
+    The view builds its own dashboard from <code>Items</code>, one country's rows, on every visit and whenever the country changes.
+    Nothing is cached, and the facets are defined here in the markup. <a href="/">The shared dashboard over every row</a>
+</p>
+
+<label class="small-country">
+    Country
+    <select @bind="country">
+        @foreach (string name in Countries)
+        {
+            <option value="@name">@name</option>
+        }
+    </select>
+</label>
+
+<DashboardView T="SampleOrder" Context="dash" Items="Rows" SyncUrl="true">
+    <div class="small-layout">
+        <aside class="small-facets">
+            <ValueFacet T="SampleOrder" For="x => x.Status" />
+            <ValueFacet T="SampleOrder" For="x => x.Channel" Top="5" Name="Sales channel" />
+            <ValueFacet T="SampleOrder" For="x => x.Tags" Multiple="true" />
+            <ValueFacet T="SampleOrder" For="x => x.IsActive" Name="Active customer" />
+        </aside>
+        <main class="small-main">
+            <ActiveSelections T="SampleOrder" />
+            <p>@dash.State.MatchingCount.ToString("N0") of @dash.State.TotalCount.ToString("N0") orders.</p>
+            <div class="small-grid">
+                <QuickGrid Items="dash.Items" Virtualize="true" ItemSize="22">
+                    <PropertyColumn Property="o => o.Id" Sortable="true" />
+                    <PropertyColumn Property="o => o.OrderDate" Title="Date" Format="yyyy-MM-dd" Sortable="true" />
+                    <PropertyColumn Property="o => o.Status" Sortable="true" />
+                    <PropertyColumn Property="o => o.Channel" Sortable="true" />
+                    <PropertyColumn Property="o => o.Amount" Format="N2" Align="Align.Right" Sortable="true" />
+                </QuickGrid>
+            </div>
+        </main>
+    </div>
+</DashboardView>
