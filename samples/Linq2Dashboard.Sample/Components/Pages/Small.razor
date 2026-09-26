@@ -33,6 +33,13 @@
         </aside>
         <main class="small-main">
             <ActiveSelections T="SampleOrder" />
+            <div class="small-metrics">
+                <Metric T="SampleOrder" Key="orders" Count="true" Name="Orders" />
+                <Metric T="SampleOrder" Key="revenue" Sum="x => x.Amount" Name="Revenue" />
+                <Metric T="SampleOrder" Key="average" Average="x => x.Amount" Name="Average order" />
+                <Metric T="SampleOrder" Key="customers" Distinct="x => x.CustomerId" Name="Customers" />
+                <Metric T="SampleOrder" Key="perCustomer" Formula="PerCustomer" Name="Revenue per customer" />
+            </div>
             <p>@dash.State.MatchingCount.ToString("N0") of @dash.State.TotalCount.ToString("N0") orders.</p>
             <div class="small-grid">
                 <QuickGrid Items="dash.Items" Virtualize="true" ItemSize="22">
