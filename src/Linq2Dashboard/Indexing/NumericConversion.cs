@@ -42,7 +42,7 @@ internal static class NumericConversion
         return Expression.Lambda<Func<T, double?>>(block, selector.Parameters).Compile();
     }
 
-    private static bool IsNumeric(Type type) =>
+    internal static bool IsNumeric(Type type) =>
         type == typeof(byte) || type == typeof(sbyte)
         || type == typeof(short) || type == typeof(ushort)
         || type == typeof(int) || type == typeof(uint)

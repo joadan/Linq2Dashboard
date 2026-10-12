@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Linq2Dashboard.Indexing;
+using Linq2Dashboard.Queries;
 using Linq2Dashboard.Serialization;
 
 namespace Linq2Dashboard.Facets;
@@ -60,6 +61,20 @@ internal sealed class RangeFacetIndex : FacetIndex
 
         var nullValue = new FacetValue(null, totals[0], counts[0], range is { IncludeNull: true });
         return new RangeFacetState(Key, Name, selection, context.Count, Column.Min, Column.Max, buckets, nullValue);
+    }
+
+    /// <inheritdoc />
+    public override GroupColumn GroupColumn(DateGranularity? period) =>
+        period is DateGranularity named ? throw NotADate(named) : new RangeGroupColumn(Column);
+
+    /// <inheritdoc />
+    public override NumberSource? Numbers() => new ColumnNumbers(Column, Column.ValuesArray);
+
+    /// <summary>The values by their bits, with negative zero folded into zero.</summary>
+    public override DistinctSource? DistinctKeys()
+    {
+        double[] values = Column.ValuesArray;
+        return new RawKeys(Column, row => double.IsNaN(values[row]) ? null : BitConverter.DoubleToInt64Bits(values[row] == 0 ? 0 : values[row]));
     }
 
     /// <inheritdoc />
