@@ -965,6 +965,59 @@ A property name in a query reaches a public, readable instance property of `T`, 
 - **The getter** is compiled from an expression on first use and kept in a concurrent dictionary on the dashboard, shared with its scopes (§10.3). A boxed value reaches the grouping only once per distinct value; numbers are read through a typed delegate that returns `double`.
 - **No allowlist in the core.** A C# caller can read any member of `T` through `Where`, so a list in the core would protect nothing on the code path. Which names an agent or an HTTP client may use is decided where their input is read: in the tool layer, or by the JSON reader (§10.6).
 
+### 10.6 JSON
+
+Both directions live on `dashboard.Serializer`, because facet values are written and read in each facet's own JSON form (§2.5), the builder's `Serialize` included.
+
+**The answer to JSON.** `ToJson(QueryResult)` and `ToJsonObject(QueryResult)`:
+
+```json
+{
+  "columns": [
+    { "key": "SalesRep", "name": "Sales rep", "role": "dimension", "kind": "value" },
+    { "key": "Month(OrderDate)", "name": "Month(OrderDate)", "role": "dimension", "kind": "period", "granularity": "month" },
+    { "key": "revenue", "name": "Revenue", "role": "value", "kind": "number", "aggregation": "sum" }
+  ],
+  "rows": [
+    ["Anna", "2026-03-01", 125000.5],
+    [{ "value": 1042, "label": "Acme (Malmö)" }, "2026-03-01", 98000],
+    [null, "2026-03-01", null]
+  ],
+  "total": 42,
+  "cut": true
+}
+```
+
+- Rows are arrays in column order, not objects: an answer is read with its header, and an agent pays for every repeated key.
+- A value cell is the value in its facet's JSON form, or `{ "value", "label" }` when the facet has a label. An interval is its query-string text (§2.5), `"[100..500)"`, so a client can drill down by putting the cell into a link. A period is its local start date, with the granularity on the column. An instant is ISO 8601 with its offset, a number the shortest text that round-trips, a multi-valued column an array, and a null group or "no value" is `null`.
+
+**A query from JSON.** `QueryFromJson(json, options)` and `QueryFromJsonObject`:
+
+```json
+{
+  "selections": { "Country": { "values": ["SE"] } },
+  "where": "Amount>=100000,Status=Shipped|Delivered",
+  "groupBy": ["SalesRep", { "name": "OrderDate", "period": "month" }, { "property": "Country" }],
+  "values": [{ "metric": "revenue" }, { "aggregation": "count" }, { "aggregation": "average", "of": "DeliveryDays", "as": "days" }],
+  "orderBy": { "key": "revenue", "descending": true },
+  "take": 10
+}
+```
+
+```csharp
+DashboardQuery<Order> query = dashboard.Serializer.QueryFromJson(json, new QueryJsonOptions<Order>
+{
+    Where = text => new GridifyQuery { Filter = text }.GetFilteringExpression(mapper),   // the application's parser
+    Allowed = ["Country", "SalesRep", "OrderDate", "revenue", "Amount", "DeliveryDays"],
+});
+```
+
+- The shape is the query object of §10.1 part for part; `columns` instead of `groupBy` and `values` makes a row query. A dimension is a bare name, `{ "name", "period" }`, or `{ "property" }` for the property behind a facet's name.
+- **The where is a string** handed to the application's parser, which returns the expression. The core never reads it, so it has no filter language and no dependency (§C4.11); a `where` without a parser is an error. The parser owns what the string may name, as a Gridify mapper does.
+- **`Allowed`** limits every name the query uses outside the where, selection keys included, to the list. Without it every facet, metric and property of §10.5 can be named. This is where exposure to an agent or a client is decided.
+- **Strict throughout**, also for the selections inside a query, unlike the lenient selection reader of §2.5: a dropped selection would change the answer without saying so (§C4.11). An error is a `DashboardQueryException`, an `ArgumentException` whose `Path` names the JSON element and whose message is written to be passed back to an agent as it is: what is wrong, and the valid names or values.
+- There is no query-to-JSON in this version: a where that came as an expression has no text to write.
+
 ## 11. Open questions
 
 1. **Facets and metrics declared in Blazor markup.** Should `<Metric>` and the facet components be able to define what they show (aggregation and selector, or facet kind and selector), not only place something defined in the builder? Two routes were weighed on 2026-09-12: computing in the component over the matching rows (pure, but the UI calculates and pays per render; for facets that would be a second counting engine, which §C7 rules out), or registering the column lazily on the dashboard on first render (keeps the speed, but mutates a dashboard the design promises is immutable after `Create`, misses states already cached, and makes a page's markup part of the dashboard's definition). A third route is a markup-driven builder: a `Definition` fragment inside `DashboardView` whose children (`ValueFacetDefinition`, `RangeFacetDefinition`, `DateFacetDefinition`, `MetricDefinition`, `CountMetricDefinition`, `FixedFilter`, `SortDefinition`) register builder calls with a collector during the first render, after which the view runs `Dashboard.Create` once and then renders the placement components; the view cascades its type parameter so children need no `T`. This keeps the engine and its guarantees untouched and was prototyped on 2026-09-12 (facet and metric definition components were written, then removed unfinished). Discussed and parked the same day: the builder stays the primary API, the markup route is the one to add if any, and the one decision it needs is whether each view builds its own dashboard (right for WebAssembly) or a host can build once and share (needed on Blazor Server with large shared data; a `DashboardCreated` callback plus the existing `Dashboard` parameter would give both). Also noted: the core's internal `*Definition` classes would want renaming to avoid sharing names with the markup components. **Update 2026-09-26:** the one decision is made: a view renders either a host-built `Dashboard` or builds its own from `Items` and `Build` (§C7, §9 component 1), and markup definitions are to apply to `Items` views only, on the same facet and metric components rather than separate definition components. A spike confirmed the registration pass under static SSR, prerendering and interactive rendering (§9, Markup definitions: spike).
@@ -1028,3 +1081,4 @@ A property name in a query reaches a public, readable instance property of `T`, 
 - **A query reuses the dashboard's columns and reads plain properties per query.** The matching set comes from the state cache or the selection row-set cache without counting facets, the where runs over the matching rows only, facets group through their existing code and bucket columns, and metrics aggregate their own columns. A property's getter is compiled once and kept, but its values are coded again by every query; a cached code column per property waits for measurements that ask for it, behind one internal interface. Decided 2026-10-12. See §10.3.
 - **A row query is capped by a constant; a group query is not; `Query` takes a token and stays synchronous.** A row query returns 100 rows without `Take` and refuses a `Take` above 10 000, since bulk rows come from `state.Items`; a builder option was left until a host needs one, because an option can be added but not taken back. Groups are bounded by the codes of two dimensions and charts want all of them, so a ceiling on groups was rejected. The token is checked between steps and every 65 536 rows. Decided 2026-10-12. See §10.4.
 - **A query reaches public top-level properties of `T` by case-sensitive name, and a row query returns simple types only.** Grouping and distinct use the value facet's equality, periods take the date types, aggregations the numeric ones; object-valued properties are refused as row columns so an answer is never an object graph. Case-insensitive names were rejected because facet keys are case-sensitive and one rule should hold for every name; the error suggests near matches instead. No allowlist in the core, since `Where` already reads anything on the code path; exposure is decided where outside input is read. Decided 2026-10-12. See §10.5.
+- **Queries and answers both have a JSON form in the core, on `dashboard.Serializer`.** The answer writes rows as arrays under a column header, intervals in the query-string notation and values in each facet's own form. A query is read strictly, selections included, with the where handed as a string to a parser the application supplies, so the core reads no filter language and takes no dependency, and an optional `Allowed` list decides which names outside input may use. Answer-only JSON was rejected because every tool layer and HTTP endpoint would write the same mapping and the same error messages. Decided 2026-10-12. See §10.6.
