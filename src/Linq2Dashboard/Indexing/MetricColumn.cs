@@ -20,6 +20,9 @@ internal sealed class MetricColumn
 
     public ReadOnlySpan<double> Values => values;
 
+    /// <summary>The same values as an array, for a query to read without copying (design §10.3). Never written after build.</summary>
+    internal double[] ValuesArray => values;
+
     /// <summary>Rows that have a value, over the whole dataset.</summary>
     public int ValueCount => total.Count;
 
@@ -34,7 +37,7 @@ internal sealed class MetricColumn
         ArgumentNullException.ThrowIfNull(read);
 
         var values = new double[rowCount];
-        var accumulator = new Accumulator();
+        var accumulator = new MetricAccumulator();
         for (int row = 0; row < rowCount; row++)
         {
             if (!read(row, out double value) || double.IsNaN(value))
@@ -68,7 +71,7 @@ internal sealed class MetricColumn
             return total;
         }
 
-        var accumulator = new Accumulator();
+        var accumulator = new MetricAccumulator();
         ReadOnlySpan<double> all = values;
         foreach (int row in context)
         {
@@ -80,54 +83,6 @@ internal sealed class MetricColumn
         }
 
         return accumulator.Result;
-    }
-
-    /// <summary>Neumaier compensated summation alongside count, min and max.</summary>
-    private struct Accumulator
-    {
-        private int count;
-        private double sum;
-        private double compensation;
-        private double min;
-        private double max;
-
-        public void Add(double value)
-        {
-            if (count == 0)
-            {
-                min = value;
-                max = value;
-            }
-            else
-            {
-                if (value < min)
-                {
-                    min = value;
-                }
-
-                if (value > max)
-                {
-                    max = value;
-                }
-            }
-
-            count++;
-            double t = sum + value;
-            if (Math.Abs(sum) >= Math.Abs(value))
-            {
-                compensation += (sum - t) + value;
-            }
-            else
-            {
-                compensation += (value - t) + sum;
-            }
-
-            sum = t;
-        }
-
-        public MetricAggregate Result => count == 0
-            ? MetricAggregate.Empty
-            : new MetricAggregate(count, sum + compensation, min, max);
     }
 }
 
@@ -148,4 +103,52 @@ internal readonly record struct MetricAggregate(int Count, double Sum, double Mi
     public double? MinOrNull => IsEmpty ? null : Min;
 
     public double? MaxOrNull => IsEmpty ? null : Max;
+}
+
+/// <summary>Neumaier compensated summation alongside count, min and max (design §4.6). Also accumulates one query group (design §10.3).</summary>
+internal struct MetricAccumulator
+{
+    private int count;
+    private double sum;
+    private double compensation;
+    private double min;
+    private double max;
+
+    public void Add(double value)
+    {
+        if (count == 0)
+        {
+            min = value;
+            max = value;
+        }
+        else
+        {
+            if (value < min)
+            {
+                min = value;
+            }
+
+            if (value > max)
+            {
+                max = value;
+            }
+        }
+
+        count++;
+        double t = sum + value;
+        if (Math.Abs(sum) >= Math.Abs(value))
+        {
+            compensation += (sum - t) + value;
+        }
+        else
+        {
+            compensation += (value - t) + sum;
+        }
+
+        sum = t;
+    }
+
+    public MetricAggregate Result => count == 0
+        ? MetricAggregate.Empty
+        : new MetricAggregate(count, sum + compensation, min, max);
 }

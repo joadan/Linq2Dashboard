@@ -1,6 +1,7 @@
 using System.Globalization;
 using System.Text.Json.Nodes;
 using Linq2Dashboard.Indexing;
+using Linq2Dashboard.Queries;
 using Linq2Dashboard.Serialization;
 
 namespace Linq2Dashboard.Facets;
@@ -164,6 +165,50 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
             facetValues, other, valueCount, Searchable,
             (text, max) => Search(text, max, counts, selected), LabelOf);
     }
+
+    /// <inheritdoc />
+    public override GroupColumn GroupColumn(DateGranularity? period)
+    {
+        if (period is DateGranularity named)
+        {
+            throw NotADate(named);
+        }
+
+        return Column switch
+        {
+            ValueColumn<TValue> single => new ValueGroupColumn<TValue>(single, labels),
+            MultiValueColumn<TValue> multi => new MultiValueGroupColumn<TValue>(multi, labels),
+            _ => throw new InvalidOperationException($"Unexpected column {Column.GetType().Name}."),
+        };
+    }
+
+    /// <summary>One double per value, converted once per query, when the facet holds numbers; never for a multi-valued facet.</summary>
+    public override NumberSource? Numbers()
+    {
+        Type type = Nullable.GetUnderlyingType(typeof(TValue)) ?? typeof(TValue);
+        if (Column is not ValueColumn<TValue> single || !NumericConversion.IsNumeric(type))
+        {
+            return null;
+        }
+
+        Func<TValue, double?> toDouble = NumericConversion.ToNullableDouble<TValue, TValue>(v => v, nameof(TValue));
+        var values = new double[single.DistinctCount + 1];
+        values[0] = double.NaN;
+        for (int code = 1; code < values.Length; code++)
+        {
+            values[code] = toDouble(single.ValueOf(code)) ?? double.NaN;
+        }
+
+        return new CodedNumbers<TValue>(single, values);
+    }
+
+    /// <summary>The value codes, so equality is the facet's own (strings ignoring case by default).</summary>
+    public override DistinctSource? DistinctKeys() => Column switch
+    {
+        ValueColumn<TValue> single => new CodeKeys(single, single.CodeAt),
+        MultiValueColumn<TValue> multi => new MultiCodeKeys<TValue>(multi),
+        _ => null,
+    };
 
     /// <summary>Design §2.5: <c>{ "values": [ ... ] }</c>, null written as JSON null.</summary>
     public override JsonObject Serialize(Selection selection)

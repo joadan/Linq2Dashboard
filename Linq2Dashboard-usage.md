@@ -159,6 +159,34 @@ Dashboard<Order> view = dashboard.ScopeTo(selections);                      // t
 
 A scoped dashboard is the cheap way to show the same dashboard over a subset: one tab per region, one page per customer, one dashboard per tenant. It shares the parent's indexes and costs milliseconds, not a rebuild. It behaves exactly like a dashboard built with the predicate as a fixed filter: `TotalCount`, total counts, "Other" and metric shares are against the subset, and a value no row in the subset has is not listed. Range and date buckets stay the parent's, so every scope has the same axes. The scope is not a selection: nothing shows it and JSON does not carry it. The same `Selections` and the same `Serializer` work for every scope, and scopes compose. `ScopeTo(selections)` scopes in the facets' own terms, so the current view or a saved bookmark can become a dashboard of its own: it starts with nothing selected, its facets list only the values in scope, and a relative date preset is frozen at that moment. Give the scoped dashboard to `DashboardView` as its `Dashboard`; switching the parameter recalculates every component inside with the same selections. Keep the scoped dashboards you switch between, since each caches its own states.
 
+## Queries
+
+A query asks one question of the dashboard's rows and returns one table: revenue per country, orders per month, the top ten of something. It runs beside the state and changes nothing on screen.
+
+```csharp
+QueryResult answer = dashboard.Query(new DashboardQuery<Order>
+{
+    Selections = selections,                                          // every selection applies, including the grouped facet's own
+    GroupBy = [Dimension.Of("Country"), Dimension.Of("OrderDate")],   // up to two facets; none gives one row
+    Values = [QueryValue.Metric("revenue"), QueryValue.Count(), QueryValue.Average("Amount")],   // empty counts
+    OrderBy = QueryOrder.Descending("revenue"),
+    Take = 10,
+}, cancellationToken);
+
+answer.Columns;                                   // QueryColumn: Key, Name, Role (Dimension or Value), Kind
+answer.Total;                                     // groups before Take; IsCut says whether Take left some out
+foreach (QueryRow row in answer.Rows)
+{
+    var country = (QueryValueCell?)row["Country"];   // Value and Label; null for the null group
+    var month = (QueryPeriod?)row["OrderDate"];      // Interval, PeriodStart, Granularity
+    double? revenue = (double?)row["revenue"];       // null means no value
+}
+```
+
+Cells are the library's own types, so a cell goes straight back into a selection: `Toggle(key, cell.Value)` for a value, `ToggleInterval(key, interval)` for a range bucket's `RangeInterval` and `ToggleInterval(key, period.Interval)` for a date period. Grouped by a facet and counted under the same selections, a query gives that facet's filtered counts whenever the facet has no selection of its own. Groups without rows are left out, null is a group, a multi-valued row joins one group per item, and without an order groups follow their dimensions: values by value, buckets and periods ascending, null last.
+
+`QueryValue.Sum`, `Average`, `Min` and `Max` take a range facet or a numeric value facet, `Distinct` any facet with values, and `Metric` any dashboard metric, calculated ones per group. A name that is not known, a metric used as a dimension, a third dimension or a period on a facet that is not a date throws an `ArgumentException` naming what is known and the nearest match. `.As(key)` renames a column. Plain properties, a `Where` filter, other periods on a date facet and row queries are being built (design §10.8).
+
 ## Small datasets
 
 When the rows are the user's own and few, such as one customer's orders, build the dashboard in the page on every visit and cache nothing. A build costs about 2 ms of fixed overhead plus under 1 µs per row: about 3 ms at 1 000 rows, 10 ms at 10 000 and 100 ms at 100 000 (design §8). Up to tens of thousands of rows that is well inside a page request; above about 100 000, or when every user sees the same rows, build once and share it as in the wiring checklist.

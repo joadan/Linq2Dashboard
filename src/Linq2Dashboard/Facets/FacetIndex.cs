@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Linq2Dashboard.Indexing;
+using Linq2Dashboard.Queries;
 
 namespace Linq2Dashboard.Facets;
 
@@ -61,6 +62,23 @@ internal abstract class FacetIndex
     /// facet or nothing usable remains, with the same leniency as <see cref="Deserialize"/> (design §2.5).
     /// </summary>
     public abstract Selection? DeserializeQuery(string value);
+
+    /// <summary>
+    /// This facet as a query dimension (design §10.3), grouped as it presents its values, buckets or periods.
+    /// <paramref name="period"/> names a period for a date facet. Throws when the facet cannot group a query that way.
+    /// </summary>
+    public virtual GroupColumn GroupColumn(DateGranularity? period) =>
+        throw new ArgumentException($"Facet '{Key}' is a {Kind} facet; it has no values a query can group by.", "query");
+
+    /// <summary>The facet's values as numbers for sum, average, min and max in a query, or null when they are not numbers (design §10.3).</summary>
+    public virtual NumberSource? Numbers() => null;
+
+    /// <summary>The facet's values as keys for a distinct count in a query, or null when it has none (design §10.3).</summary>
+    public virtual DistinctSource? DistinctKeys() => null;
+
+    /// <summary>The error for a period on a facet that is not a date.</summary>
+    protected ArgumentException NotADate(DateGranularity period) =>
+        new($"Facet '{Key}' is a {Kind} facet; only a date can be grouped by {period}.", "query");
 
     protected TSelection? ExpectOrNull<TSelection>(Selection? selection) where TSelection : Selection =>
         selection is null ? null : Expect<TSelection>(selection);

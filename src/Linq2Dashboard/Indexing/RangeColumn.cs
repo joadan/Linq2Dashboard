@@ -43,6 +43,9 @@ internal sealed class RangeColumn
 
     public ReadOnlySpan<double> Values => values;
 
+    /// <summary>The same values as an array, for a query to read without copying (design §10.3). Never written after build.</summary>
+    internal double[] ValuesArray => values;
+
     public ReadOnlySpan<int> BucketCodes => bucketCodes;
 
     /// <summary>Total count per bucket code, index 0 being null.</summary>

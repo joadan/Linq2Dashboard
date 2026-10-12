@@ -1,5 +1,6 @@
 using System.Text.Json.Nodes;
 using Linq2Dashboard.Indexing;
+using Linq2Dashboard.Queries;
 using Linq2Dashboard.Serialization;
 
 namespace Linq2Dashboard.Facets;
@@ -120,6 +121,19 @@ internal sealed class DateFacetIndex : FacetIndex
 
         var nullValue = new FacetValue(null, totals[0], counts[0], date is { IncludeNull: true });
         return new DateFacetState(Key, Name, selection, context.Count, Column.Granularity, Column.Zone, buckets, presets, nullValue);
+    }
+
+    /// <summary>The facet's own periods. Another period needs the instants converted per row, which comes with plain date properties (design §10.8).</summary>
+    public override GroupColumn GroupColumn(DateGranularity? period) =>
+        period is null || period == Column.Granularity
+            ? new DateGroupColumn(Column)
+            : throw new ArgumentException($"Facet '{Key}' is grouped by {Column.Granularity}; grouping it by {period} is not supported yet.", "query");
+
+    /// <summary>The instants as UTC ticks.</summary>
+    public override DistinctSource? DistinctKeys()
+    {
+        DateColumn column = Column;
+        return new RawKeys(column, row => column.UtcTicks[row] == long.MinValue ? null : column.UtcTicks[row]);
     }
 
     /// <inheritdoc />

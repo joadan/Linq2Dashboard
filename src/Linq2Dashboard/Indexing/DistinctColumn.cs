@@ -21,6 +21,9 @@ internal sealed class DistinctColumn
     /// <summary>Distinct non-null values over the whole dataset, V.</summary>
     public int DistinctCount { get; }
 
+    /// <summary>The code of one row: 0 for null, 1..V otherwise. A query counts these per group (design §10.3).</summary>
+    public int CodeAt(int row) => codes[row];
+
     /// <summary>Encodes one value per row. <paramref name="comparer"/> defaults to <see cref="ValueColumn.DefaultComparer{TValue}"/>, so strings ignore case.</summary>
     public static DistinctColumn Build<TValue>(int rowCount, RowReader<TValue> read, IEqualityComparer<TValue>? comparer = null)
     {

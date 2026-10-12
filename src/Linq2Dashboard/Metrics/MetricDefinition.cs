@@ -138,8 +138,7 @@ internal sealed class MetricIndex
         ArgumentNullException.ThrowIfNull(matching);
         if (formula is not null)
         {
-            double? result = formula(earlier);
-            return new MetricState(Key, Name, Aggregation, result is double r && double.IsFinite(r) ? r : null, null);
+            return new MetricState(Key, Name, Aggregation, Evaluate(earlier), null);
         }
 
         if (Distinct is not null)
@@ -165,6 +164,18 @@ internal sealed class MetricIndex
             _ => throw new InvalidOperationException($"Unexpected aggregation {Aggregation}."),
         };
     }
+
+    /// <summary>True for a calculated metric, whose value is <see cref="Evaluate"/> over earlier metrics rather than read from rows.</summary>
+    public bool IsCalculated => formula is not null;
+
+    /// <summary>
+    /// A calculated metric's formula over <paramref name="earlier"/>, null when the result is not finite
+    /// (concept §4.4). A query evaluates it once per group over that group's values (design §10.3).
+    /// </summary>
+    public double? Evaluate(MetricValues earlier) =>
+        formula is null
+            ? throw new InvalidOperationException($"Metric '{Key}' is not calculated.")
+            : formula(earlier) is double r && double.IsFinite(r) ? r : null;
 
     /// <summary>A share of a zero total is undefined: there is nothing to be a part of.</summary>
     private static double? ShareOf(double value, double total) => total == 0 ? null : value / total;

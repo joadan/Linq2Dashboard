@@ -827,7 +827,7 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 
 ## 10. Queries
 
-A query (§C4.11) asks one question of a dashboard's rows and returns one table. Planned 2026-10-12, not yet built. Designed one decision at a time on 2026-10-12; the build order and its checkpoint are in §10.8.
+A query (§C4.11) asks one question of a dashboard's rows and returns one table. Designed one decision at a time on 2026-10-12; the build order and its checkpoint are in §10.8. Step 1, the query core, is built: grouping by facets, metric values and aggregations over facets, order, take and cancellation.
 
 ### 10.1 The query object
 
@@ -1059,7 +1059,7 @@ string json = dashboard.Serializer.ToJson(description);
 
 One pull request per step, each with its tests and the usage guide brought up to date:
 
-1. **The query core.** `DashboardQuery<T>`, `Dimension`, `QueryValue`, `QueryOrder` and `QueryResult`; grouping by facets with metric values, selections, order and take, limits and cancellation (§10.1 to §10.4).
+1. **The query core.** `DashboardQuery<T>`, `Dimension`, `QueryValue`, `QueryOrder` and `QueryResult`; grouping by facets with metric values, selections, order and take, limits and cancellation (§10.1 to §10.4). Built 2026-10-12. Three details settled in the code: the metric a `QueryValue` reads is `MetricKey`, since a type cannot have a property and a method both called `Metric`; `Sum`, `Average`, `Min` and `Max` already take a range facet or a numeric value facet, and `Distinct` any facet with values (codes, a range facet's values, a date facet's instants), before plain properties arrive; a date facet grouped by another period than its own is refused until step 2 brings per-row conversion. A range bucket's cell is closed at a finite top edge, as the column holds the last bucket (§3.3).
 2. **Where and plain properties.** The compiled where, property getters, grouping by value and by period, period overrides on date facets, aggregations over properties (§10.3, §10.5).
 3. **Row queries** (§C4.11, §10.2).
 4. **JSON.** The answer to JSON, `QueryFromJson` with the where parser and `Allowed`, `DashboardQueryException` (§10.6).

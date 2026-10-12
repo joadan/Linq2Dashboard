@@ -3,6 +3,7 @@ using Linq2Dashboard.Calculation;
 using Linq2Dashboard.Facets;
 using Linq2Dashboard.Indexing;
 using Linq2Dashboard.Metrics;
+using Linq2Dashboard.Queries;
 
 namespace Linq2Dashboard;
 
@@ -122,18 +123,7 @@ public sealed class Dashboard<T>
     public Dashboard<T> ScopeTo(Selections selections)
     {
         ArgumentNullException.ThrowIfNull(selections);
-        RowSet scope = All;
-        foreach ((string key, Selection selection) in selections)
-        {
-            if (!facetsByKey.TryGetValue(key, out FacetIndex? facet))
-            {
-                throw new ArgumentException($"Unknown facet key '{key}'.", nameof(selections));
-            }
-
-            scope = scope.And(RowsMatching(facet, selection));
-        }
-
-        return new Dashboard<T>(this, scope);
+        return new Dashboard<T>(this, Matching(selections));
     }
 
     /// <summary>The facets in definition order.</summary>
@@ -161,6 +151,20 @@ public sealed class Dashboard<T>
 
     /// <summary>The state with nothing selected.</summary>
     public DashboardState<T> Calculate() => Calculate(Selections.Empty);
+
+    /// <summary>
+    /// Answers one question about this dashboard's rows with one table (concept §4.11, design §10): the rows
+    /// <see cref="DashboardQuery{T}.Selections"/> match, every selection applied, grouped by up to two
+    /// dimensions, each group reporting the query's values, then ordered and cut. Reads the dashboard and
+    /// changes nothing: no selection, no state, no cache entry. Thread-safe; any number of queries may run at
+    /// once, also beside <see cref="Calculate(Selections)"/>. Every part is checked before a row is read, and a
+    /// mistake throws an <see cref="ArgumentException"/> that says what is wrong and what is known.
+    /// Synchronous: a query is CPU work, so a host that must keep its thread free runs it on another (design §10.4).
+    /// </summary>
+    /// <param name="query">The question.</param>
+    /// <param name="cancellationToken">Checked between steps and every 65 536 rows; a cancelled query throws <see cref="OperationCanceledException"/>.</param>
+    public QueryResult Query(DashboardQuery<T> query, CancellationToken cancellationToken = default) =>
+        QueryRunner.Run(this, query, cancellationToken);
 
     /// <summary>Calculates without consulting or filling the state cache. For benchmarks; the row-set cache still applies.</summary>
     internal DashboardState<T> CalculateUncached(Selections selections) => DashboardCalculator.Calculate(this, selections);
@@ -195,6 +199,8 @@ public sealed class Dashboard<T>
 
     internal bool TryGetFacetIndex(string key, out FacetIndex facet) => facetsByKey.TryGetValue(key, out facet!);
 
+    internal bool TryGetMetricIndex(string key, out MetricIndex metric) => metricsByKey.TryGetValue(key, out metric!);
+
     internal MetricIndex MetricIndex(string key) =>
         metricsByKey.TryGetValue(key, out MetricIndex? metric)
             ? metric
@@ -203,6 +209,33 @@ public sealed class Dashboard<T>
     /// <summary>Rows matching one facet's selection, through the row-set cache (design §5).</summary>
     internal RowSet RowsMatching(FacetIndex facet, Selection selection) =>
         rowSets.GetOrAdd((facet.Key, selection), _ => facet.RowsMatching(selection));
+
+    /// <summary>
+    /// The rows <paramref name="selections"/> match within this dashboard, every selection applied (concept §4.11):
+    /// the cached state's matching set when there is one, otherwise the cached selection row sets ANDed with
+    /// <see cref="All"/>, without counting any facet (design §10.3). An unknown key throws, as in <see cref="Calculate(Selections)"/>.
+    /// </summary>
+    internal RowSet MatchingRows(Selections selections)
+    {
+        ArgumentNullException.ThrowIfNull(selections);
+        return states.TryGet(selections, out DashboardState<T> state) ? state.Matching : Matching(selections);
+    }
+
+    private RowSet Matching(Selections selections)
+    {
+        RowSet rows = All;
+        foreach ((string key, Selection selection) in selections)
+        {
+            if (!facetsByKey.TryGetValue(key, out FacetIndex? facet))
+            {
+                throw new ArgumentException($"Unknown facet key '{key}'.", nameof(selections));
+            }
+
+            rows = rows.And(RowsMatching(facet, selection));
+        }
+
+        return rows;
+    }
 
     internal int CachedRowSetCount => rowSets.Count;
 
