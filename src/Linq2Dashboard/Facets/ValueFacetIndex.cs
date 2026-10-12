@@ -182,6 +182,32 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         };
     }
 
+    /// <summary>The row's value with its label, or a multi-valued row's items as a list.</summary>
+    public override RowColumn RowColumn(DateGranularity? period)
+    {
+        if (period is DateGranularity named)
+        {
+            throw NotADate(named);
+        }
+
+        if (Column is MultiValueColumn<TValue> multi)
+        {
+            return new ListRowColumn(row =>
+            {
+                ReadOnlySpan<int> codes = multi.CodesOf(row);
+                var cells = new QueryValueCell[codes.Length];
+                for (int i = 0; i < codes.Length; i++)
+                {
+                    cells[i] = (QueryValueCell)ValueCells.Cell(multi, labels, codes[i]);
+                }
+
+                return cells;
+            });
+        }
+
+        return new CodedRowColumn(GroupColumn(null));
+    }
+
     /// <summary>One double per value, converted once per query, when the facet holds numbers; never for a multi-valued facet.</summary>
     public override NumberSource? Numbers()
     {

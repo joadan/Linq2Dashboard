@@ -23,10 +23,10 @@ public sealed class QueryResult
     /// <summary>The rows of the answer, in the query's order.</summary>
     public IReadOnlyList<QueryRow> Rows { get; }
 
-    /// <summary>The number of groups before the query's take (concept §4.11).</summary>
+    /// <summary>The number of groups, or of matching rows for a row query, before the query's take (concept §4.11).</summary>
     public int Total { get; }
 
-    /// <summary>True when the take left groups out.</summary>
+    /// <summary>True when the take left groups or rows out.</summary>
     public bool IsCut => Rows.Count < Total;
 
     /// <summary>The column with <paramref name="key"/>. Throws for a key the answer does not have.</summary>
@@ -68,7 +68,7 @@ public enum QueryColumnRole
 /// <summary>What a query column's cells hold (design §10.2).</summary>
 public enum QueryColumnKind
 {
-    /// <summary>A <see cref="QueryValueCell"/>: a facet value with its label.</summary>
+    /// <summary>A <see cref="QueryValueCell"/>: a facet value with its label, or a property's value. A multi-valued column in a row query holds a list of them.</summary>
     Value,
 
     /// <summary>A <see cref="RangeInterval"/>: a range facet's bucket.</summary>
@@ -77,10 +77,10 @@ public enum QueryColumnKind
     /// <summary>A <see cref="QueryPeriod"/>: a date period.</summary>
     Period,
 
-    /// <summary>A <see cref="DateTimeOffset"/>: a point in time.</summary>
+    /// <summary>A <see cref="DateTimeOffset"/>: a point in time, in a date facet's zone or in UTC for a property.</summary>
     Instant,
 
-    /// <summary>A <see cref="double"/>, or null for "no value" (concept §4.4).</summary>
+    /// <summary>A <see cref="double"/>, or null for "no value" (concept §4.4): a value column, or a range facet's number in a row query.</summary>
     Number,
 }
 

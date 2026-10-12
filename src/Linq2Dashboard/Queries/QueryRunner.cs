@@ -4,6 +4,7 @@ using System.Runtime.ExceptionServices;
 using Linq2Dashboard.Facets;
 using Linq2Dashboard.Indexing;
 using Linq2Dashboard.Metrics;
+using static Linq2Dashboard.Queries.QueryNames;
 
 namespace Linq2Dashboard.Queries;
 
@@ -18,22 +19,22 @@ internal static class QueryRunner
     private const long DenseGroupLimit = 1 << 20;
 
     /// <summary>The cancellation token is checked once per this many rows (design §10.4).</summary>
-    private const int CancellationStride = 1 << 16;
+    internal const int CancellationStride = 1 << 16;
 
     private static readonly int[] NullCode = [0];
 
     public static QueryResult Run<T>(Dashboard<T> dashboard, DashboardQuery<T> query, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(query);
+        if (query.Columns is null || query.Columns.Count > 0)
+        {
+            return RowQueryRunner.Run(dashboard, query, cancellationToken);
+        }
+
         Plan plan = Plan.Resolve(dashboard, query);
         cancellationToken.ThrowIfCancellationRequested();
 
-        RowSet rows = dashboard.MatchingRows(query.Selections);
-        cancellationToken.ThrowIfCancellationRequested();
-        if (query.Where is Expression<Func<T, bool>> where)
-        {
-            rows = Filter(dashboard, rows, where, cancellationToken);
-        }
+        RowSet rows = Rows(dashboard, query, cancellationToken);
 
         Groups groups = Groups.Collect(plan, rows, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
@@ -70,6 +71,14 @@ internal static class QueryRunner
         }
 
         return new QueryResult(plan.Columns, cells, groups.Count);
+    }
+
+    /// <summary>Steps 2 and 3 of design §10.3: the rows the selections match, narrowed by the where.</summary>
+    internal static RowSet Rows<T>(Dashboard<T> dashboard, DashboardQuery<T> query, CancellationToken cancellationToken)
+    {
+        RowSet rows = dashboard.MatchingRows(query.Selections);
+        cancellationToken.ThrowIfCancellationRequested();
+        return query.Where is Expression<Func<T, bool>> where ? Filter(dashboard, rows, where, cancellationToken) : rows;
     }
 
     /// <summary>
@@ -430,96 +439,6 @@ internal static class QueryRunner
 
             return slot;
         }
-
-        /// <summary>A name in a query: the facet with that key, else the property of that name (concept §4.11).</summary>
-        private static (FacetIndex? Facet, PropertyAccessor<T>? Property) Name<T>(Dashboard<T> dashboard, string name, string use)
-        {
-            if (dashboard.TryGetFacetIndex(name, out FacetIndex facet))
-            {
-                return (facet, null);
-            }
-
-            if (dashboard.Properties.TryGet(name, out PropertyAccessor<T> property))
-            {
-                return (null, property);
-            }
-
-            if (dashboard.TryGetMetricIndex(name, out _))
-            {
-                throw Error($"'{name}' is a metric, and a query cannot {use} a metric. Ask for its value with QueryValue.Metric(\"{name}\").");
-            }
-
-            IEnumerable<string> facets = dashboard.Facets.Select(f => f.Key);
-            IReadOnlyList<string> properties = dashboard.Properties.Names;
-            throw Error($"'{name}' is neither a facet of this dashboard nor a property of {typeof(T).Name}.{Suggest(name, facets.Concat(properties))} Facets: {string.Join(", ", facets)}. Properties: {string.Join(", ", properties)}.");
-        }
-
-        private static PropertyAccessor<T> Property<T>(Dashboard<T> dashboard, string name)
-        {
-            if (dashboard.Properties.TryGet(name, out PropertyAccessor<T> property))
-            {
-                return property;
-            }
-
-            IReadOnlyList<string> properties = dashboard.Properties.Names;
-            throw Error($"'{name}' is not a property of {typeof(T).Name}.{Suggest(name, properties)} Properties: {string.Join(", ", properties)}.");
-        }
-
-        private static MetricIndex Metric<T>(Dashboard<T> dashboard, string key)
-        {
-            if (dashboard.TryGetMetricIndex(key, out MetricIndex metric))
-            {
-                return metric;
-            }
-
-            IEnumerable<string> keys = dashboard.Metrics.Select(m => m.Key);
-            string known = dashboard.Metrics.Count == 0 ? " The dashboard has no metrics." : $" Metrics: {string.Join(", ", keys)}.";
-            throw Error($"'{key}' is not a metric of this dashboard.{Suggest(key, keys)}{known}");
-        }
-
-        /// <summary>The nearest known name, ignoring case and up to two edits away, so a caller or an agent can retry (design §10.5).</summary>
-        private static string Suggest(string name, IEnumerable<string> candidates)
-        {
-            string? best = null;
-            int bestDistance = 3;
-            foreach (string candidate in candidates)
-            {
-                int distance = Distance(name.ToUpperInvariant(), candidate.ToUpperInvariant());
-                if (distance < bestDistance)
-                {
-                    best = candidate;
-                    bestDistance = distance;
-                }
-            }
-
-            return best is null ? string.Empty : $" Did you mean '{best}'?";
-        }
-
-        private static int Distance(string a, string b)
-        {
-            var previous = new int[b.Length + 1];
-            var current = new int[b.Length + 1];
-            for (int j = 0; j <= b.Length; j++)
-            {
-                previous[j] = j;
-            }
-
-            for (int i = 1; i <= a.Length; i++)
-            {
-                current[0] = i;
-                for (int j = 1; j <= b.Length; j++)
-                {
-                    int substitution = previous[j - 1] + (a[i - 1] == b[j - 1] ? 0 : 1);
-                    current[j] = Math.Min(substitution, Math.Min(previous[j], current[j - 1]) + 1);
-                }
-
-                (previous, current) = (current, previous);
-            }
-
-            return previous[b.Length];
-        }
-
-        private static ArgumentException Error(string message) => new(message, "query");
     }
 
     /// <summary>The groups the matching rows fall in, with their counts and accumulations (design §10.3, steps 4 and 5).</summary>

@@ -827,7 +827,7 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 
 ## 10. Queries
 
-A query (§C4.11) asks one question of a dashboard's rows and returns one table. Designed one decision at a time on 2026-10-12; the build order and its checkpoint are in §10.8. Steps 1 and 2 are built: grouping by facets and properties, periods, metric values and aggregations, the where, order, take and cancellation.
+A query (§C4.11) asks one question of a dashboard's rows and returns one table. Designed one decision at a time on 2026-10-12; the build order and its checkpoint are in §10.8. Steps 1 to 3 are built: grouping by facets and properties, periods, metric values and aggregations, the where, row queries, order, take and cancellation. The checkpoint of §10.8 comes next.
 
 ### 10.1 The query object
 
@@ -897,11 +897,11 @@ A cell holds the library's own types, so what a query returns can go straight ba
 
 | Kind | Cell | From | Back into a selection |
 |---|---|---|---|
-| `Value` | `QueryValueCell`: the value, boxed in its own type, and the facet's label for it (§C5) | a value or multi-valued facet, or a property grouped by value | `Toggle(key, cell.Value)` |
+| `Value` | `QueryValueCell`: the value, boxed in its own type, and the facet's label for it (§C5) | a value or multi-valued facet, a property grouped by value, or a property other than a date in a row query | `Toggle(key, cell.Value)` |
 | `Interval` | `RangeInterval`, the bucket's `[From, To)`, the last bucket closed | a range facet in a group query | `ToggleInterval(key, cell)` |
 | `Period` | `QueryPeriod`: the `[From, To)` instants and the local period start for labels, as `DateBucket` carries them | a date facet, or a date with a named period | `ToggleInterval(key, cell.Interval)` |
-| `Instant` | `DateTimeOffset` | a date facet or date property in a row query without a period | |
-| `Number` | `double?`, null for "no value" (§C4.4) | a value column; a range facet or number property in a row query | |
+| `Instant` | `DateTimeOffset`, in the facet's zone or in UTC for a property | a date facet or date property in a row query without a period | |
+| `Number` | `double?`, null for "no value" (§C4.4) | a value column; a range facet in a row query | |
 
 - A null group's cell is `null` in every kind; back into a selection it is `Toggle(key, null)` for a value facet and `ToggleNull` for a range or date facet (§C4.8).
 - A multi-valued facet as a row query column holds the row's items as an `IReadOnlyList<QueryValueCell>`.
@@ -1061,7 +1061,7 @@ One pull request per step, each with its tests and the usage guide brought up to
 
 1. **The query core.** `DashboardQuery<T>`, `Dimension`, `QueryValue`, `QueryOrder` and `QueryResult`; grouping by facets with metric values, selections, order and take, limits and cancellation (§10.1 to §10.4). Built 2026-10-12. Three details settled in the code: the metric a `QueryValue` reads is `MetricKey`, since a type cannot have a property and a method both called `Metric`; `Sum`, `Average`, `Min` and `Max` already take a range facet or a numeric value facet, and `Distinct` any facet with values (codes, a range facet's values, a date facet's instants), before plain properties arrive; a date facet grouped by another period than its own is refused until step 2 brings per-row conversion. A range bucket's cell is closed at a finite top edge, as the column holds the last bucket (§3.3).
 2. **Where and plain properties.** The compiled where, property getters, grouping by value and by period, period overrides on date facets, aggregations over properties (§10.3, §10.5). Built 2026-10-12. The where scans the matching set word by word, on several cores under parallel counting. A property dimension codes its values per query in first-seen order behind a key that is never null, so the number of codes is unknown until the scan and its groups are always found through a hash. A date facet grouped by a coarser period its own periods nest in (a day in anything, a month in its quarter and year, a quarter in its year) maps its buckets once and reads the bucket codes; any other period converts each row's instant in the facet's zone. Errors name a property's type as C# writes it, `IReadOnlyList<String?>?`.
-3. **Row queries** (§C4.11, §10.2).
+3. **Row queries** (§C4.11, §10.2). Built 2026-10-12. A property column keeps its own type in a `QueryValueCell` rather than becoming a `double`, so an id stays an exact integer and a decimal keeps its digits; a range facet's column is its `double`, as the column stores it. Ties in the order column fall back to row order, not to the dashboard's sort, which would need the inverse of the sort order per query. A column holding several values per row (a multi-valued facet, a collection property) lists them and cannot be ordered by. The order key is read once per row into a heap of N, so a property column costs one read per row and none per comparison.
 4. **JSON.** The answer to JSON, `QueryFromJson` with the where parser and `Allowed`, `DashboardQueryException` (§10.6).
 5. **`Describe`** and its JSON (§10.7).
 6. **Benchmarks.** The estimates of §10.3 measured at a million rows and recorded in §8.
