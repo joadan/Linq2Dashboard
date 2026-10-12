@@ -865,6 +865,49 @@ dashboard.Query(new DashboardQuery<Order>
 - C# callers name a member-derived facet with `FacetKey.Of<Order>(x => x.Country)`, as elsewhere (§C7).
 - Everything is checked when `Query` is called, before any row is read: unknown names, more than two dimensions, a period on something that is not a date, an aggregation that does not fit its property, duplicate keys (§C4.11, strict).
 
+### 10.2 The answer
+
+```csharp
+sealed class QueryResult
+{
+    IReadOnlyList<QueryColumn> Columns { get; }     // dimensions first, then values, in the query's order
+    IReadOnlyList<QueryRow> Rows { get; }
+    int Total { get; }                              // groups, or matching rows for a row query (§C4.11)
+    bool IsCut { get; }                             // Rows.Count < Total
+    QueryColumn Column(string key);
+}
+
+sealed record QueryColumn(string Key, string Name, QueryColumnRole Role, QueryColumnKind Kind)
+{
+    string? Source { get; }                 // the facet key, property name or metric key it reads; null for Count
+    Aggregation? Aggregation { get; }       // for a value column
+    DateGranularity? Granularity { get; }   // for a period column
+}
+
+enum QueryColumnRole { Dimension, Value }
+enum QueryColumnKind { Value, Interval, Period, Instant, Number }
+
+sealed class QueryRow { object? this[int column] { get; } object? this[string key] { get; } }
+
+sealed record QueryValueCell(object? Value, string? Label = null);                  // Kind Value
+sealed record QueryPeriod(DateInterval Interval, DateTime PeriodStart, DateGranularity Granularity);   // Kind Period
+```
+
+A cell holds the library's own types, so what a query returns can go straight back into a selection and be formatted the way the facets are:
+
+| Kind | Cell | From | Back into a selection |
+|---|---|---|---|
+| `Value` | `QueryValueCell`: the value, boxed in its own type, and the facet's label for it (§C5) | a value or multi-valued facet, or a property grouped by value | `Toggle(key, cell.Value)` |
+| `Interval` | `RangeInterval`, the bucket's `[From, To)`, the last bucket closed | a range facet in a group query | `ToggleInterval(key, cell)` |
+| `Period` | `QueryPeriod`: the `[From, To)` instants and the local period start for labels, as `DateBucket` carries them | a date facet, or a date with a named period | `ToggleInterval(key, cell.Interval)` |
+| `Instant` | `DateTimeOffset` | a date facet or date property in a row query without a period | |
+| `Number` | `double?`, null for "no value" (§C4.4) | a value column; a range facet or number property in a row query | |
+
+- A null group's cell is `null` in every kind; back into a selection it is `Toggle(key, null)` for a value facet and `ToggleNull` for a range or date facet (§C4.8).
+- A multi-valued facet as a row query column holds the row's items as an `IReadOnlyList<QueryValueCell>`.
+- A column's `Name` is the facet's or metric's display name, the property name, or the key for a derived value; a component may override it, as for facets.
+- `Rows` is in the query's order, or the dimensions' own order when it names none (§C4.11). JSON writes the cells flat (§10.6).
+
 ## 11. Open questions
 
 1. **Facets and metrics declared in Blazor markup.** Should `<Metric>` and the facet components be able to define what they show (aggregation and selector, or facet kind and selector), not only place something defined in the builder? Two routes were weighed on 2026-09-12: computing in the component over the matching rows (pure, but the UI calculates and pays per render; for facets that would be a second counting engine, which §C7 rules out), or registering the column lazily on the dashboard on first render (keeps the speed, but mutates a dashboard the design promises is immutable after `Create`, misses states already cached, and makes a page's markup part of the dashboard's definition). A third route is a markup-driven builder: a `Definition` fragment inside `DashboardView` whose children (`ValueFacetDefinition`, `RangeFacetDefinition`, `DateFacetDefinition`, `MetricDefinition`, `CountMetricDefinition`, `FixedFilter`, `SortDefinition`) register builder calls with a collector during the first render, after which the view runs `Dashboard.Create` once and then renders the placement components; the view cascades its type parameter so children need no `T`. This keeps the engine and its guarantees untouched and was prototyped on 2026-09-12 (facet and metric definition components were written, then removed unfinished). Discussed and parked the same day: the builder stays the primary API, the markup route is the one to add if any, and the one decision it needs is whether each view builds its own dashboard (right for WebAssembly) or a host can build once and share (needed on Blazor Server with large shared data; a `DashboardCreated` callback plus the existing `Dashboard` parameter would give both). Also noted: the core's internal `*Definition` classes would want renaming to avoid sharing names with the markup components. **Update 2026-09-26:** the one decision is made: a view renders either a host-built `Dashboard` or builds its own from `Items` and `Build` (§C7, §9 component 1), and markup definitions are to apply to `Items` views only, on the same facet and metric components rather than separate definition components. A spike confirmed the registration pass under static SSR, prerendering and interactive rendering (§9, Markup definitions: spike).
@@ -924,3 +967,4 @@ dashboard.Query(new DashboardQuery<Order>
 - **Markup definitions register with the view and settle in one build per render pass.** Explicit definitions beat implicit ones, two explicit ones or one against `Build` throw, a host-built `Dashboard` rejects explicit ones; components with an unknown key wait until the view has settled after being asked; requested selections are held until their facets exist. `ValueFacet.Define` is a `Delegate` checked against the selector's type rather than a facade type. Decided 2026-09-26. See §9, component 11.
 - **The view cascades its type parameter, keeping the name `T`.** Children written inside `DashboardView` need no `T="Order"`, and the view infers its own from `Dashboard` or `Items`, so a page names the row type nowhere; explicit `T` still compiles. `T` is kept over a rename to `TItem`, which would have avoided sharing the name with other libraries' components but broken every page: the compiler lets another component's own parameters win, so the only effect is on a component whose `T` nothing infers. A method group for a parameter typed by `T` needs `T` on that component, since the compiler reads it as inferring; both are in the usage guide. Decided 2026-09-26. See §9, component 1.
 - **A query is one immutable object of typed parts.** `DashboardQuery<T>` holds `Selections`, `Where`, `Dimension`, `QueryValue` and `QueryOrder` parts, so nothing is parsed and each part maps one to one to a JSON object for a tool layer. Names as strings with a small syntax (`"OrderDate:month"`, `"avg(DeliveryDays)"`) were rejected because that syntax is a query language, which the core does not have (§C1); a fluent builder was rejected as the primary form because agents and JSON need a data object anyway, and it can be added later over this one. Decided 2026-10-12. See §10.1.
+- **A query's cells are the library's own types.** A value is a `QueryValueCell` with its label, a range bucket a `RangeInterval`, a period a `QueryPeriod` around a `DateInterval`, a number `double?`, so a cell from an answer goes straight back into `Selections` (a chart drawn from a query drills down into the dashboard) and the Blazor formatter shows it as it shows the facets. A flat table of plain values (label as an extra column, an interval as two) was rejected because every client would rebuild intervals and selections from the pieces; JSON still writes the cells flat. Decided 2026-10-12. See §10.2.
