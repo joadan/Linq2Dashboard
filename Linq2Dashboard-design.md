@@ -1018,6 +1018,43 @@ DashboardQuery<Order> query = dashboard.Serializer.QueryFromJson(json, new Query
 - **Strict throughout**, also for the selections inside a query, unlike the lenient selection reader of §2.5: a dropped selection would change the answer without saying so (§C4.11). An error is a `DashboardQueryException`, an `ArgumentException` whose `Path` names the JSON element and whose message is written to be passed back to an agent as it is: what is wrong, and the valid names or values.
 - There is no query-to-JSON in this version: a where that came as an expression has no text to write.
 
+### 10.7 Describing what can be asked
+
+Before a client or an agent asks, it needs the dashboard's vocabulary: the names it may use and what each allows. `Facets` and `Metrics` on the dashboard give keys, names and kinds only, so the core describes the rest, because the rules of §10.5 are the core's.
+
+```csharp
+DashboardDescription description = dashboard.Describe(allowed);   // optional; the Allowed list of §10.6
+string json = dashboard.Serializer.ToJson(description);
+```
+
+```json
+{
+  "facets": [
+    { "key": "Country", "name": "Country", "kind": "value", "values": 20 },
+    { "key": "Customer", "name": "Customer", "kind": "value", "values": 100000, "labelled": true },
+    { "key": "Amount", "name": "Amount", "kind": "range", "buckets": 9, "min": 0, "max": 48250 },
+    { "key": "OrderDate", "name": "Order date", "kind": "date", "granularity": "month", "timeZone": "Europe/Stockholm" }
+  ],
+  "metrics": [
+    { "key": "orders", "name": "Orders", "aggregation": "count" },
+    { "key": "revenue", "name": "Revenue", "aggregation": "sum" }
+  ],
+  "properties": [
+    { "name": "DeliveryDays", "type": "number", "uses": ["groupBy", "aggregate", "distinct", "column"] },
+    { "name": "Country", "type": "text", "uses": ["groupBy", "distinct", "column"], "behindFacet": true }
+  ],
+  "periods": ["day", "week", "month", "quarter", "year"],
+  "limits": { "rows": 10000, "dimensions": 2 }
+}
+```
+
+- A facet carries what helps a question: the number of values in the dataset (or the scope) for a value facet, so an agent knows whether grouping by it is small, the bucket count and bounds of a range facet, the period and zone of a date facet, and whether values have labels.
+- A property carries a type in the vocabulary of JSON (`text`, `number`, `boolean`, `date`, `collection`, `other`) and the uses §10.5 allows it. `behindFacet` marks a property whose name a facet also has, reached only through `{ "property" }` (§10.6).
+- The `Allowed` list filters the description exactly as it filters the reader, so a client is never told about a name it cannot use.
+- Facet values are not listed. A query grouped by the facet discovers them with counts (§C4.11), which keeps the description small and fixed for the life of the dashboard; it is built once per `Allowed` list and is cheap to call again.
+- What the where's parser accepts is the parser's to describe; a Gridify mapper knows its own fields.
+- The state as JSON (counts, selections and metrics of the current view) is not part of this. A client learns the current view from the selections' JSON (§2.5) and from queries, and a state JSON stays with the parked plan for non-Blazor clients.
+
 ## 11. Open questions
 
 1. **Facets and metrics declared in Blazor markup.** Should `<Metric>` and the facet components be able to define what they show (aggregation and selector, or facet kind and selector), not only place something defined in the builder? Two routes were weighed on 2026-09-12: computing in the component over the matching rows (pure, but the UI calculates and pays per render; for facets that would be a second counting engine, which §C7 rules out), or registering the column lazily on the dashboard on first render (keeps the speed, but mutates a dashboard the design promises is immutable after `Create`, misses states already cached, and makes a page's markup part of the dashboard's definition). A third route is a markup-driven builder: a `Definition` fragment inside `DashboardView` whose children (`ValueFacetDefinition`, `RangeFacetDefinition`, `DateFacetDefinition`, `MetricDefinition`, `CountMetricDefinition`, `FixedFilter`, `SortDefinition`) register builder calls with a collector during the first render, after which the view runs `Dashboard.Create` once and then renders the placement components; the view cascades its type parameter so children need no `T`. This keeps the engine and its guarantees untouched and was prototyped on 2026-09-12 (facet and metric definition components were written, then removed unfinished). Discussed and parked the same day: the builder stays the primary API, the markup route is the one to add if any, and the one decision it needs is whether each view builds its own dashboard (right for WebAssembly) or a host can build once and share (needed on Blazor Server with large shared data; a `DashboardCreated` callback plus the existing `Dashboard` parameter would give both). Also noted: the core's internal `*Definition` classes would want renaming to avoid sharing names with the markup components. **Update 2026-09-26:** the one decision is made: a view renders either a host-built `Dashboard` or builds its own from `Items` and `Build` (§C7, §9 component 1), and markup definitions are to apply to `Items` views only, on the same facet and metric components rather than separate definition components. A spike confirmed the registration pass under static SSR, prerendering and interactive rendering (§9, Markup definitions: spike).
@@ -1082,3 +1119,4 @@ DashboardQuery<Order> query = dashboard.Serializer.QueryFromJson(json, new Query
 - **A row query is capped by a constant; a group query is not; `Query` takes a token and stays synchronous.** A row query returns 100 rows without `Take` and refuses a `Take` above 10 000, since bulk rows come from `state.Items`; a builder option was left until a host needs one, because an option can be added but not taken back. Groups are bounded by the codes of two dimensions and charts want all of them, so a ceiling on groups was rejected. The token is checked between steps and every 65 536 rows. Decided 2026-10-12. See §10.4.
 - **A query reaches public top-level properties of `T` by case-sensitive name, and a row query returns simple types only.** Grouping and distinct use the value facet's equality, periods take the date types, aggregations the numeric ones; object-valued properties are refused as row columns so an answer is never an object graph. Case-insensitive names were rejected because facet keys are case-sensitive and one rule should hold for every name; the error suggests near matches instead. No allowlist in the core, since `Where` already reads anything on the code path; exposure is decided where outside input is read. Decided 2026-10-12. See §10.5.
 - **Queries and answers both have a JSON form in the core, on `dashboard.Serializer`.** The answer writes rows as arrays under a column header, intervals in the query-string notation and values in each facet's own form. A query is read strictly, selections included, with the where handed as a string to a parser the application supplies, so the core reads no filter language and takes no dependency, and an optional `Allowed` list decides which names outside input may use. Answer-only JSON was rejected because every tool layer and HTTP endpoint would write the same mapping and the same error messages. Decided 2026-10-12. See §10.6.
+- **The core describes what can be asked; it does not write the state as JSON.** `Describe(allowed)` lists facets with what helps a question (value count, buckets, period, labels), metrics, and properties with their type and the uses §10.5 allows, filtered by the same `Allowed` list as the query reader, so a client is never told about a name it cannot use. Leaving the description to each tool layer was rejected because only the core knows the property rules; facet value lists stay out because a query discovers them. State JSON was left with the parked plan for non-Blazor clients, since the current view is the selections plus queries. Decided 2026-10-12. See §10.7.
