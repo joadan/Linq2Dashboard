@@ -22,7 +22,7 @@ It is the faceted-search experience of an e-commerce site, applied to any .NET c
 
 ### What it is not
 
-- Not a BI platform. No query language, no report designer, no data warehouse.
+- Not a BI platform. No query language, no report designer, no data warehouse. A query (§4.11) asks one bounded question in the dashboard's own terms; it is not a language.
 - Not a data access layer. The data is already in memory when the dashboard sees it.
 - Not a UI framework. The core knows nothing about rendering. A separate Blazor package renders it.
 
@@ -125,7 +125,7 @@ A value whose filtered count is zero is still a facet value. The core always inc
 
 Unlike facet counts, metrics and results have no "own selection" to exclude. They always reflect the full set of matching rows.
 
-In the first version a metric is a single number over all matching rows. Metrics broken down per facet value (revenue per country) belong to grouping, which is a later concern (§8).
+In the first version a metric is a single number over all matching rows. Metrics broken down per facet value (revenue per country) belong to grouping, which is a later concern (§8) and arrives as queries (§4.11), not in the state.
 
 Null is skipped by metrics that read a property. Sum, average, min and max are calculated over the matching rows that have a value; average divides by that number, not by the number of matching rows. Count counts matching rows and is unaffected by nulls. A metric over a set with no values reports "no value", never zero.
 
@@ -190,6 +190,27 @@ The same definitions are often wanted over several subsets of the data: one tab 
 - Scopes compose: a scoped dashboard can be scoped again.
 - The scope is not a selection. It never appears among the active selections or in serialised selections, and the user cannot remove it.
 - A scope can also be given as selections, in the facets' own terms: the rows the selections match become the scope, with the facets' matching rules (case-insensitive strings, null as a value, half-open intervals). This is how "make this view my dashboard" works: the current selections become the scope of a new dashboard, which starts with nothing selected. Three consequences follow from the scope not being a selection. The scoped facets show only the values in scope, without the own-facet exclusion of §4.2, since the scope is part of "everything", not a choice. A selection inside the scope on the same facet narrows further: Sweden inside a Nordic scope gives Sweden, Germany gives nothing. A relative date preset is resolved when the scope is made and stays fixed, as a fixed filter would.
+
+### 4.11 A query asks one question and changes nothing
+
+Planned 2026-10-12, not yet built. This section sets the boundary before any code: what a query can ask, and what it cannot.
+
+The state answers "what does the current view look like". A **query** answers one question about the dashboard's rows in the dashboard's own terms: revenue per sales rep in Sweden this year, the top ten. One question goes in, one table comes out.
+
+- **Separate from the state.** A query only reads the immutable dashboard (§4.9). It changes no selection, no state and nothing on screen, and any number can run at once. The state's metrics stay over all matching rows (§4.4); numbers per group are a query's answer.
+- **The rows it asks about.** The dataset (after fixed filters and scope, §4.10), narrowed by a set of selections under the rules of §4.1 and, optionally, by a **where**: a predicate over the row from the application, combined with the selections by AND. Every selection applies, also that of a facet the query groups by; there is no own-facet exclusion (§4.2), since a query counts no facet. The core has no filter language: a string syntax, typed by a user or written by an agent, is turned into the predicate outside the core. The predicate owns its semantics and must be pure and thread-safe, like a text facet's function (§5).
+- **Grouping.** By nothing, which gives one row, or by one or two dimensions. A dimension is either a facet, grouped exactly as the facet presents its values (the same values and labels, buckets and date periods, null as a group of its own as in §4.8, and a row in every group it has a value in under a multi-valued facet), or a plain property of the row, grouped by the value facet's rules (strings ignoring case, null as a group, a collection like a multi-valued facet). A group with no rows is not in the answer; the zero-count rule of §4.3 is about facets.
+- **Values.** Per group, any of the dashboard's metrics by key, calculated metrics included, and count, sum, average, minimum, maximum or distinct count over a plain property, all with the null rules of §4.4. A value with nothing to aggregate is "no value". There is no share of the total per group.
+- **Order and size.** Ordered by one value or dimension, in either direction, and cut to the first N groups. The answer always says how many groups there were, so a cut answer is never mistaken for the whole.
+- **Consistent with the screen.** Grouped by a facet and counted, a query under the same selections gives that facet's filtered counts whenever the facet has no selection of its own. This is why queries live in the library rather than in a general query library.
+- **Strict.** An unknown name, or a value that does not fit its property (the sum of a text), is an error before anything runs. Reading selections stays lenient (§7), because a dropped selection shows on screen; a dropped part of a query gives a wrong answer that looks right.
+
+What a query does not do, so that the first version can be finished:
+
+- No language of its own, no condition on groups ("having"), no top N per group, no share of a parent, no period comparison, no more than two dimensions. A caller, person or agent, composes several queries instead.
+- No data outside the dashboard's rows: no joins, no database, no writing.
+- No caching of answers, and no effect on what the dashboard shows. A where never changes the facet counts, and neither does a grid's own filter over the matching rows.
+- No knowledge of agents. Turning a dashboard into tools an agent can call is the application's concern, or a separate package's.
 
 ---
 
@@ -393,7 +414,7 @@ Because facets are identified by string keys and selections are serialisable, a 
 
 ### Later
 
-- Grouping and hierarchical facets, including metrics per facet value (revenue per country).
+- Grouping and hierarchical facets, including metrics per facet value (revenue per country). Grouping arrives as queries, whose boundary is set in §4.11 (2026-10-12) and which are not yet built.
 - ~~Multi-valued facets over collection properties (tags, categories).~~ Added 2026-09-20 with OR within the facet; see §5. AND within the facet ("has all of these tags") remains later, as a selection mode: it makes a value's count depend on the facet's own selection, against §4.2.
 - ~~Distinct count, percentage-of-total, calculated metrics.~~ All three were added on 2026-09-14; see §4.4.
 - Exclusion selections ("everything except Sweden") as an additional mode on value facets.
@@ -410,6 +431,7 @@ Because facets are identified by string keys and selections are serialisable, a 
 Decisions still to be made, roughly in order of how much they shape everything else.
 
 1. **Sorting the result page.** Application-defined only, or user-controlled with the same key-addressed contract as selections? Parked until the rest of the first version is clearer.
+2. **Queries (§4.11).** Which wins when a facet key equals a property name in grouping? Are plain number and date properties bucketed, by the range and date facets' rules? Can a query list rows (the ten largest orders) as well as groups? Does the answer carry hints for a chart?
 
 ### To revisit
 
@@ -446,3 +468,4 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **The matching rows are a list, not pages.** The state exposes them counted and indexable in the application-defined order. Paging, virtualisation and display sorting belong to the grid that shows them; the core never tries to be that grid and offers no page API, and the Blazor package renders no rows either: it hands them to the application's grid. Decided 2026-09-19. See §3, §4.4, §7.
 - **A view either renders a dashboard the host built or builds its own from rows.** The host building once and sharing is the way for large or shared data; the view building over the user's own rows on every visit is the way for small data, measured at about 10 ms for 10 000 rows (design §8). One or the other per view, never both; the view rebuilds when the rows change and carries the selections over as a bookmark would. Decided 2026-09-26. See §7.
 - **Under a view that builds its own dashboard, the facet and metric components define what they show.** The same components as for display, not separate definition components; one place per definition; nothing removed; values watched, code read once; waiting selections. Not under a host-built dashboard. Decided 2026-09-26. See §7.
+- **Queries live in the core and reuse the facets.** A query groups by facets and by plain properties of the row, so its numbers agree with the facet counts by construction; a separate query library could not do that. Its where is a predicate over the row from the application, not a language: a string syntax such as Gridify is turned into the predicate outside the core, which stays free of dependencies. Agents are served by tools outside the core. Decided 2026-10-12. See §4.11.
