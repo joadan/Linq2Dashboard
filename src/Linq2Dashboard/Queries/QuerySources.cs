@@ -87,6 +87,67 @@ internal sealed class RangeGroupColumn(RangeColumn column) : GroupColumn(column.
     }
 }
 
+/// <summary>
+/// A date facet grouped by a coarser period that its own periods nest in (a month in its quarter and year, a day in
+/// anything): each bucket maps to the coarser period once, so rows are read through the bucket codes (design §10.3).
+/// </summary>
+internal sealed class CoarserDateGroupColumn : GroupColumn
+{
+    private readonly DateColumn column;
+    private readonly int[] codeOfBucket;
+    private readonly DateTime[] starts;
+    private readonly DateGranularity granularity;
+
+    private CoarserDateGroupColumn(DateColumn column, int[] codeOfBucket, DateTime[] starts, DateGranularity granularity)
+        : base(starts.Length + 1, QueryColumnKind.Period)
+    {
+        this.column = column;
+        this.codeOfBucket = codeOfBucket;
+        this.starts = starts;
+        this.granularity = granularity;
+    }
+
+    public override DateGranularity? Granularity => granularity;
+
+    /// <summary>Whether every period of <paramref name="own"/> lies inside one period of <paramref name="coarser"/>. Weeks nest in nothing but weeks.</summary>
+    public static bool Nests(DateGranularity own, DateGranularity coarser) => (own, coarser) switch
+    {
+        (DateGranularity.Day, _) => true,
+        (DateGranularity.Month, DateGranularity.Quarter or DateGranularity.Year) => true,
+        (DateGranularity.Quarter, DateGranularity.Year) => true,
+        _ => false,
+    };
+
+    public static CoarserDateGroupColumn Create(DateColumn column, DateGranularity granularity)
+    {
+        var codeOfBucket = new int[column.BucketCount + 1];
+        var starts = new List<DateTime>();
+        for (int bucket = 0; bucket < column.BucketCount; bucket++)
+        {
+            DateTime start = DateColumn.PeriodStart(column.BucketStart(bucket), granularity);
+            if (starts.Count == 0 || starts[^1] != start)
+            {
+                starts.Add(start);
+            }
+
+            codeOfBucket[bucket + 1] = starts.Count;
+        }
+
+        return new CoarserDateGroupColumn(column, codeOfBucket, starts.ToArray(), granularity);
+    }
+
+    public override int CodeAt(int row) => codeOfBucket[column.BucketCodes[row]];
+
+    public override object Cell(int code)
+    {
+        DateTime start = starts[code - 1];
+        return new QueryPeriod(
+            DateInterval.Between(column.ToInstant(start), column.ToInstant(DateColumn.NextPeriodStart(start, granularity))),
+            start,
+            granularity);
+    }
+}
+
 internal sealed class DateGroupColumn(DateColumn column) : GroupColumn(column.BucketCount + 1, QueryColumnKind.Period)
 {
     public override DateGranularity? Granularity => column.Granularity;
@@ -106,12 +167,14 @@ internal static class ValueCells
     public static object Cell<TValue>(IValueColumn<TValue> column, string?[]? labels, int code) =>
         new QueryValueCell(column.ValueOf(code), labels?[code - 1]);
 
-    /// <summary>By value when the type has an order (strings ignoring case, then ordinal), otherwise in first-seen order.</summary>
-    public static int Compare<TValue>(IValueColumn<TValue> column, int a, int b)
+    /// <summary>By value when the type has an order (strings ignoring case), otherwise in first-seen order.</summary>
+    public static int Compare<TValue>(IValueColumn<TValue> column, int a, int b) =>
+        Compare(column.ValueOf(a), column.ValueOf(b), a, b);
+
+    /// <summary>Two values of codes <paramref name="a"/> and <paramref name="b"/> by value, then by code, so the order is total and deterministic.</summary>
+    public static int Compare<TValue>(TValue x, TValue y, int a, int b)
     {
-        int result = ValueOrder<TValue>.Comparer is IComparer<TValue> comparer
-            ? comparer.Compare(column.ValueOf(a), column.ValueOf(b))
-            : 0;
+        int result = ValueOrder<TValue>.Comparer is IComparer<TValue> comparer ? comparer.Compare(x, y) : 0;
         return result != 0 ? result : a.CompareTo(b);
     }
 

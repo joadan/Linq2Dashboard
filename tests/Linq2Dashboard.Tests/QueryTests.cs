@@ -343,6 +343,129 @@ public class QueryTests
     }
 
     [Fact]
+    public void Query_where_narrows_the_rows_the_selections_match()
+    {
+        var answer = Ask(new()
+        {
+            Selections = Selections.Empty.With("IsActive", ValueSelection.Of(true)),
+            Where = x => x.Amount >= 500,
+            GroupBy = [Dimension.Of("Country")],
+        });
+
+        Assert.Equal([("SE", 2.0)], answer.Rows.Select(r => (ValueOf(r[0]), (double)r["Count"]!)));
+    }
+
+    [Fact]
+    public void Query_where_gives_the_same_answer_on_several_cores()
+    {
+        Order[] many = Enumerable.Range(0, 50).SelectMany(_ => TestData.Orders()).ToArray();
+        var serial = Dashboard.Create(many, b => b.ValueFacet(x => x.Country));
+        var query = new DashboardQuery<Order> { Where = x => x.Amount >= 500 && x.Status != "Pending", GroupBy = [Dimension.Of("Country")] };
+
+        var expected = serial.Query(query).Rows.Select(r => r.Cells.ToArray());
+        var actual = Dashboard.Create(many, b => { b.ValueFacet(x => x.Country); b.EnableParallelCounting(); }).Query(query).Rows.Select(r => r.Cells.ToArray());
+
+        Assert.Equal(expected, actual);
+        Assert.Equal([("SE", 100.0), (null, 50.0)], serial.Query(query).Rows.Select(r => (ValueOf(r[0]), (double)r["Count"]!)));
+    }
+
+    [Fact]
+    public void Query_groups_by_a_plain_property_with_a_value_facets_rules()
+    {
+        var kind = Ask(new() { GroupBy = [Dimension.Of("Kind")] });
+        Assert.Equal([(OrderKind.Web, 5.0), (OrderKind.Store, 3.0)], kind.Rows.Select(r => ((OrderKind)ValueOf(r[0])!, (double)r["Count"]!)));
+        Assert.Equal(new QueryColumn("Kind", "Kind", QueryColumnRole.Dimension, QueryColumnKind.Value) { Source = "Kind" }, kind.Column("Kind"));
+
+        // Strings ignore case and keep the first spelling, null is a group, as under the Country facet.
+        var country = Ask(new() { GroupBy = [Dimension.Property("Country")] });
+        Assert.Equal([("DK", 1.0), ("NO", 2.0), ("SE", 3.0), (null, 2.0)], country.Rows.Select(r => (ValueOf(r[0]), (double)r["Count"]!)));
+    }
+
+    [Fact]
+    public void Query_name_means_the_facet_before_the_property()
+    {
+        var facet = Ask(new() { GroupBy = [Dimension.Of("Amount")] });
+        var property = Ask(new() { GroupBy = [Dimension.Property("Amount")] });
+
+        Assert.Equal(QueryColumnKind.Interval, facet.Column("Amount").Kind);
+        Assert.Equal(4, facet.Total);
+        Assert.Equal(QueryColumnKind.Value, property.Column("Amount").Kind);
+        Assert.Equal([0m, 75m, 100m, 250m, 500m, 999.5m, 1000m, 2500m], property.Rows.Select(r => (decimal)ValueOf(r[0])!));
+    }
+
+    [Fact]
+    public void Query_groups_a_collection_property_by_item()
+    {
+        var answer = Ask(new() { GroupBy = [Dimension.Property("Tags")] });
+
+        Assert.Equal(
+            [("b2b", 3.0), ("gift", 3.0), ("urgent", 2.0), (null, 3.0)],
+            answer.Rows.Select(r => (ValueOf(r[0]), (double)r["Count"]!)));
+    }
+
+    [Fact]
+    public void Query_groups_a_plain_date_property_by_period_in_utc()
+    {
+        var shipped = Ask(new() { GroupBy = [Dimension.Of("Shipped", DateGranularity.Month)] });
+
+        Assert.Equal("Month(Shipped)", shipped.Columns[0].Key);
+        Assert.Equal(
+            [(new DateTime(2026, 1, 1), 1.0), (new DateTime(2026, 2, 1), 1.0), (new DateTime(2026, 3, 1), 1.0), (new DateTime(2026, 4, 1), 2.0)],
+            shipped.Rows.Take(4).Select(r => (((QueryPeriod)r[0]!).PeriodStart, (double)r["Count"]!)));
+        Assert.Null(shipped.Rows[^1][0]);
+        Assert.Equal(TestData.Instant("2026-01-01T00:00:00Z"), ((QueryPeriod)shipped.Rows[0][0]!).Interval.From);
+
+        var due = Ask(new() { GroupBy = [Dimension.Of("Due", DateGranularity.Quarter)] });
+        Assert.Equal([5.0, 3.0], due.Rows.Select(r => (double)r["Count"]!));
+    }
+
+    [Theory]
+    [InlineData(DateGranularity.Quarter)]
+    [InlineData(DateGranularity.Year)]
+    [InlineData(DateGranularity.Week)]
+    [InlineData(DateGranularity.Day)]
+    public void Query_groups_a_date_facet_by_another_period_in_its_zone(DateGranularity period)
+    {
+        var answer = Ask(new() { GroupBy = [Dimension.Of("OrderDate", period)] });
+
+        var periods = answer.Rows.Select(r => (QueryPeriod)r[0]!).ToArray();
+        Assert.All(periods, p => Assert.Equal(period, p.Granularity));
+        Assert.Equal(periods.OrderBy(p => p.PeriodStart), periods);
+        Assert.Equal(8.0, answer.Rows.Sum(r => (double)r["Count"]!));
+        foreach (QueryRow row in answer.Rows)
+        {
+            var selections = Selections.Empty.ToggleInterval("OrderDate", ((QueryPeriod)row[0]!).Interval);
+            Assert.Equal((double)row["Count"]!, Shared.Calculate(selections).MatchingCount);
+        }
+    }
+
+    [Fact]
+    public void Query_groups_a_monthly_date_facet_by_quarter_in_its_zone()
+    {
+        var answer = Ask(new() { GroupBy = [Dimension.Of("OrderDate", DateGranularity.Quarter)] });
+
+        // 31 March 22:30 in Stockholm is still the first quarter there.
+        Assert.Equal(
+            [(new DateTime(2026, 1, 1), 6.0), (new DateTime(2026, 4, 1), 2.0)],
+            answer.Rows.Select(r => (((QueryPeriod)r[0]!).PeriodStart, (double)r["Count"]!)));
+        Assert.Equal(TestData.Instant("2026-04-01T00:00:00+02:00"), ((QueryPeriod)answer.Rows[1][0]!).Interval.From);
+    }
+
+    [Fact]
+    public void Query_aggregates_plain_properties()
+    {
+        var answer = Ask(new()
+        {
+            GroupBy = [Dimension.Of("Status")],
+            Values = [QueryValue.Sum("Discount"), QueryValue.Distinct("Kind"), QueryValue.Distinct("Tags")],
+        });
+
+        Assert.Equal(
+            [("Closed", (double?)50.0, 1.0, 2.0), ("Open", 265.0, 2.0, 3.0), ("Pending", null, 1.0, null)],
+            answer.Rows.Select(r => (ValueOf(r[0]), (double?)r[1], (double)r[2]!, (double?)r[3])));
+    }
+
+    [Fact]
     public void Query_throws_when_cancelled()
     {
         using var cancelled = new CancellationTokenSource();
@@ -366,11 +489,15 @@ public class QueryTests
     private static readonly Dictionary<string, (string Expected, DashboardQuery<Order> Query)> Mistakes = new()
     {
         ["dimension in the wrong case"] = ("Did you mean 'Country'?", new() { GroupBy = [Dimension.Of("country")] }),
-        ["unknown dimension"] = ("'Customer' is not a facet of this dashboard. Facets: Country, Status", new() { GroupBy = [Dimension.Of("Customer")] }),
+        ["unknown dimension"] = ("'Customer' is neither a facet of this dashboard nor a property of Order. Facets: Country, Status", new() { GroupBy = [Dimension.Of("Customer")] }),
+        ["unknown property"] = ("'Customer' is not a property of Order. Properties: Id, Country", new() { GroupBy = [Dimension.Property("Customer")] }),
+        ["property in the wrong case"] = ("Did you mean 'Kind'?", new() { GroupBy = [Dimension.Of("kind")] }),
+        ["period on a property that is not a date"] = ("Property 'Kind' (OrderKind) is not a date", new() { GroupBy = [Dimension.Of("Kind", DateGranularity.Month)] }),
+        ["period on a collection property"] = ("Property 'Tags' (IReadOnlyList<String?>?) is a collection", new() { GroupBy = [Dimension.Property("Tags", DateGranularity.Month)] }),
+        ["sum of a property that is not a number"] = ("Sum needs numbers, and property 'Kind' (OrderKind) does not hold numbers", new() { Values = [QueryValue.Sum("Kind")] }),
         ["metric as dimension"] = ("'revenue' is a metric", new() { GroupBy = [Dimension.Of("revenue")] }),
         ["three dimensions"] = ("at most two dimensions", new() { GroupBy = [Dimension.Of("Country"), Dimension.Of("Status"), Dimension.Of("IsActive")] }),
         ["period on a value facet"] = ("only a date can be grouped by Month", new() { GroupBy = [Dimension.Of("Country", DateGranularity.Month)] }),
-        ["another period on a date facet"] = ("grouping it by Quarter is not supported yet", new() { GroupBy = [Dimension.Of("OrderDate", DateGranularity.Quarter)] }),
         ["text facet as dimension"] = ("Text facet; it has no values", new() { GroupBy = [Dimension.Of("search")] }),
         ["duplicate keys"] = ("Two parts of the query have the key 'orders'", new() { Values = [QueryValue.Metric("orders"), QueryValue.Count().As("orders")] }),
         ["order by unknown key"] = ("orders by 'revenue', which is not one of its columns", new() { GroupBy = [Dimension.Of("Country")], OrderBy = QueryOrder.Descending("revenue") }),

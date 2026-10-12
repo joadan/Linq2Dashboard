@@ -46,7 +46,7 @@ public sealed class Dashboard<T>
     private readonly LruCache<Selections, DashboardState<T>> states = new(StateCacheCapacity);
 
     internal Dashboard(T[] items, FacetIndex[] facets, MetricIndex[] metrics, int[]? sortedRows, TimeProvider timeProvider, bool parallelCounting)
-        : this(items, facets, metrics, sortedRows, timeProvider, parallelCounting, RowSet.Full(items.Length), new LruCache<(string Key, Selection Selection), RowSet>(RowSetCacheCapacity), new SelectionSerializer(facets))
+        : this(items, facets, metrics, sortedRows, timeProvider, parallelCounting, RowSet.Full(items.Length), new LruCache<(string Key, Selection Selection), RowSet>(RowSetCacheCapacity), new SelectionSerializer(facets), new PropertyCatalog<T>())
     {
     }
 
@@ -58,15 +58,17 @@ public sealed class Dashboard<T>
             parent.metrics.Select(m => m.Scope(scope)).ToArray(),
             parent.SortedRows, parent.TimeProvider, parent.ParallelCounting, scope,
             // Selections mean the same in every scope, and the rows a selection matches do not depend on the scope,
-            // so the row-set cache and the serializer are shared with the parent (design §5).
-            parent.rowSets, parent.Serializer)
+            // so the row-set cache and the serializer are shared with the parent (design §5), as are the compiled
+            // property getters of queries (design §10.3).
+            parent.rowSets, parent.Serializer, parent.Properties)
     {
     }
 
     private Dashboard(
         T[] items, FacetIndex[] facets, MetricIndex[] metrics, int[]? sortedRows, TimeProvider timeProvider, bool parallelCounting,
-        RowSet all, LruCache<(string Key, Selection Selection), RowSet> rowSets, SelectionSerializer serializer)
+        RowSet all, LruCache<(string Key, Selection Selection), RowSet> rowSets, SelectionSerializer serializer, PropertyCatalog<T> properties)
     {
+        Properties = properties;
         this.items = items;
         this.facets = facets;
         facetsByKey = facets.ToDictionary(f => f.Key, StringComparer.Ordinal);
@@ -177,6 +179,12 @@ public sealed class Dashboard<T>
     }
 
     internal ReadOnlySpan<T> Items => items;
+
+    /// <summary>The row array, for a query's where and property reads (design §10.3). Never written after build.</summary>
+    internal T[] ItemArray => items;
+
+    /// <summary>The properties of <typeparamref name="T"/> queries can name, with their compiled getters (design §10.5).</summary>
+    internal PropertyCatalog<T> Properties { get; }
 
     internal T ItemAt(int row) => items[row];
 
