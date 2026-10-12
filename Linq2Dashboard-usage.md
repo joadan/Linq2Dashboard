@@ -167,7 +167,8 @@ A query asks one question of the dashboard's rows and returns one table: revenue
 QueryResult answer = dashboard.Query(new DashboardQuery<Order>
 {
     Selections = selections,                                          // every selection applies, including the grouped facet's own
-    GroupBy = [Dimension.Of("Country"), Dimension.Of("OrderDate")],   // up to two facets; none gives one row
+    Where = x => x.Amount >= 100_000,                                 // optional; your predicate, ANDed with the selections
+    GroupBy = [Dimension.Of("Country"), Dimension.Of("OrderDate")],   // up to two facets or properties; none gives one row
     Values = [QueryValue.Metric("revenue"), QueryValue.Count(), QueryValue.Average("Amount")],   // empty counts
     OrderBy = QueryOrder.Descending("revenue"),
     Take = 10,
@@ -185,7 +186,9 @@ foreach (QueryRow row in answer.Rows)
 
 Cells are the library's own types, so a cell goes straight back into a selection: `Toggle(key, cell.Value)` for a value, `ToggleInterval(key, interval)` for a range bucket's `RangeInterval` and `ToggleInterval(key, period.Interval)` for a date period. Grouped by a facet and counted under the same selections, a query gives that facet's filtered counts whenever the facet has no selection of its own. Groups without rows are left out, null is a group, a multi-valued row joins one group per item, and without an order groups follow their dimensions: values by value, buckets and periods ascending, null last.
 
-`QueryValue.Sum`, `Average`, `Min` and `Max` take a range facet or a numeric value facet, `Distinct` any facet with values, and `Metric` any dashboard metric, calculated ones per group. A name that is not known, a metric used as a dimension, a third dimension or a period on a facet that is not a date throws an `ArgumentException` naming what is known and the nearest match. `.As(key)` renames a column. Plain properties, a `Where` filter, other periods on a date facet and row queries are being built (design §10.8).
+A name means the facet with that key, and otherwise the public property of `T` with that name, case-sensitive. A property groups by value with a value facet's rules (strings ignore case, null is a group, a collection groups by item); `Dimension.Property("Country")` asks for the property when a facet has the same key. `Dimension.Of("OrderDate", DateGranularity.Quarter)` groups a date by a period: a date facet in its own zone, a plain date property in UTC. Properties are read row by row in every query, so a property grouped often is cheaper as a facet.
+
+`QueryValue.Sum`, `Average`, `Min` and `Max` take a numeric facet or property, `Distinct` any facet with values or any property, and `Metric` any dashboard metric, calculated ones per group. `Where` is compiled once per query and called once per row the selections match; it must be pure and thread-safe. To let users or an agent write filters as text, turn the text into the expression yourself, for example with Gridify. A name that is not known, a metric used as a dimension, a third dimension or a period on something that is not a date throws an `ArgumentException` naming what is known and the nearest match. `.As(key)` renames a column. Row queries are being built (design §10.8).
 
 ## Small datasets
 

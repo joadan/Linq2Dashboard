@@ -123,11 +123,25 @@ internal sealed class DateFacetIndex : FacetIndex
         return new DateFacetState(Key, Name, selection, context.Count, Column.Granularity, Column.Zone, buckets, presets, nullValue);
     }
 
-    /// <summary>The facet's own periods. Another period needs the instants converted per row, which comes with plain date properties (design §10.8).</summary>
-    public override GroupColumn GroupColumn(DateGranularity? period) =>
-        period is null || period == Column.Granularity
-            ? new DateGroupColumn(Column)
-            : throw new ArgumentException($"Facet '{Key}' is grouped by {Column.Granularity}; grouping it by {period} is not supported yet.", "query");
+    /// <summary>
+    /// The facet's own periods, or another period in the facet's zone (concept §4.11): through the buckets when the
+    /// facet's periods nest in it, otherwise by converting each row's instant (design §10.3).
+    /// </summary>
+    public override GroupColumn GroupColumn(DateGranularity? period)
+    {
+        if (period is not DateGranularity granularity || granularity == Column.Granularity)
+        {
+            return new DateGroupColumn(Column);
+        }
+
+        if (CoarserDateGroupColumn.Nests(Column.Granularity, granularity))
+        {
+            return CoarserDateGroupColumn.Create(Column, granularity);
+        }
+
+        DateColumn column = Column;
+        return new PeriodGroupColumn(row => column.UtcTicks[row] == long.MinValue ? null : column.UtcTicks[row], column.Zone, granularity);
+    }
 
     /// <summary>The instants as UTC ticks.</summary>
     public override DistinctSource? DistinctKeys()

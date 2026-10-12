@@ -1,3 +1,6 @@
+using System.Linq.Expressions;
+using System.Numerics;
+using System.Runtime.ExceptionServices;
 using Linq2Dashboard.Facets;
 using Linq2Dashboard.Indexing;
 using Linq2Dashboard.Metrics;
@@ -27,6 +30,10 @@ internal static class QueryRunner
 
         RowSet rows = dashboard.MatchingRows(query.Selections);
         cancellationToken.ThrowIfCancellationRequested();
+        if (query.Where is Expression<Func<T, bool>> where)
+        {
+            rows = Filter(dashboard, rows, where, cancellationToken);
+        }
 
         Groups groups = Groups.Collect(plan, rows, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
@@ -63,6 +70,62 @@ internal static class QueryRunner
         }
 
         return new QueryResult(plan.Columns, cells, groups.Count);
+    }
+
+    /// <summary>
+    /// Step 3 of design §10.3: the where, compiled once, called once per matching row. Each word of 64 rows is
+    /// filled on its own, so words may be scanned on several cores when the dashboard counts in parallel, as a text
+    /// facet's scan is (design §4.1).
+    /// </summary>
+    private static RowSet Filter<T>(Dashboard<T> dashboard, RowSet rows, Expression<Func<T, bool>> where, CancellationToken cancellationToken)
+    {
+        Func<T, bool> predicate = where.Compile();
+        T[] items = dashboard.ItemArray;
+        var words = new ulong[RowSet.WordCount(rows.Length)];
+
+        ulong Scan(int index)
+        {
+            ulong word = rows.WordAt(index);
+            ulong kept = 0;
+            while (word != 0)
+            {
+                int bit = BitOperations.TrailingZeroCount(word);
+                word &= word - 1;
+                if (predicate(items[(index << 6) + bit]))
+                {
+                    kept |= 1UL << bit;
+                }
+            }
+
+            return kept;
+        }
+
+        if (dashboard.ParallelCounting && words.Length > 1)
+        {
+            try
+            {
+                Parallel.For(0, words.Length, new ParallelOptions { CancellationToken = cancellationToken }, index => words[index] = Scan(index));
+            }
+            catch (AggregateException e)
+            {
+                // Every inner exception comes from the predicate; the first one is what a serial scan would have thrown.
+                ExceptionDispatchInfo.Throw(e.InnerExceptions[0]);
+            }
+        }
+        else
+        {
+            for (int index = 0; index < words.Length; index++)
+            {
+                if (index % (CancellationStride >> 6) == 0)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                }
+
+                words[index] = Scan(index);
+            }
+        }
+
+        return RowSet.FromOwnedWords(words, rows.Length);
     }
 
     /// <summary>Group indexes in answer order, cut to <paramref name="take"/> with a heap when it cuts (design §10.3).</summary>
@@ -205,12 +268,16 @@ internal static class QueryRunner
             for (int d = 0; d < groupBy.Count; d++)
             {
                 Dimension dimension = groupBy[d] ?? throw Error("The query's GroupBy holds a null dimension.");
-                FacetIndex facet = Facet(dashboard, dimension.Name, "group by");
-                GroupColumn column = facet.GroupColumn(dimension.Granularity);
+                (FacetIndex? facet, PropertyAccessor<T>? property) = dimension.IsProperty
+                    ? (null, Property(dashboard, dimension.Name))
+                    : Name(dashboard, dimension.Name, "group by");
+                GroupColumn column = facet is not null
+                    ? facet.GroupColumn(dimension.Granularity)
+                    : property!.GroupColumn(dashboard.ItemArray, dimension.Granularity);
                 dimensions[d] = column;
-                columns.Add(new QueryColumn(dimension.Key, facet.Name, QueryColumnRole.Dimension, column.Kind)
+                columns.Add(new QueryColumn(dimension.Key, facet?.Name ?? property!.Name, QueryColumnRole.Dimension, column.Kind)
                 {
-                    Source = facet.Key,
+                    Source = facet?.Key ?? property!.Name,
                     Granularity = column.Granularity,
                 });
             }
@@ -278,21 +345,22 @@ internal static class QueryRunner
             }
 
             string name = value.Of ?? throw Error($"The value '{value.Key}' has no name to aggregate.");
-            FacetIndex facet = Facet(dashboard, name, aggregation.ToString());
-            if (aggregation == Aggregation.Distinct)
-            {
-                DistinctSource keys = facet.DistinctKeys()
-                    ?? throw Error($"Distinct needs values; facet '{name}' is a {facet.Kind} facet and has none.");
-                return (new DistinctReader(DistinctSlot(keys)), column);
-            }
-
             if (aggregation is Aggregation.Calculated)
             {
                 throw Error($"A calculated value is a dashboard metric; ask for it with QueryValue.Metric(...).");
             }
 
-            NumberSource numbers = facet.Numbers()
-                ?? throw Error($"{aggregation} needs numbers, and facet '{name}' ({facet.Kind}) does not hold numbers.");
+            (FacetIndex? facet, PropertyAccessor<T>? property) = Name(dashboard, name, aggregation.ToString());
+            string what = facet is not null ? $"facet '{name}' ({facet.Kind})" : $"property '{name}' ({property!.TypeName})";
+            if (aggregation == Aggregation.Distinct)
+            {
+                DistinctSource keys = (facet is not null ? facet.DistinctKeys() : property!.DistinctKeys(dashboard.ItemArray))
+                    ?? throw Error($"Distinct needs values; {what} has none.");
+                return (new DistinctReader(DistinctSlot(keys)), column);
+            }
+
+            NumberSource numbers = (facet is not null ? facet.Numbers() : property!.Numbers(dashboard.ItemArray))
+                ?? throw Error($"{aggregation} needs numbers, and {what} does not hold numbers.");
             return (new NumberReader(NumberSlot(numbers), aggregation), column);
         }
 
@@ -363,11 +431,17 @@ internal static class QueryRunner
             return slot;
         }
 
-        private static FacetIndex Facet<T>(Dashboard<T> dashboard, string name, string use)
+        /// <summary>A name in a query: the facet with that key, else the property of that name (concept §4.11).</summary>
+        private static (FacetIndex? Facet, PropertyAccessor<T>? Property) Name<T>(Dashboard<T> dashboard, string name, string use)
         {
             if (dashboard.TryGetFacetIndex(name, out FacetIndex facet))
             {
-                return facet;
+                return (facet, null);
+            }
+
+            if (dashboard.Properties.TryGet(name, out PropertyAccessor<T> property))
+            {
+                return (null, property);
             }
 
             if (dashboard.TryGetMetricIndex(name, out _))
@@ -375,8 +449,20 @@ internal static class QueryRunner
                 throw Error($"'{name}' is a metric, and a query cannot {use} a metric. Ask for its value with QueryValue.Metric(\"{name}\").");
             }
 
-            IEnumerable<string> keys = dashboard.Facets.Select(f => f.Key);
-            throw Error($"'{name}' is not a facet of this dashboard.{Suggest(name, keys)} Facets: {string.Join(", ", keys)}.");
+            IEnumerable<string> facets = dashboard.Facets.Select(f => f.Key);
+            IReadOnlyList<string> properties = dashboard.Properties.Names;
+            throw Error($"'{name}' is neither a facet of this dashboard nor a property of {typeof(T).Name}.{Suggest(name, facets.Concat(properties))} Facets: {string.Join(", ", facets)}. Properties: {string.Join(", ", properties)}.");
+        }
+
+        private static PropertyAccessor<T> Property<T>(Dashboard<T> dashboard, string name)
+        {
+            if (dashboard.Properties.TryGet(name, out PropertyAccessor<T> property))
+            {
+                return property;
+            }
+
+            IReadOnlyList<string> properties = dashboard.Properties.Names;
+            throw Error($"'{name}' is not a property of {typeof(T).Name}.{Suggest(name, properties)} Properties: {string.Join(", ", properties)}.");
         }
 
         private static MetricIndex Metric<T>(Dashboard<T> dashboard, string key)

@@ -38,6 +38,9 @@ internal sealed class RowSet : IEquatable<RowSet>
 
     internal static int WordCount(int length) => (length + 63) >> 6;
 
+    /// <summary>One word of the set, for scans that fill a new set word by word.</summary>
+    internal ulong WordAt(int index) => words[index];
+
     public static RowSet Empty(int length)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(length);
