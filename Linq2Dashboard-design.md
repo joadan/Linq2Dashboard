@@ -796,7 +796,7 @@ tests/Linq2Dashboard.Blazor.Tests/   bUnit: each component renders a given state
 
 ### Markup definitions: spike (2026-09-26)
 
-Before facet and metric components define what they show under an `Items` view (§10, question 1), a throwaway prototype checked the one mechanism the design rests on: components register their definition during the first render, and the view builds from what registered and renders again, under every render mode. The prototype (a `SpikeFacet` that registered a builder call in `OnParametersSet` and rendered the real `ValueFacet` once its key existed) ran in the sample at three nesting depths, with a fourth facet behind an `@if`, over 2 000 rows. It was not merged.
+Before facet and metric components define what they show under an `Items` view (§11, question 1), a throwaway prototype checked the one mechanism the design rests on: components register their definition during the first render, and the view builds from what registered and renders again, under every render mode. The prototype (a `SpikeFacet` that registered a builder call in `OnParametersSet` and rendered the real `ValueFacet` once its key existed) ran in the sample at three nesting depths, with a fourth facet behind an `@if`, over 2 000 rows. It was not merged.
 
 How it worked: the first registration in a pass queues the view's re-render with `StateHasChanged`; the view, at the top of that render, builds from `Build` plus every registration so far and rebinds the context synchronously, which re-renders the subscribed components in the same render batch.
 
@@ -825,7 +825,47 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 
 ---
 
-## 10. Open questions
+## 10. Queries
+
+A query (§C4.11) asks one question of a dashboard's rows and returns one table. Planned 2026-10-12, not yet built. This section is written one decision at a time; the parts still to come are the answer type, execution, limits and cancellation, property access, JSON and cost.
+
+### 10.1 The query object
+
+A query is one immutable object of typed parts. Nothing in it is a string to be parsed: every name is a facet key, a metric key or a property name, and everything else is a typed value.
+
+```csharp
+QueryResult answer = dashboard.Query(new DashboardQuery<Order>
+{
+    Selections = selections,                                    // §C4.1 rules; every selection applies, no own-facet exclusion
+    Where = o => o.Amount >= 100_000,                           // Expression<Func<T, bool>>, the application's predicate
+    GroupBy = [Dimension.Of("SalesRep"),                        // a facet when one has the key, else a property
+               Dimension.Of("OrderDate", DateGranularity.Month)],   // a date dimension names a period
+    Values  = [QueryValue.Metric("revenue"),                    // a dashboard metric, calculated ones included
+               QueryValue.Count(),
+               QueryValue.Average("DeliveryDays")],             // an aggregation over a property
+    OrderBy = QueryOrder.Descending("revenue"),
+    Take = 10,
+});
+
+// a row query: columns instead of groups and values (§C4.11)
+dashboard.Query(new DashboardQuery<Order>
+{
+    Selections = selections,
+    Columns = [Dimension.Of("Id"), Dimension.Of("Customer"), Dimension.Of("Amount")],
+    OrderBy = QueryOrder.Descending("Amount"),
+    Take = 10,
+});
+```
+
+- `DashboardQuery<T>` is generic because of `Where`; everything else in it is non-generic. It is a record with init-only properties, so a variation is a `with` expression.
+- `Dimension.Of(name)` resolves the name to a facet first and to a property of `T` otherwise; `Dimension.Property(name)` asks for the property when a facet has the same key (§C4.11). `Dimension.Of(name, granularity)` groups a date facet or a plain date property by that period. The same type names the columns of a row query.
+- `QueryValue.Metric(key)` reads a dashboard metric per group. `Count()`, `Sum(name)`, `Average(name)`, `Min(name)`, `Max(name)` and `Distinct(name)` aggregate a property or a facet's value with the null rules of §C4.4.
+- Every dimension and value has a key, the name the answer's column carries and `OrderBy` refers to: a metric's key, a dimension's name, `Month(OrderDate)` for a period and `Average(DeliveryDays)` for an aggregation. `.As(key)` renames one. Two parts with the same key are an error.
+- A query with `Columns` is a row query and takes no `GroupBy` or `Values`. A group query without `Values` counts.
+- C# callers name a member-derived facet with `FacetKey.Of<Order>(x => x.Country)`, as elsewhere (§C7).
+- Everything is checked when `Query` is called, before any row is read: unknown names, more than two dimensions, a period on something that is not a date, an aggregation that does not fit its property, duplicate keys (§C4.11, strict).
+
+## 11. Open questions
 
 1. **Facets and metrics declared in Blazor markup.** Should `<Metric>` and the facet components be able to define what they show (aggregation and selector, or facet kind and selector), not only place something defined in the builder? Two routes were weighed on 2026-09-12: computing in the component over the matching rows (pure, but the UI calculates and pays per render; for facets that would be a second counting engine, which §C7 rules out), or registering the column lazily on the dashboard on first render (keeps the speed, but mutates a dashboard the design promises is immutable after `Create`, misses states already cached, and makes a page's markup part of the dashboard's definition). A third route is a markup-driven builder: a `Definition` fragment inside `DashboardView` whose children (`ValueFacetDefinition`, `RangeFacetDefinition`, `DateFacetDefinition`, `MetricDefinition`, `CountMetricDefinition`, `FixedFilter`, `SortDefinition`) register builder calls with a collector during the first render, after which the view runs `Dashboard.Create` once and then renders the placement components; the view cascades its type parameter so children need no `T`. This keeps the engine and its guarantees untouched and was prototyped on 2026-09-12 (facet and metric definition components were written, then removed unfinished). Discussed and parked the same day: the builder stays the primary API, the markup route is the one to add if any, and the one decision it needs is whether each view builds its own dashboard (right for WebAssembly) or a host can build once and share (needed on Blazor Server with large shared data; a `DashboardCreated` callback plus the existing `Dashboard` parameter would give both). Also noted: the core's internal `*Definition` classes would want renaming to avoid sharing names with the markup components. **Update 2026-09-26:** the one decision is made: a view renders either a host-built `Dashboard` or builds its own from `Items` and `Build` (§C7, §9 component 1), and markup definitions are to apply to `Items` views only, on the same facet and metric components rather than separate definition components. A spike confirmed the registration pass under static SSR, prerendering and interactive rendering (§9, Markup definitions: spike).
 
@@ -883,3 +923,4 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 - **A view builds its own dashboard from `Items` and `Build`, rebuilding when the list reference or `RebuildKey` changes.** `Build` is the full `DashboardBuilder<T>`; the rows are compared by reference and the delegate never, since a markup lambda is new on every render. Selections carry over a rebuild through the serializers, lenient like a bookmark; a host-built `Dashboard` switch stays strict. `Dashboard` and `Items` are exclusive and checked on first render. Decided 2026-09-26. See §9, component 1.
 - **Markup definitions register with the view and settle in one build per render pass.** Explicit definitions beat implicit ones, two explicit ones or one against `Build` throw, a host-built `Dashboard` rejects explicit ones; components with an unknown key wait until the view has settled after being asked; requested selections are held until their facets exist. `ValueFacet.Define` is a `Delegate` checked against the selector's type rather than a facade type. Decided 2026-09-26. See §9, component 11.
 - **The view cascades its type parameter, keeping the name `T`.** Children written inside `DashboardView` need no `T="Order"`, and the view infers its own from `Dashboard` or `Items`, so a page names the row type nowhere; explicit `T` still compiles. `T` is kept over a rename to `TItem`, which would have avoided sharing the name with other libraries' components but broken every page: the compiler lets another component's own parameters win, so the only effect is on a component whose `T` nothing infers. A method group for a parameter typed by `T` needs `T` on that component, since the compiler reads it as inferring; both are in the usage guide. Decided 2026-09-26. See §9, component 1.
+- **A query is one immutable object of typed parts.** `DashboardQuery<T>` holds `Selections`, `Where`, `Dimension`, `QueryValue` and `QueryOrder` parts, so nothing is parsed and each part maps one to one to a JSON object for a tool layer. Names as strings with a small syntax (`"OrderDate:month"`, `"avg(DeliveryDays)"`) were rejected because that syntax is a query language, which the core does not have (§C1); a fluent builder was rejected as the primary form because agents and JSON need a data object anyway, and it can be added later over this one. Decided 2026-10-12. See §10.1.
