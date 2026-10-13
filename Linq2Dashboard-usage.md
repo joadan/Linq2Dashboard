@@ -10,8 +10,9 @@ Interactive exploration of a large in-memory collection: facets with counts, met
 |---|---|---|
 | `Linq2Dashboard` | `Linq2Dashboard` | The engine. net10.0, no dependencies. |
 | `Linq2Dashboard.Blazor` | `Linq2Dashboard.Blazor` | Components that render a dashboard and turn clicks into selections. |
+| `Linq2Dashboard.AI` | `Linq2Dashboard.AI` | A dashboard as tools an agent can call, for `Microsoft.Extensions.AI`. Depends on Gridify. |
 
-`Linq2Dashboard.Blazor` depends on `Linq2Dashboard`, so a Blazor app adds only the Blazor package; add the engine alone for a host without the components. Both are prerelease on NuGet while the API settles: `dotnet add package Linq2Dashboard.Blazor --prerelease`.
+`Linq2Dashboard.Blazor` and `Linq2Dashboard.AI` depend on `Linq2Dashboard`, so a Blazor app adds only the Blazor package; add the engine alone for a host without the components. All are prerelease on NuGet while the API settles: `dotnet add package Linq2Dashboard.Blazor --prerelease`.
 
 ## Wiring checklist
 
@@ -242,6 +243,36 @@ string json = dashboard.Serializer.ToJson(description);                // facets
 ```
 
 The description lists each facet with what helps a question (the values of a facet with at most `ValueLimit` of them, 25 by default, most common first; a range facet's bounds; a date facet's period, zone and presets), each metric, and each property of `T` with its kind and what a query can do with it. Write descriptions for every name whose value is not self-explanatory, an id with a label above all: in the first agent tool, the one wrong answer came from a value without a meaning.
+
+## Agents
+
+`Linq2Dashboard.AI` turns a dashboard into tools an agent can call: describe what can be asked, query, and, when a dashboard is on screen, show selections there. They are `Microsoft.Extensions.AI` functions, which Agent Framework, Semantic Kernel, a plain `IChatClient` with function invocation and the MCP C# SDK all take.
+
+```csharp
+using Linq2Dashboard.AI;
+
+DashboardTools<Order> tools = dashboard.ToTools(new DashboardToolOptions<Order>
+{
+    Name = "orders",                                                  // tools orders_describe, orders_query, orders_show
+    Summary = "Customer orders since 2020, one row per order.",       // opens every tool's description
+    Allowed = ["Country", "Status", "OrderDate", "Amount", "customer", "revenue"],   // null for every name
+    Descriptions = new Dictionary<string, string>
+    {
+        ["customer"] = "The customer's number; the label is its name.",
+        ["revenue"] = "Order value in SEK, excluding VAT.",
+    },
+    Show = selections => InvokeAsync(() => dash.ApplyAsync(selections)),   // optional; on a page with the dashboard
+});
+
+var options = new ChatOptions { Tools = [.. tools.Functions] };
+```
+
+- **Describe** returns the dashboard's description (facets with their values when few, metrics, properties, periods, limits) and the fields the where can filter on. **Query** takes one parameter per part, `selections`, `where`, `groupBy`, `values`, `columns`, `orderBy` and `take`, in the short forms of the JSON query above, and returns the answer's JSON. **Show** reads selections strictly and hands them to your callback.
+- The tools are also methods, `tools.Describe()`, `tools.Query(groupBy: ["Country"], values: ["revenue"])` and `tools.ShowAsync("Country=SE")`, returning the same JSON, for tests and hosts that are not `Microsoft.Extensions.AI`.
+- **The where is Gridify** over the allowed plain properties of a type a filter can compare (text, numbers, booleans, enums, `Guid`, dates): `Amount>=1000,Status=Open|Closed`. Strings ignore case and `Country=null` finds the rows without a country, as in a value facet; numbers are read invariant. `Filterable` narrows the fields, empty turns the where off, and `Where` with `WhereHelp` puts your own parser in its place.
+- **Errors are results.** An unknown name, a selection or a where that does not read comes back as `{ "error", "path" }` with the known names in the message, so the model corrects itself; nothing is thrown at the agent. Mistakes in the options throw in `ToTools`.
+- `Allowed` limits names, not rows. The agent sees the rows of the dashboard you hand it, so give a user who may see only some rows tools over their own scope, `dashboard.ScopeTo(...)`. Build the tools where you would build the page's dashboard; they cost nothing to keep and hold no conversation state.
+- Write a description for every name whose value is not self-explanatory, an id with a label above all. With several dashboards, give each its own `Name`.
 
 ## Small datasets
 

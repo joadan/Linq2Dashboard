@@ -8,6 +8,7 @@
   <Folder Name="/src/">
     <Project Path="src/Linq2Dashboard/Linq2Dashboard.csproj" />
     <Project Path="src/Linq2Dashboard.Blazor/Linq2Dashboard.Blazor.csproj" />
+    <Project Path="src/Linq2Dashboard.AI/Linq2Dashboard.AI.csproj" />
   </Folder>
   <Folder Name="/samples/">
     <Project Path="samples/Linq2Dashboard.Sample/Linq2Dashboard.Sample.csproj" />
@@ -19,6 +20,7 @@
   <Folder Name="/tests/">
     <Project Path="tests/Linq2Dashboard.Tests/Linq2Dashboard.Tests.csproj" />
     <Project Path="tests/Linq2Dashboard.Blazor.Tests/Linq2Dashboard.Blazor.Tests.csproj" />
+    <Project Path="tests/Linq2Dashboard.AI.Tests/Linq2Dashboard.AI.Tests.csproj" />
   </Folder>
   <Folder Name="/benchmarks/">
     <Project Path="benchmarks/Linq2Dashboard.Benchmarks/Linq2Dashboard.Benchmarks.csproj" />

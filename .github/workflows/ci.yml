@@ -60,6 +60,7 @@ jobs:
         run: |
           dotnet pack src/Linq2Dashboard/Linq2Dashboard.csproj -c Release --no-build -o artifacts
           dotnet pack src/Linq2Dashboard.Blazor/Linq2Dashboard.Blazor.csproj -c Release --no-build -o artifacts
+          dotnet pack src/Linq2Dashboard.AI/Linq2Dashboard.AI.csproj -c Release --no-build -o artifacts
 
       - name: Upload packages artifact
         uses: actions/upload-artifact@v7

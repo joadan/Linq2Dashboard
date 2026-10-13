@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>Linq2Dashboard.AI</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackageId>Linq2Dashboard.AI</PackageId>
+    <Description>Agent tools for Linq2Dashboard: one dashboard as describe, query and show functions for Microsoft.Extensions.AI, which Agent Framework, Semantic Kernel, IChatClient and MCP servers take. Filters in Gridify syntax; errors returned so the model can correct itself.</Description>
+    <PackageTags>ai;agents;llm;tools;function-calling;microsoft-extensions-ai;gridify;dashboard;facets</PackageTags>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Gridify" Version="2.20.0" />
+    <PackageReference Include="Microsoft.Extensions.AI.Abstractions" Version="10.3.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Linq2Dashboard\Linq2Dashboard.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\Linq2Dashboard-usage.md" Pack="true" PackagePath="\" />
+    <None Include="..\..\assets\icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Linq2Dashboard.AI.Tests" />
+  </ItemGroup>
+
+</Project>
