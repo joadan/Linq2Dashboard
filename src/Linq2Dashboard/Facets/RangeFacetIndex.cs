@@ -56,7 +56,7 @@ internal sealed class RangeFacetIndex : FacetIndex
             (double from, double to) = Column.Bucket(i);
             bool last = i == buckets.Length - 1;
             bool selected = range is not null && Covers(range, from, to, last);
-            buckets[i] = new RangeBucket(from, to, totals[i + 1], counts[i + 1], selected);
+            buckets[i] = new RangeBucket(from, to, totals[i + 1], counts[i + 1], selected, Column.IncludesTo(i));
         }
 
         var nullValue = new FacetValue(null, totals[0], counts[0], range is { IncludeNull: true });

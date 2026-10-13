@@ -261,6 +261,31 @@ public class CalculateTests
         Assert.Equal(discount.Buckets[0].TotalCount + discount.Null.TotalCount, withNull.MatchingCount);
     }
 
+    /// <summary>Design §3.3: a derived last bucket with a finite top edge holds the rows at that edge, so its click selects them too.</summary>
+    [Fact]
+    public void Clicking_a_finite_last_bucket_selects_the_rows_at_its_top_edge()
+    {
+        // Amount runs 0 to 2500, a round edge, so the last bucket is [2000, 2500] with no open tail above it.
+        var dashboard = Build(b => b.RangeFacet("AutoAmount", x => x.Amount).AutoBuckets(5));
+        var auto = (RangeFacetState)dashboard.Calculate().Facet("AutoAmount");
+        RangeBucket last = auto.Buckets[^1];
+        Assert.Equal((2000, 2500), (last.From, last.To));
+        Assert.Equal(1, last.TotalCount);
+        Assert.Equal(new RangeInterval(2000, 2500), last.ToInterval());
+
+        var state = dashboard.Calculate(Selections.Empty.With("AutoAmount", last.ToSelection()));
+        Assert.Equal(last.FilteredCount, state.MatchingCount);
+        Assert.Equal([6], state.Items.Select(o => o.Id)); // row 5, amount 2500
+        Assert.True(((RangeFacetState)state.Facet("AutoAmount")).Buckets[^1].Selected);
+
+        // Clicked with its neighbour the two join into one closed interval, and a second click carves the last one out again.
+        Selections both = Selections.Empty
+            .ToggleInterval("AutoAmount", auto.Buckets[^2].ToInterval())
+            .ToggleInterval("AutoAmount", last.ToInterval());
+        Assert.Equal(new RangeSelection(1500, 2500), both["AutoAmount"]);
+        Assert.Equal(auto.Buckets[^2].ToSelection(), both.ToggleInterval("AutoAmount", last.ToInterval())["AutoAmount"]);
+    }
+
     [Fact]
     public void Range_facet_null_value_is_counted_and_selectable()
     {

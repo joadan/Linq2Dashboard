@@ -119,7 +119,7 @@ public sealed record ValueSelection : Selection
 /// <summary>
 /// One numeric interval of a <see cref="RangeSelection"/>. Null bounds are unbounded. Both ends are
 /// inclusive by default; a bucket click sets <see cref="ToInclusive"/> false so adjacent buckets never
-/// both claim their shared edge (design §2.2).
+/// both claim their shared edge, except on a last bucket that ends on a finite edge (design §2.2).
 /// </summary>
 public sealed record RangeInterval
 {
@@ -156,7 +156,7 @@ public sealed record RangeInterval
     /// <summary>Whether a row equal to <see cref="From"/> matches. Default true.</summary>
     public bool FromInclusive { get; init; }
 
-    /// <summary>Whether a row equal to <see cref="To"/> matches. Default true; a bucket click sets it false.</summary>
+    /// <summary>Whether a row equal to <see cref="To"/> matches. Default true; a bucket click sets it false except on a finite last edge.</summary>
     public bool ToInclusive { get; init; }
 
     /// <summary>Closed interval <c>[from, to]</c>.</summary>

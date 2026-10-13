@@ -10,12 +10,14 @@ public class RangeFacetTests : BunitContext
 {
     // Amount: 100, 250, 500, 999.5, 1000, 2500, 0, 75  → buckets <100: 2, 100–500: 2, 500–1000: 2, ≥1000: 2, no nulls
     // Discount: 10, null, 50, 0, null, 250, null, 5   → buckets <10: 2, 10–100: 2, ≥100: 1, null: 3
+    // AutoAmount: Amount on derived buckets 0–500: 4, 500–1000: 2, 1000–1500: 1, 1500–2000: 0, 2000–2500: 1, closed at 2500
     private static Dashboard<Order> BuildDashboard() =>
         Dashboard.Create(TestData.Orders(), b =>
         {
             b.ValueFacet(x => x.Country);
             b.RangeFacet(x => x.Amount).Name("Order amount").Buckets(100, 500, 1000);
             b.RangeFacet(x => x.Discount).Buckets(10, 100);
+            b.RangeFacet("AutoAmount", x => x.Amount).AutoBuckets(5);
         });
 
     private IRenderedComponent<DashboardView<Order>> RenderFacet(
@@ -117,6 +119,23 @@ public class RangeFacetTests : BunitContext
         Assert.Equal([false, false, false, true], Buckets(cut).Select(b => b.ClassList.Contains("l2d-selected")));
 
         Buckets(cut)[3].QuerySelector("button")!.Click();
+        Assert.Equal(Selections.Empty, raised);
+    }
+
+    /// <summary>Design §3.3: the last derived bar ends on a finite edge that holds rows, so its click is closed there and lights the bar.</summary>
+    [Fact]
+    public void Clicking_a_finite_last_bucket_selects_its_closed_interval_and_lights_it()
+    {
+        Selections? raised = null;
+        var cut = RenderFacet("AutoAmount", onChanged: s => raised = s);
+        Assert.Equal(["4", "2", "1", "0", "1"], Buckets(cut).Select(Count));
+
+        Buckets(cut)[^1].QuerySelector("button")!.Click();
+
+        Assert.Equal(Selections.Empty.With("AutoAmount", RangeSelection.Between(2000, 2500)), raised);
+        Assert.Equal([false, false, false, false, true], Buckets(cut).Select(b => b.ClassList.Contains("l2d-selected")));
+
+        Buckets(cut)[^1].QuerySelector("button")!.Click();
         Assert.Equal(Selections.Empty, raised);
     }
 

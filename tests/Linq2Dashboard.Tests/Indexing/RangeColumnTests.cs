@@ -53,6 +53,7 @@ public class RangeColumnTests
         Assert.Equal((100, 500), column.Bucket(1));
         Assert.Equal((500, 1000), column.Bucket(2));
         Assert.Equal((1000, double.PositiveInfinity), column.Bucket(3));
+        Assert.All(Enumerable.Range(0, 4), i => Assert.False(column.IncludesTo(i))); // an infinite top edge holds nothing
     }
 
     [Fact]
@@ -98,6 +99,8 @@ public class RangeColumnTests
         Assert.Equal(0, column.Bucket(0).From);
         Assert.Equal(100, column.Bucket(column.BucketCount - 1).To);
         Assert.Equal(column.BucketCount, column.BucketCodes[4]); // 100 sits in the closed last bucket
+        Assert.True(column.IncludesTo(column.BucketCount - 1));
+        Assert.False(column.IncludesTo(column.BucketCount - 2));
     }
 
     [Fact]
@@ -203,6 +206,7 @@ public class RangeColumnTests
 
         Assert.Equal(1, column.BucketCount);
         Assert.Equal((7, 7), column.Bucket(0));
+        Assert.True(column.IncludesTo(0)); // otherwise the bucket's interval would be the empty [7, 7)
         Assert.Equal([1, 1, 0, 1], column.BucketCodes.ToArray());
     }
 

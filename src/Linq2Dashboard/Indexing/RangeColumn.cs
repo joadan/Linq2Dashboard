@@ -65,6 +65,16 @@ internal sealed class RangeColumn
         return (edges[index], edges[index + 1]);
     }
 
+    /// <summary>
+    /// Whether bucket <paramref name="index"/> includes its upper edge: true only for the last bucket when that
+    /// edge is finite, as derived buckets leave it when the maximum is a round edge (design §3.3).
+    /// </summary>
+    public bool IncludesTo(int index)
+    {
+        (_, double to) = Bucket(index);
+        return index == BucketCount - 1 && !double.IsInfinity(to);
+    }
+
     public static RangeColumn Build(int rowCount, RowReader<double> read, RangeBucketing bucketing)
     {
         ArgumentOutOfRangeException.ThrowIfNegative(rowCount);

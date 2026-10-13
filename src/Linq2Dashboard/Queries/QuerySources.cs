@@ -78,12 +78,11 @@ internal sealed class RangeGroupColumn(RangeColumn column) : GroupColumn(column.
     public override object Cell(int code)
     {
         (double from, double to) = column.Bucket(code - 1);
-        bool last = code == column.BucketCount;
         return new RangeInterval(
             double.IsInfinity(from) ? null : from,
             double.IsInfinity(to) ? null : to,
             fromInclusive: true,
-            toInclusive: last && !double.IsInfinity(to));
+            toInclusive: column.IncludesTo(code - 1));
     }
 }
 
