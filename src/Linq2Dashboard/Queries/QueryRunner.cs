@@ -420,7 +420,7 @@ internal static class QueryRunner
 
             if (metric.Distinct is DistinctColumn distinct)
             {
-                return new DistinctReader(DistinctSlot(new CodeKeys(distinct, distinct.CodeAt)));
+                return new DistinctReader(DistinctSlot(new CodeKeys(distinct, distinct.CodeAt, distinct.DistinctCount + 1)));
             }
 
             if (metric.Column is MetricColumn column)
@@ -480,7 +480,8 @@ internal static class QueryRunner
         private int[] counts = new int[16];
         private int[][] codes;
         private MetricAccumulator[][] numbers;
-        private readonly HashSet<(int Group, long Key)>[] distincts;
+        private readonly HashSet<(int Group, long Key)>?[] distincts;
+        private readonly DistinctBits?[] distinctBits;
         private int[][]? distinctCounts;
 
         private Groups(Plan plan)
@@ -501,7 +502,12 @@ internal static class QueryRunner
 
             codes = dimensions.Select(_ => new int[16]).ToArray();
             numbers = plan.Numbers.Select(_ => new MetricAccumulator[16]).ToArray();
-            distincts = plan.Distincts.Select(_ => new HashSet<(int Group, long Key)>()).ToArray();
+            // A distinct value over codes known before the scan gets one bit per (group, code) when that fits: no hashing
+            // per row. Keys that are coded as they are read, a property's or a range facet's numbers, keep the hash.
+            distinctBits = plan.Distincts
+                .Select(source => source.CodeCount is int codeCount && combinations * codeCount <= DistinctBits.MaxBits ? new DistinctBits(combinations, codeCount) : null)
+                .ToArray();
+            distincts = distinctBits.Select(bits => bits is null ? new HashSet<(int Group, long Key)>() : null).ToArray();
         }
 
         public int Count { get; private set; }
@@ -514,13 +520,18 @@ internal static class QueryRunner
 
         public int DistinctCount(int slot, int group)
         {
+            if (distinctBits[slot] is DistinctBits bits)
+            {
+                return bits.Count(group);
+            }
+
             if (distinctCounts is null)
             {
                 var all = new int[distincts.Length][];
                 for (int s = 0; s < distincts.Length; s++)
                 {
                     all[s] = new int[Count];
-                    foreach ((int g, long _) in distincts[s])
+                    foreach ((int g, long _) in distincts[s] ?? [])
                     {
                         all[s][g]++;
                     }
@@ -663,7 +674,14 @@ internal static class QueryRunner
 
             for (int s = 0; s < distincts.Length; s++)
             {
-                plan.Distincts[s].AddTo(row, group, distincts[s]);
+                if (distinctBits[s] is DistinctBits bits)
+                {
+                    plan.Distincts[s].MarkTo(row, group, bits);
+                }
+                else
+                {
+                    plan.Distincts[s].AddTo(row, group, distincts[s]!);
+                }
             }
         }
     }
