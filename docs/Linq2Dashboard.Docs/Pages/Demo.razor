@@ -45,7 +45,7 @@ else
             <aside class="demo-facets">
                 <TextFacet Key="@SampleOrderKeys.Search" Placeholder="Customer or channel" />
                 @* A per-facet cap: the list scrolls inside itself, the header stays. Set the property on the dashboard instead to cap every facet. *@
-                <ValueFacet For="x => x.Country" style="--l2d-facet-max-height: 12rem" />
+                <ValueFacet For="x => x.Country" GroupsCollapsed="true" style="--l2d-facet-max-height: 12rem" />
                 @* A value template: the page renders the inside of each value button, the library keeps the button, its click and its selected state. *@
                 <ValueFacet For="x => x.Status">
                     <ValueTemplate Context="value"><DemoStatus Value="value" /></ValueTemplate>
