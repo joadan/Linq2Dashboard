@@ -52,7 +52,7 @@
                 @foreach ((ValueGroup group, IReadOnlyList<FacetValue> values) in DisplayedGroups)
                 {
                     bool folded = IsFolded(group.Name);
-                    <li @key="new GroupKey(group.Name)" class="l2d-group @(folded ? "l2d-group-folded" : null)">
+                    <li @key="new GroupKey(group.Name)" class="l2d-group @(Context.Links ? null : "l2d-group-foldable") @(folded ? "l2d-group-folded" : null)">
                         <div class="l2d-group-row @(group.Selected ? "l2d-selected" : null) @(group.PartlySelected ? "l2d-group-partly" : null) @(group.FilteredCount == 0 ? "l2d-zero" : null)">
                             @if (!Context.Links)
                             {

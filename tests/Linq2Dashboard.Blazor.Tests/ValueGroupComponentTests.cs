@@ -148,6 +148,7 @@ public class ValueGroupComponentTests : BunitContext
         Group(cut, "North").QuerySelector(".l2d-group-toggle")!.Click();
 
         IElement north = Group(cut, "North");
+        Assert.Contains("l2d-group-foldable", north.ClassName); // its values step in past the chevron
         Assert.Contains("l2d-group-folded", north.ClassName);
         Assert.Empty(GroupValues(north));
         Assert.Equal("false", north.QuerySelector(".l2d-group-toggle")!.GetAttribute("aria-expanded"));
@@ -250,6 +251,7 @@ public class ValueGroupComponentTests : BunitContext
             Selections.Empty.With("Country", ValueSelection.Of("SE", "NO")),
             cut.Instance.Context.Dashboard.Serializer.FromQueryString(link.GetAttribute("href")!));
         Assert.Empty(cut.FindAll(".l2d-group-toggle"));
+        Assert.DoesNotContain("l2d-group-foldable", Group(cut, "North").ClassName); // no chevron to step past
         Assert.Equal(["SE", "NO"], GroupValues(Group(cut, "North"))); // nothing could unfold a group, so links show them open
     }
 

@@ -67,7 +67,11 @@
     opacity: var(--l2d-total-opacity, 0.65);
 }
 
-/* Groups (concept §6, design §9): a row per group with a fold chevron, then its values indented. */
+/*
+ * Groups (concept §6, design §9): a row per group with a fold chevron, then its values indented. The values step in
+ * past the chevron, when there is one, and then by --l2d-group-indent, whose default of the box and the gap lines
+ * their names up under the group's name.
+ */
 .l2d-group-row {
     display: flex;
     align-items: center;
@@ -78,7 +82,7 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: var(--l2d-group-indent, 1.25rem);
+    width: 1.25rem;
     align-self: stretch;
     padding: 0;
     border: none;
@@ -110,9 +114,13 @@
 .l2d-group-values {
     list-style: none;
     margin: 0;
-    padding: 0 0 0 var(--l2d-group-indent, 1.25rem);
+    padding: 0 0 0 var(--l2d-group-indent, 1.125rem);
     display: flex;
     flex-direction: column;
+}
+
+.l2d-group-foldable > .l2d-group-values {
+    padding-left: calc(1.25rem + var(--l2d-group-indent, 1.125rem));
 }
 
 .l2d-group-label {
