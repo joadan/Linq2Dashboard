@@ -32,6 +32,11 @@ public sealed class ValueFacetBuilder<T, TProp>
     {
         ArgumentOutOfRangeException.ThrowIfLessThan(count, 1);
         ensureMutable();
+        if (definition.GroupBy is not null)
+        {
+            throw TopWithGroups();
+        }
+
         definition.Top = count;
         return this;
     }
@@ -72,6 +77,27 @@ public sealed class ValueFacetBuilder<T, TProp>
     }
 
     /// <summary>
+    /// A named group per value, read from the row (concept §6), such as <c>x =&gt; x.Market</c>, or
+    /// <c>x =&gt; markets[x.Country]</c> for a lookup by the value. Evaluated once per distinct value, on
+    /// the first row that introduces it; rows that disagree are not an error. A null group leaves the
+    /// value ungrouped, and the null value is never grouped. Group names compare ignoring case. The
+    /// state lists the groups with summed counts, and <see cref="Selections.ToggleGroup"/> selects a
+    /// group's values. Cannot be combined with <see cref="Top"/>.
+    /// </summary>
+    public ValueFacetBuilder<T, TProp> GroupBy(Func<T, string?> group)
+    {
+        ArgumentNullException.ThrowIfNull(group);
+        ensureMutable();
+        if (definition.Top is not null)
+        {
+            throw TopWithGroups();
+        }
+
+        definition.GroupBy = group;
+        return this;
+    }
+
+    /// <summary>
     /// Value equality for this facet. Defaults to ordinal ignore-case for strings and default
     /// equality otherwise (design §3.3).
     /// </summary>
@@ -96,4 +122,7 @@ public sealed class ValueFacetBuilder<T, TProp>
         definition.Formatter = new ValueFormatter<TProp>(format, parse);
         return this;
     }
+
+    private InvalidOperationException TopWithGroups() => new(
+        $"Facet '{Key}' cannot have both GroupBy and Top: a group lists all its values, so a click on it selects what it shows (concept §6).");
 }

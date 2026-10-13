@@ -43,13 +43,17 @@ public sealed class ValueFacetState : FacetState
 {
     private readonly Func<string, int, IReadOnlyList<FacetValue>> search;
     private readonly Func<object?, string?> labelOf;
+    private readonly Func<object?, string?> groupOf;
 
     internal ValueFacetState(
         string key, string name, FacetKind kind, Selection? selection, int contextCount,
         IReadOnlyList<FacetValue> values, FacetCount? other, int distinctCount, bool isSearchable,
-        Func<string, int, IReadOnlyList<FacetValue>> search, Func<object?, string?> labelOf)
+        Func<string, int, IReadOnlyList<FacetValue>> search, Func<object?, string?> labelOf,
+        IReadOnlyList<ValueGroup> groups, Func<object?, string?> groupOf)
         : base(key, name, kind, selection, contextCount)
     {
+        Groups = groups;
+        this.groupOf = groupOf;
         Values = values;
         Other = other;
         DistinctCount = distinctCount;
@@ -100,6 +104,20 @@ public sealed class ValueFacetState : FacetState
     /// Accepts the same boxed forms as <see cref="ValueSelection"/> does.
     /// </summary>
     public string? LabelOf(object? value) => labelOf(value);
+
+    /// <summary>
+    /// The groups of a facet built with <c>GroupBy</c> (concept §6), ranked like <see cref="Values"/>,
+    /// each with its values; empty for a facet without groups. <see cref="Values"/> stays the flat list
+    /// of every value, so a value without a group is one <see cref="GroupOf"/> returns null for.
+    /// </summary>
+    public IReadOnlyList<ValueGroup> Groups { get; }
+
+    /// <summary>
+    /// The group of a value (concept §6), whether or not it is presented, so a search result can be
+    /// shown with its group. Null when the facet has no groups, for an ungrouped value, for the null
+    /// value, and for a value that does not occur. Accepts the same boxed forms as <see cref="ValueSelection"/> does.
+    /// </summary>
+    public string? GroupOf(object? value) => groupOf(value);
 }
 
 /// <summary>State of a numeric range facet.</summary>
@@ -189,6 +207,14 @@ public sealed record FacetValue(object? Value, int TotalCount, int FilteredCount
 
 /// <summary>A pair of counts without an identity of its own, used for "Other" (concept §6).</summary>
 public sealed record FacetCount(int TotalCount, int FilteredCount);
+
+/// <summary>
+/// One group of a value facet (concept §6). Its counts are the sums of its values' counts, which are
+/// exact because a row has one value. <see cref="Selected"/> is true when every value is selected and
+/// <see cref="PartlySelected"/> when some but not all are. A click goes to <see cref="Selections.ToggleGroup"/>.
+/// </summary>
+public sealed record ValueGroup(
+    string Name, int TotalCount, int FilteredCount, bool Selected, bool PartlySelected, IReadOnlyList<FacetValue> Values);
 
 /// <summary>
 /// One bucket of a range facet, covering <c>[From, To)</c>; the last bucket also includes

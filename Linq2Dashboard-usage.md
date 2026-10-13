@@ -75,7 +75,8 @@ Rules of the builder:
 - A facet declared from a member expression takes the member's name as its key. Anything else needs an explicit key. Keys are case-sensitive and must be unique among facets and among metrics.
 - Spell every explicit key once. Metrics and explicitly keyed facets have no C# identity, so put their keys in a constants class, `OrderKeys.Revenue`, and use it in the builder, in formulas (`m[OrderKeys.Revenue]`), in markup (`Key="@OrderKeys.Revenue"`) and in code. A facet declared from a member needs no constant: `FacetKey.Of<Order>(x => x.Country)` gives its key in code, and the components take the selector itself through `For`.
 - Range facets accept any numeric type or its nullable form. Date facets accept `DateTime`, `DateTimeOffset`, `DateOnly` or their nullable forms.
-- Value facet options: `Name`, `Top(n)` with an "Other" remainder, `RankBy(RankMode.TotalCount)` for a stable list, `Searchable()`, `Label(row => text)`, `Comparer(...)`, `Serialize(format, parse)` for value types JSON cannot round-trip by default.
+- Value facet options: `Name`, `Top(n)` with an "Other" remainder, `RankBy(RankMode.TotalCount)` for a stable list, `Searchable()`, `Label(row => text)`, `GroupBy(row => group)`, `Comparer(...)`, `Serialize(format, parse)` for value types JSON cannot round-trip by default.
+- `GroupBy` puts values in named groups, one level: `.GroupBy(x => x.Market)`, or `.GroupBy(x => markets[x.Country])` for a lookup. Read once per distinct value from its first row, like `Label`; a null group leaves the value ungrouped and the null value is never grouped. Group counts are the sums of their values' counts. Not with `Top`, and not on a multi-valued facet.
 - Multi-valued facet options: the same, except that `Label(value => text)` reads the value, since a row has several, and `Top(n)` presents no "Other". A row counts once under each distinct value in its collection; a null, empty or all-null collection is the null value. The item type is inferred from the collection, so a `List<string>` gives a facet over `string`.
 - Range facet options: `Name`, `Buckets(cuts...)` strictly ascending, or `AutoBuckets(count)` (the default, with 10) for about `count` equal buckets on round edges over the body of the data, with an open bucket at each end for outliers.
 - Date facet options: `Name`, `TimeZone`, `Granularity` (Year, Quarter, Month, ISO Week, Day) or `AutoGranularity(maxPeriods)` (the default, with 30) for the finest period that keeps to about `maxPeriods` bars over the body of the data; the state reports the period chosen, `Presets` (Today, Yesterday, Last7Days, Last30Days, ThisWeek, LastWeek, ThisMonth, LastMonth, ThisQuarter, LastQuarter, ThisYear, LastYear, YearToDate), `SkipEmptyPresets()` to leave out a preset no row falls in (off by default; re-decided at each calculation, and a selected empty preset is left out too).
@@ -92,6 +93,7 @@ var s = Selections.Empty
     .Toggle("Country", "SE")                                  // add if absent, remove if present
     .With("Amount", RangeSelection.Between(100, 1000))        // replace the facet's selection
     .ToggleInterval("Amount", RangeInterval.AtLeast(5000))    // the click on a bar: carve the interval out when covered, else add it and join neighbours
+    .ToggleGroup("Country", group)                            // a ValueGroup from the state: select all its values, or remove them all when all are selected
     .With("OrderDate", DateSelection.Relative(DatePreset.Last30Days))
     .With("search", new TextSelection("acme"))
     .Clear("Country");                                        // remove one facet's selection
@@ -137,6 +139,8 @@ var country = (ValueFacetState)state.Facet("Country");
 country.Values;                                   // FacetValue: Value, Label, TotalCount, FilteredCount, Selected
 country.Other;                                    // counts Top N left out, or null
 country.Search("swe", max: 20);                   // a UI operation, not a selection
+country.Groups;                                   // ValueGroup: Name, TotalCount, FilteredCount, Selected, PartlySelected, Values; empty without GroupBy
+country.GroupOf("SE");                            // a value's group, or null; Values stays the flat list of every value
 
 var amount = (RangeFacetState)state.Facet("Amount");
 amount.Buckets[1].ToInterval();                   // exactly the interval a click on that bar toggles, [From, To), closed when ToInclusive (a last bar on a finite edge); ToSelection() is that interval alone

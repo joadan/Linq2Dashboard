@@ -84,6 +84,36 @@ public sealed class Selections : IEquatable<Selections>, IEnumerable<KeyValuePai
     }
 
     /// <summary>
+    /// Selects every value of <paramref name="group"/> in the value facet <paramref name="key"/>, or,
+    /// when every one is already selected, removes them all (concept §6). The click case for a group;
+    /// the result is an ordinary value selection, so no group name is stored (design §2.2). Decided
+    /// from this selection rather than the group's flags, so a group from an older state still toggles
+    /// right. Values compare as in <see cref="Toggle"/>.
+    /// </summary>
+    public Selections ToggleGroup(string key, ValueGroup group)
+    {
+        ArgumentException.ThrowIfNullOrEmpty(key);
+        ArgumentNullException.ThrowIfNull(group);
+
+        ValueSelection current = this[key] switch
+        {
+            null => ValueSelection.Of(),
+            ValueSelection values => values,
+            Selection other => throw new InvalidOperationException(
+                $"Facet '{key}' has a {other.GetType().Name}; ToggleGroup applies to value selections only."),
+        };
+
+        bool remove = group.Values.All(v => current.Contains(v.Value));
+        ValueSelection next = current;
+        foreach (FacetValue value in group.Values)
+        {
+            next = remove ? next.Remove(value.Value) : next.Add(value.Value);
+        }
+
+        return With(key, next);
+    }
+
+    /// <summary>
     /// Adds <paramref name="interval"/> to the range selection for <paramref name="key"/>, or removes it
     /// if already present. The click case for a range facet's bucket (concept §5); removing the last
     /// interval clears the facet unless the null rows are selected too.

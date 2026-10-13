@@ -27,6 +27,8 @@ internal sealed class ValueFacetDefinition<T, TProp> : FacetDefinition<T>
 
     public Func<T, string?>? Label { get; set; }
 
+    public Func<T, string?>? GroupBy { get; set; }
+
     public override FacetIndex Build(T[] items, TimeProvider timeProvider, bool parallel)
     {
         var column = ValueColumn<TProp>.Build(items.Length, (int row, out TProp value) =>
@@ -35,23 +37,21 @@ internal sealed class ValueFacetDefinition<T, TProp> : FacetDefinition<T>
             return value is not null;
         }, Comparer);
 
-        return new ValueFacetIndex<TProp>(Key, Name, Kind, column, Top, RankMode, Searchable, Formatter, BuildLabels(items, column));
+        int[]? firstRows = Label is null && GroupBy is null ? null : FirstRows(column);
+        string?[]? labels = Label is { } label ? firstRows!.Select(row => label(items[row])).ToArray() : null;
+        ValueGroups? groups = GroupBy is { } group ? ValueGroups.Build(items, firstRows!, group) : null;
+        return new ValueFacetIndex<TProp>(Key, Name, Kind, column, Top, RankMode, Searchable, Formatter, labels, groups);
     }
 
     /// <summary>
-    /// One label per distinct value, read from the first row that introduces the value (concept §5),
-    /// the same rule that fixes the presented spelling (design §3.3). Null when no label is defined.
+    /// The row that introduces each distinct value, indexed by code − 1: labels and groups are read
+    /// from it (concept §5, §6), the same rule that fixes the presented spelling (design §3.3).
     /// </summary>
-    private string?[]? BuildLabels(T[] items, ValueColumn<TProp> column)
+    private static int[] FirstRows(ValueColumn<TProp> column)
     {
-        if (Label is null)
-        {
-            return null;
-        }
-
-        var labels = new string?[column.DistinctCount];
+        var firstRows = new int[column.DistinctCount];
         var seen = new bool[column.DistinctCount];
-        int remaining = labels.Length;
+        int remaining = firstRows.Length;
         ReadOnlySpan<int> codes = column.Codes;
         for (int row = 0; row < codes.Length && remaining > 0; row++)
         {
@@ -62,10 +62,10 @@ internal sealed class ValueFacetDefinition<T, TProp> : FacetDefinition<T>
             }
 
             seen[index] = true;
-            labels[index] = Label(items[row]);
+            firstRows[index] = row;
             remaining--;
         }
 
-        return labels;
+        return firstRows;
     }
 }

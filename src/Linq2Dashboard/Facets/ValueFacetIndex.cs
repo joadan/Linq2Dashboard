@@ -16,19 +16,20 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     private readonly Lazy<string[]> searchLabels;
     private readonly ValueFormatter<TValue>? formatter;
     private readonly string?[]? labels;
+    private readonly ValueGroups? groups;
     private readonly int[] totals;
     private readonly int valueCount;
 
     public ValueFacetIndex(
         string key, string name, FacetKind kind, IValueColumn<TValue> column,
-        int? top, RankMode rankMode, bool searchable, ValueFormatter<TValue>? formatter, string?[]? labels = null)
-        : this(key, name, kind, column, column.TotalCountsArray, column.RowCount, top, rankMode, searchable, formatter, Validate(column, labels), null)
+        int? top, RankMode rankMode, bool searchable, ValueFormatter<TValue>? formatter, string?[]? labels = null, ValueGroups? groups = null)
+        : this(key, name, kind, column, column.TotalCountsArray, column.RowCount, top, rankMode, searchable, formatter, Validate(column, labels), groups, null)
     {
     }
 
     private ValueFacetIndex(
         string key, string name, FacetKind kind, IValueColumn<TValue> column, int[] totals, int rowCount,
-        int? top, RankMode rankMode, bool searchable, ValueFormatter<TValue>? formatter, string?[]? labels, Lazy<string[]>? searchLabels)
+        int? top, RankMode rankMode, bool searchable, ValueFormatter<TValue>? formatter, string?[]? labels, ValueGroups? groups, Lazy<string[]>? searchLabels)
         : base(key, name, kind, rowCount)
     {
         Column = column;
@@ -38,6 +39,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         Searchable = searchable;
         this.formatter = formatter;
         this.labels = labels;
+        this.groups = groups;
         this.searchLabels = searchLabels ?? new Lazy<string[]>(BuildSearchLabels, LazyThreadSafetyMode.ExecutionAndPublication);
         foreach (int total in totals)
         {
@@ -66,6 +68,21 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         return Column.TryGetCode(ConvertValue(value), out int code) ? labels[code - 1] : null;
     }
 
+    /// <summary>
+    /// The group of a value (concept §6), or null when the facet has no groups, the value is null or
+    /// does not occur, or the value is ungrouped. Accepts the same boxed forms as a selection does.
+    /// </summary>
+    public string? GroupOf(object? value)
+    {
+        if (groups is null || value is null || !Column.TryGetCode(ConvertValue(value), out int code))
+        {
+            return null;
+        }
+
+        int index = groups.GroupOf[code];
+        return index < 0 ? null : groups.Names[index];
+    }
+
     public IValueColumn<TValue> Column { get; }
 
     public int? Top { get; }
@@ -90,7 +107,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     {
         var scoped = new int[Column.DistinctCount + 1];
         Column.CountInto(scope, scoped);
-        return new ValueFacetIndex<TValue>(Key, Name, Kind, Column, scoped, scope.Count, Top, RankMode, Searchable, formatter, labels, searchLabels);
+        return new ValueFacetIndex<TValue>(Key, Name, Kind, Column, scoped, scope.Count, Top, RankMode, Searchable, formatter, labels, groups, searchLabels);
     }
 
     /// <summary>Design §4.3 and §4.4: count, rank, pin selected values, fill to Top N, compute Other.</summary>
@@ -163,8 +180,66 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         return new ValueFacetState(
             Key, Name, Kind, selection, context.Count,
             facetValues, other, valueCount, Searchable,
-            (text, max) => Search(text, max, counts, selected), LabelOf);
+            (text, max) => Search(text, max, counts, selected), LabelOf,
+            PresentGroups(presented, facetValues, counts), GroupOf);
     }
+
+    /// <summary>
+    /// Design §4.4 groups: the presented values bucketed by group in rank order, counts summed, groups
+    /// ranked by their sums like values, ties by total count and then by name. Top N is refused with
+    /// groups, so every value with a non-zero total is presented and a group lists all its values.
+    /// </summary>
+    private ValueGroup[] PresentGroups(List<int> presented, FacetValue[] facetValues, int[] counts)
+    {
+        if (groups is null)
+        {
+            return [];
+        }
+
+        var members = new List<FacetValue>?[groups.Names.Length];
+        var totalSums = new int[groups.Names.Length];
+        var filteredSums = new int[groups.Names.Length];
+        for (int i = 0; i < presented.Count; i++)
+        {
+            int code = presented[i];
+            int index = groups.GroupOf[code];
+            if (index < 0)
+            {
+                continue;
+            }
+
+            (members[index] ??= []).Add(facetValues[i]);
+            totalSums[index] += totals[code];
+            filteredSums[index] += counts[code];
+        }
+
+        var result = new List<ValueGroup>(groups.Names.Length);
+        for (int index = 0; index < members.Length; index++)
+        {
+            if (members[index] is not { } values)
+            {
+                continue;
+            }
+
+            int selectedCount = values.Count(v => v.Selected);
+            result.Add(new ValueGroup(
+                groups.Names[index], totalSums[index], filteredSums[index],
+                selectedCount == values.Count, selectedCount > 0 && selectedCount < values.Count, values));
+        }
+
+        result.Sort((a, b) =>
+        {
+            int order = BestFirst.Compare(GroupRank(a), GroupRank(b));
+            return order != 0 ? order : StringComparer.OrdinalIgnoreCase.Compare(a.Name, b.Name);
+        });
+
+        return [.. result];
+    }
+
+    /// <summary>A group's rank per the facet's <see cref="RankMode"/>, as for a value (concept §6); the name breaks ties.</summary>
+    private RankKey GroupRank(ValueGroup group) => RankMode == RankMode.TotalCount
+        ? new RankKey(group.TotalCount, group.FilteredCount, 0)
+        : new RankKey(group.FilteredCount, group.TotalCount, 0);
 
     /// <inheritdoc />
     public override GroupColumn GroupColumn(DateGranularity? period)
