@@ -301,7 +301,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     }
 
     /// <summary>A facet value as JSON: through the application's formatter when given, otherwise the defaults.</summary>
-    internal JsonNode? FormatValue(object? value)
+    public override JsonNode? FormatValue(object? value)
     {
         if (value is null)
         {

@@ -9,13 +9,17 @@ public sealed class QueryResult
 {
     private readonly Dictionary<string, int> positions;
 
-    internal QueryResult(QueryColumn[] columns, object?[][] cells, int total)
+    internal QueryResult(QueryColumn[] columns, object?[][] cells, int total, Facets.FacetIndex?[] facets)
     {
         Columns = columns;
+        ColumnFacets = facets;
         positions = columns.Select((c, i) => (c.Key, i)).ToDictionary(p => p.Key, p => p.i, StringComparer.Ordinal);
         Rows = cells.Select(row => new QueryRow(row, positions)).ToArray();
         Total = total;
     }
+
+    /// <summary>The facet each column reads, null for a property or a value: what writes its values to JSON (design §10.6).</summary>
+    internal IReadOnlyList<Facets.FacetIndex?> ColumnFacets { get; }
 
     /// <summary>Dimensions first, then values, in the query's order.</summary>
     public IReadOnlyList<QueryColumn> Columns { get; }
@@ -82,6 +86,9 @@ public enum QueryColumnKind
 
     /// <summary>A <see cref="double"/>, or null for "no value" (concept §4.4): a value column, or a range facet's number in a row query.</summary>
     Number,
+
+    /// <summary>A <see cref="DateOnly"/>: a date property in a row query, kept a date rather than an instant at midnight (design §10.9). Added 2026-10-13.</summary>
+    Date,
 }
 
 /// <summary>One row of a <see cref="QueryResult"/>. A cell is null for a null group and for "no value".</summary>

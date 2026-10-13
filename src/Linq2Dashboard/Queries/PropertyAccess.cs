@@ -109,7 +109,7 @@ internal abstract class PropertyAccessor<T>(PropertyInfo property)
             || underlying == typeof(TimeOnly) || underlying == typeof(TimeSpan);
     }
 
-    protected ArgumentException NotSimple() =>
+    protected DashboardQueryException NotSimple() =>
         Error("holds an object, and a row query returns simple values only: numbers, text, enums, dates and lists of them. Flatten what you want listed into the row, or define a facet.");
 
     /// <summary>Keys for a distinct count, with the value facet's equality.</summary>
@@ -130,7 +130,7 @@ internal abstract class PropertyAccessor<T>(PropertyInfo property)
     /// <summary>The property's type as C# writes it, for messages: <c>Int32?</c>, <c>IReadOnlyList&lt;String?&gt;?</c>.</summary>
     public string TypeName => Display(Type, new NullabilityInfoContext().Create(Property));
 
-    protected ArgumentException Error(string message) => new($"Property '{Name}' ({TypeName}) {message}", "query");
+    protected DashboardQueryException Error(string message) => new($"Property '{Name}' ({TypeName}) {message}");
 
     private static string Display(Type type, NullabilityInfo nullability)
     {
@@ -194,7 +194,7 @@ internal sealed class ValueAccessor<T, TProp> : PropertyAccessor<T>
 
     public override DistinctSource DistinctKeys(T[] items) => new PropertyKeys<T, TProp>(this, items, getter.Value);
 
-    /// <summary>The value as it is, a date as its instant in UTC, or a period when one is named.</summary>
+    /// <summary>The value as it is, a <see cref="DateOnly"/> as a date, another date type as its instant in UTC, or a period when one is named.</summary>
     public override RowColumn RowColumn(T[] items, DateGranularity? period)
     {
         if (!IsSimple(typeof(TProp)))
@@ -205,6 +205,12 @@ internal sealed class ValueAccessor<T, TProp> : PropertyAccessor<T>
         if (period is not null)
         {
             return new CodedRowColumn(GroupColumn(items, period));
+        }
+
+        if ((Nullable.GetUnderlyingType(typeof(TProp)) ?? typeof(TProp)) == typeof(DateOnly))
+        {
+            Func<T, DateOnly?> date = Lambda<DateOnly?>().Compile();
+            return new DateRowColumn(row => date(items[row]));
         }
 
         if (DateConversion.IsSupported(typeof(TProp)))

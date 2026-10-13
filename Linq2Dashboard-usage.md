@@ -204,6 +204,24 @@ QueryResult largest = dashboard.Query(new DashboardQuery<Order>
 
 A facet column gives what the facet reads from the row: a value facet its value and label, a multi-valued facet a list of them, a range facet its number, a date facet its instant in the facet's zone, or its period when one is named. A property column gives the property's value in a `QueryValueCell`, a date as its instant in UTC, a collection as a list; a property holding an object is refused, so an answer is always flat. Without an order the rows come in the dashboard's own order. `Total` is the number of matching rows. For a grid or an export use `state.Items`, which has every row.
 
+For an agent or an HTTP client, read the query from JSON and write the answer as JSON:
+
+```csharp
+DashboardQuery<Order> query = dashboard.QueryFromJson(json, new QueryJsonOptions<Order>
+{
+    Where = text => ParseWhere(text),                  // your parser, such as Gridify; without one a where is refused
+    WhereHelp = "Fields: Amount, Status.",              // added to the where's errors
+    Allowed = ["Country", "Status", "OrderDate", "Amount", "revenue"],   // the names this caller may use; null for all
+});
+string answer = dashboard.Serializer.ToJson(dashboard.Query(query));
+```
+
+```json
+{ "selections": "Country=SE,NO", "groupBy": ["Status", "OrderDate:Month"], "values": ["revenue", "count", "avg:Amount"], "orderBy": "-revenue", "take": 10 }
+```
+
+Every part has a short text form, as above, or an object form (`{ "name", "period" }`, `{ "property" }`, `{ "metric" }`, `{ "aggregation", "of", "as" }`, `{ "key", "descending" }`); selections are the URL's query-string text or the JSON of `Serializer.ToJson`. Reading is strict: an unknown name, a value that cannot be read or a name outside `Allowed` throws a `DashboardQueryException` whose `Path` names the part (`groupBy[1]`, `selections.Country`, `where`) and whose message can go back to the agent as it is. The C# API throws the same exception. The answer is a column header and rows as arrays; intervals are written as in a URL (`[100..500)`), periods as their start date, labelled values as `{ "value", "label" }`. `Serializer.FromQueryString(text, "", strict: true)` and `FromJson(json, strict: true)` read selections the same strict way for any input that must not lose part of itself.
+
 ## Small datasets
 
 When the rows are the user's own and few, such as one customer's orders, build the dashboard in the page on every visit and cache nothing. A build costs about 2 ms of fixed overhead plus under 1 µs per row: about 3 ms at 1 000 rows, 10 ms at 10 000 and 100 ms at 100 000 (design §8). Up to tens of thousands of rows that is well inside a page request; above about 100 000, or when every user sees the same rows, build once and share it as in the wiring checklist.

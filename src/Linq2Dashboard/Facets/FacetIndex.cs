@@ -68,11 +68,14 @@ internal abstract class FacetIndex
     /// <paramref name="period"/> names a period for a date facet. Throws when the facet cannot group a query that way.
     /// </summary>
     public virtual GroupColumn GroupColumn(DateGranularity? period) =>
-        throw new ArgumentException($"Facet '{Key}' is a {Kind} facet; it has no values a query can group by.", "query");
+        throw new DashboardQueryException($"Facet '{Key}' is a {Kind} facet; it has no values a query can group by.");
+
+    /// <summary>A value of this facet as JSON (design §2.5): the defaults here, a value facet's own form where it has one.</summary>
+    public virtual JsonNode? FormatValue(object? value) => Serialization.JsonValues.Format(value);
 
     /// <summary>What the facet reads from one row, as a column of a row query (concept §4.11). Throws for a facet that reads nothing.</summary>
     public virtual RowColumn RowColumn(DateGranularity? period) =>
-        throw new ArgumentException($"Facet '{Key}' is a {Kind} facet; it reads nothing from a row, so it cannot be a column.", "query");
+        throw new DashboardQueryException($"Facet '{Key}' is a {Kind} facet; it reads nothing from a row, so it cannot be a column.");
 
     /// <summary>The facet's values as numbers for sum, average, min and max in a query, or null when they are not numbers (design §10.3).</summary>
     public virtual NumberSource? Numbers() => null;
@@ -81,8 +84,8 @@ internal abstract class FacetIndex
     public virtual DistinctSource? DistinctKeys() => null;
 
     /// <summary>The error for a period on a facet that is not a date.</summary>
-    protected ArgumentException NotADate(DateGranularity period) =>
-        new($"Facet '{Key}' is a {Kind} facet; only a date can be grouped by {period}.", "query");
+    protected DashboardQueryException NotADate(DateGranularity period) =>
+        new($"Facet '{Key}' is a {Kind} facet; only a date can be grouped by {period}.");
 
     protected TSelection? ExpectOrNull<TSelection>(Selection? selection) where TSelection : Selection =>
         selection is null ? null : Expect<TSelection>(selection);

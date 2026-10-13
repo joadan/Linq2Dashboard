@@ -94,5 +94,31 @@ internal static class QueryNames
         return previous[b.Length];
     }
 
-    public static ArgumentException Error(string message) => new(message, "query");
+    public static DashboardQueryException Error(string message, string? path = null) => new(message, path);
+
+    /// <summary>Resolves one part of a query, so an error it raises names that part (design §10.6).</summary>
+    public static TResult At<TResult>(string path, Func<TResult> resolve)
+    {
+        try
+        {
+            return resolve();
+        }
+        catch (DashboardQueryException e)
+        {
+            throw e.At(path);
+        }
+    }
+
+    /// <summary>Every selection names a facet; checked with the query's other names so the error says which (concept §4.11).</summary>
+    public static void CheckSelections<T>(Dashboard<T> dashboard, Selections selections)
+    {
+        foreach ((string key, _) in selections)
+        {
+            if (!dashboard.TryGetFacetIndex(key, out _))
+            {
+                IEnumerable<string> facets = dashboard.Facets.Select(f => f.Key);
+                throw Error($"'{key}' is not a facet of this dashboard, and selections name facets.{Suggest(key, facets)} Facets: {string.Join(", ", facets)}.", $"selections.{key}");
+            }
+        }
+    }
 }
