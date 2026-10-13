@@ -1066,9 +1066,47 @@ One pull request per step, each with its tests and the usage guide brought up to
 5. **`Describe`** and its JSON (§10.7).
 6. **Benchmarks.** The estimates of §10.3 measured at a million rows and recorded in §8.
 
-**Checkpoint after step 3.** Steps 1 to 3 are the query itself; steps 4 and 5 exist to serve agents and HTTP clients. Before they are built, a hand-written agent tool in the first consuming application calls the C# API with real questions, and what it fails to ask or reads wrongly reshapes the JSON contract and the description, the parts hardest to change once published. The design grew past its intended size while it was written (JSON both ways, the description and row queries were added), and the checkpoint is where that is weighed against use.
+**Checkpoint after step 3.** Steps 1 to 3 are the query itself; steps 4 and 5 exist to serve agents and HTTP clients. Before they are built, a hand-written agent tool in the first consuming application calls the C# API with real questions, and what it fails to ask or reads wrongly reshapes the JSON contract and the description, the parts hardest to change once published. The design grew past its intended size while it was written (JSON both ways, the description and row queries were added), and the checkpoint is where that is weighed against use. Held 2026-10-13; see §10.9.
 
 **Tests.** Every rule of §C4.11 has a named test, for example `Query_AppliesEverySelection_WithoutOwnFacetExclusion`, `Query_LeavesOutEmptyGroups`, `Query_NameMeansFacetBeforeProperty`, `RowQuery_RefusesTakeAboveCeiling`. One test checks the promise that queries agree with the screen directly: for random selections, a count grouped by any facet without a selection equals that facet's filtered counts from `Calculate`.
+
+### 10.9 Checkpoint: the first agent tool
+
+Held 2026-10-13 with 0.2.88-beta. The first consuming application, a Blazor Server app, gave its chat assistant (Microsoft.Extensions.AI tools, a small hosted model) a hand-written plugin over one of its dashboards: about 50 rows with seven value facets and four metrics. The plugin had three tools: describe, query (selections, a Gridify where, group-by or row columns, values, order, take) and show (navigates the page to the same selections). Strings in, JSON out, built with the C# API of steps 1 to 3 and nothing else from the core.
+
+**What it was asked.** The questions of one user session that went to this plugin. Each was answered with one or two calls, and the agent composed queries when it needed to:
+
+| Question | Calls | Result |
+|---|---|---|
+| Rows per two facets, and the three values of a third with most rows | describe, two group queries | right, said the second answer was cut |
+| The worst row per value of a facet | describe, two group queries | right |
+| Summarise one country | one group query with `Country=FR`, three values | right |
+| The most recent row in one country | one row query ordered by a date, descending | right |
+| An identifier the user named for the rows of one country | one row query | **wrong**: gave a facet's value, an internal id, for the identifier asked for |
+| The most recent row overall | an application tool that lists rows worst first | **wrong tool**, right by chance |
+
+Both mistakes were about meaning, not query power, as the 2026-10-12 discussion expected: the agent could not tell from a `{ value, label }` cell what the value was, and "most recent" and "worst" were not told apart. Both were fixed in the application by a sentence in the field descriptions and one more property; the same question was then answered right. No question needed more than two dimensions, a condition on groups or a top N per group.
+
+**What held.**
+
+- Self-describing columns and `{ value, label }` cells were read correctly, and a cell went straight back into a selection.
+- The core's error messages carried the retries. "Did you mean 'Status'?" and the list of known names were enough for the model to correct itself without help from the tool.
+- `Total` and `IsCut` were reported back to the user unprompted.
+- The where as an application string (§10.6) worked with Gridify. The core stayed out of it, and the mapper was the natural allowlist of filterable fields.
+
+**What reshapes steps 4 and 5.**
+
+1. **Selections as the query-string text** (§2.5). The tool took `Country=SE&Status=Shipped,Delivered`, the page's own URL form, and the model wrote it without mistakes; the same text drove the show tool. `QueryFromJson` should accept that text for `selections` as well as the object form, with the same strictness. The lenient reader had to be wrapped by hand to refuse unknown keys and values it dropped: a strict `FromQueryString` belongs in the core whatever the JSON shape.
+2. **Short text forms for parts.** The tool took `"OrderDate:Month"` for a period, `"avg:Amount"` for an aggregation and `"-revenue"` for a descending order. The model never got them wrong, and they are shorter than the objects of §10.6. Accept them beside the objects.
+3. **Descriptions come from the application.** The one real failure was a value without a meaning. `Describe` (§10.7) needs a place for the application's text per facet, metric and property, such as `.Description("…")` on the builder or a map in `Describe`'s options, since the core cannot know that a facet's value is an id and its label a name.
+4. **List the values of small facets in the description.** §10.7 leaves values out, but the tool listed the 25 most common per facet and the agent used them directly in selections. That matters most where value and label differ, such as a severity stored as a rank (3 = Critical). Proposal: list the values of a facet up to a small limit, and give only the count above it.
+5. **A `DateOnly` property is a date.** A row column over a `DateOnly` property came out as an instant at midnight UTC (`2026-07-22T00:00:00+00:00`), and the tool had to turn it back into a date. The answer and its JSON should keep a date as a date.
+6. **Errors of the where's parser** surface as the parser's own exceptions, some without a useful message: Gridify said "Argument types do not match" for `Amount>abc`. `QueryFromJson` should wrap them in a `DashboardQueryException` with `Path` `where`, and the parser's description of its fields belongs in the message.
+7. Rows were sent as objects keyed by column rather than as arrays. The model read them fine, but nothing argues against the arrays of §10.6, which cost fewer tokens.
+
+**Gridify, for the record.** With `CaseInsensitiveFiltering` on, Gridify throws a `NullReferenceException` on a null string property. Mapping it as `x => x.Country ?? ""` avoids it, and an empty value (`Country=`) then means "none". An adapter package must do this and test it.
+
+**On a `Linq2Dashboard.AI` package.** About two thirds of the plugin was generic: describing, reading the parts, reading selections strictly, writing the answer, and showing selections on a page. Most of that is steps 4 and 5. The rest was the application's: loading rows, the descriptions, the Gridify mapper, the wording and caching the built dashboard for two minutes per session (building was negligible beside loading the rows). The host allowed six tools per plugin, and three were enough. The decision is to wait: build steps 4 and 5 with the reshapes above, then write a second tool in the same application over a different dashboard as if it were the package. Extract the package (`dashboard.AsAITools(options)` returning describe, query and show as `AIFunction`s, with options for descriptions, `Allowed`, the where parser and the page URL) only if that second tool turns out to be mostly a copy of the first.
 
 ## 11. Open questions
 
@@ -1136,3 +1174,4 @@ One pull request per step, each with its tests and the usage guide brought up to
 - **Queries and answers both have a JSON form in the core, on `dashboard.Serializer`.** The answer writes rows as arrays under a column header, intervals in the query-string notation and values in each facet's own form. A query is read strictly, selections included, with the where handed as a string to a parser the application supplies, so the core reads no filter language and takes no dependency, and an optional `Allowed` list decides which names outside input may use. Answer-only JSON was rejected because every tool layer and HTTP endpoint would write the same mapping and the same error messages. Decided 2026-10-12. See §10.6.
 - **The core describes what can be asked; it does not write the state as JSON.** `Describe(allowed)` lists facets with what helps a question (value count, buckets, period, labels), metrics, and properties with their type and the uses §10.5 allows, filtered by the same `Allowed` list as the query reader, so a client is never told about a name it cannot use. Leaving the description to each tool layer was rejected because only the core knows the property rules; facet value lists stay out because a query discovers them. State JSON was left with the parked plan for non-Blazor clients, since the current view is the selections plus queries. Decided 2026-10-12. See §10.7.
 - **Queries are built in six steps with a checkpoint after the third.** The query core, where and properties, and row queries come first; then a hand-written agent tool in the first consuming application tries real questions before the JSON contract and the description are built, since those are the hardest to change once published and the design grew past its intended size while it was written. Decided 2026-10-12. See §10.8.
+- **The checkpoint held, and an agent package waits for a second tool.** A hand-written tool over the C# API answered real questions in one or two queries; its failures were about meaning, not query power. Steps 4 and 5 take its findings first: selections also as query-string text and a strict reader for it, short text forms for parts, application descriptions and small facets' values in the description, dates kept as dates, and the where parser's errors wrapped. A `Linq2Dashboard.AI` package is extracted only if a second tool in the same application turns out to be mostly a copy of the first. Decided 2026-10-13. See §10.9.
