@@ -168,6 +168,39 @@ public sealed class Dashboard<T>
     public QueryResult Query(DashboardQuery<T> query, CancellationToken cancellationToken = default) =>
         QueryRunner.Run(this, query, cancellationToken);
 
+    /// <summary>
+    /// Reads a query from JSON that comes from outside the application, from an agent or an HTTP client (design §10.6),
+    /// and checks it as <see cref="Query"/> would. Strict throughout, selections included: anything that cannot be
+    /// read or is not known throws a <see cref="DashboardQueryException"/> whose <see cref="DashboardQueryException.Path"/>
+    /// names the part, with a message meant to be passed back as it is. Each part is an object or a short text form:
+    /// <code>
+    /// {
+    ///   "selections": "Country=SE,NO&amp;Status=Open",
+    ///   "where": "Amount>=100000",
+    ///   "groupBy": ["SalesRep", "OrderDate:Month"],
+    ///   "values": ["revenue", "count", "avg:Amount"],
+    ///   "orderBy": "-revenue",
+    ///   "take": 10
+    /// }
+    /// </code>
+    /// </summary>
+    /// <param name="json">The query as JSON text.</param>
+    /// <param name="options">The where's parser and the names the caller may use; null allows every name and no where.</param>
+    public DashboardQuery<T> QueryFromJson(string json, QueryJsonOptions<T>? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(json);
+        return QueryJsonReader.Read(this, json, options);
+    }
+
+    /// <summary>Reads a query from a JSON object, as <see cref="QueryFromJson(string, QueryJsonOptions{T}?)"/> does, for callers that embed it in a larger document.</summary>
+    /// <param name="json">The query as a JSON object.</param>
+    /// <param name="options">The where's parser and the names the caller may use; null allows every name and no where.</param>
+    public DashboardQuery<T> QueryFromJsonObject(System.Text.Json.Nodes.JsonObject json, QueryJsonOptions<T>? options = null)
+    {
+        ArgumentNullException.ThrowIfNull(json);
+        return QueryJsonReader.Read(this, json, options);
+    }
+
     /// <summary>Calculates without consulting or filling the state cache. For benchmarks; the row-set cache still applies.</summary>
     internal DashboardState<T> CalculateUncached(Selections selections) => DashboardCalculator.Calculate(this, selections);
 

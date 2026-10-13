@@ -65,6 +65,16 @@ internal sealed class InstantRowColumn(Func<int, long?> utcTicksAt, TimeZoneInfo
     public override int Compare(RowKey a, RowKey b) => a.Integer.CompareTo(b.Integer);
 }
 
+/// <summary>A <see cref="DateOnly"/> property for the row, kept a date (design §10.9).</summary>
+internal sealed class DateRowColumn(Func<int, DateOnly?> read) : RowColumn(QueryColumnKind.Date)
+{
+    public override object? Cell(int row) => read(row);
+
+    public override RowKey KeyOf(int row) => read(row) is DateOnly date ? new RowKey(date.DayNumber, 0, false) : new RowKey(0, 0, true);
+
+    public override int Compare(RowKey a, RowKey b) => a.Integer.CompareTo(b.Integer);
+}
+
 /// <summary>Several values per row, as a list of cells; a row without any is null (concept §5). Has no order.</summary>
 internal sealed class ListRowColumn(Func<int, IReadOnlyList<QueryValueCell>> read) : RowColumn(QueryColumnKind.Value)
 {
@@ -92,7 +102,7 @@ internal static class RowQueryRunner
 
     public static QueryResult Run<T>(Dashboard<T> dashboard, DashboardQuery<T> query, CancellationToken cancellationToken)
     {
-        (RowColumn[] columns, QueryColumn[] described, int? orderColumn, int take) = Resolve(dashboard, query);
+        (RowColumn[] columns, QueryColumn[] described, FacetIndex?[] facets, int? orderColumn, int take) = Resolve(dashboard, query);
         cancellationToken.ThrowIfCancellationRequested();
 
         RowSet rows = QueryRunner.Rows(dashboard, query, cancellationToken);
@@ -112,10 +122,10 @@ internal static class RowQueryRunner
             }
         }
 
-        return new QueryResult(described, cells, rows.Count);
+        return new QueryResult(described, cells, rows.Count, facets);
     }
 
-    private static (RowColumn[] Columns, QueryColumn[] Described, int? OrderColumn, int Take) Resolve<T>(Dashboard<T> dashboard, DashboardQuery<T> query)
+    internal static (RowColumn[] Columns, QueryColumn[] Described, FacetIndex?[] Facets, int? OrderColumn, int Take) Resolve<T>(Dashboard<T> dashboard, DashboardQuery<T> query)
     {
         IReadOnlyList<Dimension> requested = query.Columns ?? throw Error("The query's Columns is null.");
         if (query.Selections is null)
@@ -125,32 +135,40 @@ internal static class RowQueryRunner
 
         if (query.GroupBy is { Count: > 0 } || query.Values is { Count: > 0 })
         {
-            throw Error("A row query lists rows, so it has Columns instead of GroupBy and Values.");
+            throw Error("A row query lists rows, so it has Columns instead of GroupBy and Values.", query.GroupBy is { Count: > 0 } ? "groupBy" : "values");
         }
 
         int take = query.Take ?? DefaultRows;
         if (take < 0)
         {
-            throw Error($"Take must be zero or more; it is {take}.");
+            throw Error($"Take must be zero or more; it is {take}.", "take");
         }
 
         if (take > MaxRows)
         {
-            throw Error($"A row query returns at most {MaxRows} rows; this one asks for {take}. Take rows in bulk from the state's Items.");
+            throw Error($"A row query returns at most {MaxRows} rows; this one asks for {take}. Take rows in bulk from the state's Items.", "take");
         }
+
+        CheckSelections(dashboard, query.Selections);
 
         var columns = new RowColumn[requested.Count];
         var described = new QueryColumn[requested.Count];
+        var facets = new FacetIndex?[requested.Count];
         for (int c = 0; c < requested.Count; c++)
         {
-            Dimension dimension = requested[c] ?? throw Error("The query's Columns holds a null column.");
-            (FacetIndex? facet, PropertyAccessor<T>? property) = dimension.IsProperty
-                ? (null, Property(dashboard, dimension.Name))
-                : Name(dashboard, dimension.Name, "list");
-            RowColumn column = facet is not null
-                ? facet.RowColumn(dimension.Granularity)
-                : property!.RowColumn(dashboard.ItemArray, dimension.Granularity);
+            Dimension dimension = requested[c] ?? throw Error("The query's Columns holds a null column.", $"columns[{c}]");
+            (FacetIndex? facet, PropertyAccessor<T>? property, RowColumn column) = At($"columns[{c}]", () =>
+            {
+                (FacetIndex? facet, PropertyAccessor<T>? property) = dimension.IsProperty
+                    ? (null, Property(dashboard, dimension.Name))
+                    : Name(dashboard, dimension.Name, "list");
+                RowColumn column = facet is not null
+                    ? facet.RowColumn(dimension.Granularity)
+                    : property!.RowColumn(dashboard.ItemArray, dimension.Granularity);
+                return (facet, property, column);
+            });
             columns[c] = column;
+            facets[c] = facet;
             described[c] = new QueryColumn(dimension.Key, facet?.Name ?? property!.Name, QueryColumnRole.Dimension, column.Kind)
             {
                 Source = facet?.Key ?? property!.Name,
@@ -161,7 +179,7 @@ internal static class RowQueryRunner
         string? duplicate = described.GroupBy(c => c.Key, StringComparer.Ordinal).FirstOrDefault(g => g.Count() > 1)?.Key;
         if (duplicate is not null)
         {
-            throw Error($"Two columns of the query have the key '{duplicate}'. Give one another key with As(...).");
+            throw Error($"Two columns of the query have the key '{duplicate}'. Give one another key with As(...).", $"columns[{Array.FindLastIndex(described, c => c.Key == duplicate)}]");
         }
 
         int? orderColumn = null;
@@ -170,18 +188,18 @@ internal static class RowQueryRunner
             int position = Array.FindIndex(described, c => c.Key == order.Key);
             if (position < 0)
             {
-                throw Error($"The query orders by '{order.Key}', which is not one of its columns: {string.Join(", ", described.Select(c => c.Key))}.");
+                throw Error($"The query orders by '{order.Key}', which is not one of its columns: {string.Join(", ", described.Select(c => c.Key))}.", "orderBy");
             }
 
             if (!columns[position].CanOrder)
             {
-                throw Error($"The query orders by '{order.Key}', which holds several values per row and has no order.");
+                throw Error($"The query orders by '{order.Key}', which holds several values per row and has no order.", "orderBy");
             }
 
             orderColumn = position;
         }
 
-        return (columns, described, orderColumn, take);
+        return (columns, described, facets, orderColumn, take);
     }
 
     /// <summary>The first <paramref name="take"/> rows in the dashboard's own order (design §3.3).</summary>

@@ -70,7 +70,20 @@ internal static class QueryRunner
             cells[i] = row;
         }
 
-        return new QueryResult(plan.Columns, cells, groups.Count);
+        return new QueryResult(plan.Columns, cells, groups.Count, plan.ColumnFacets);
+    }
+
+    /// <summary>Checks a query as <see cref="Run"/> would, without reading a row: every name resolved, every rule applied (design §10.6).</summary>
+    internal static void Check<T>(Dashboard<T> dashboard, DashboardQuery<T> query)
+    {
+        if (query.Columns is null || query.Columns.Count > 0)
+        {
+            RowQueryRunner.Resolve(dashboard, query);
+        }
+        else
+        {
+            Plan.Resolve(dashboard, query);
+        }
     }
 
     /// <summary>Steps 2 and 3 of design §10.3: the rows the selections match, narrowed by the where.</summary>
@@ -243,6 +256,9 @@ internal static class QueryRunner
 
         public QueryColumn[] Columns { get; private set; }
 
+        /// <summary>The facet behind each column, null for a property or a value.</summary>
+        public FacetIndex?[] ColumnFacets { get; private set; } = [];
+
         public Reader[] Values { get; private set; } = [];
 
         public List<NumberSource> Numbers { get; } = [];
@@ -269,21 +285,29 @@ internal static class QueryRunner
 
             if (query.Take is < 0)
             {
-                throw Error($"Take must be zero or more; it is {query.Take}.");
+                throw Error($"Take must be zero or more; it is {query.Take}.", "take");
             }
+
+            CheckSelections(dashboard, query.Selections);
 
             var dimensions = new GroupColumn[groupBy.Count];
             var columns = new List<QueryColumn>();
+            var columnFacets = new List<FacetIndex?>();
             for (int d = 0; d < groupBy.Count; d++)
             {
-                Dimension dimension = groupBy[d] ?? throw Error("The query's GroupBy holds a null dimension.");
-                (FacetIndex? facet, PropertyAccessor<T>? property) = dimension.IsProperty
-                    ? (null, Property(dashboard, dimension.Name))
-                    : Name(dashboard, dimension.Name, "group by");
-                GroupColumn column = facet is not null
-                    ? facet.GroupColumn(dimension.Granularity)
-                    : property!.GroupColumn(dashboard.ItemArray, dimension.Granularity);
+                Dimension dimension = groupBy[d] ?? throw Error("The query's GroupBy holds a null dimension.", $"groupBy[{d}]");
+                (FacetIndex? facet, PropertyAccessor<T>? property, GroupColumn column) = At($"groupBy[{d}]", () =>
+                {
+                    (FacetIndex? facet, PropertyAccessor<T>? property) = dimension.IsProperty
+                        ? (null, Property(dashboard, dimension.Name))
+                        : Name(dashboard, dimension.Name, "group by");
+                    GroupColumn column = facet is not null
+                        ? facet.GroupColumn(dimension.Granularity)
+                        : property!.GroupColumn(dashboard.ItemArray, dimension.Granularity);
+                    return (facet, property, column);
+                });
                 dimensions[d] = column;
+                columnFacets.Add(facet);
                 columns.Add(new QueryColumn(dimension.Key, facet?.Name ?? property!.Name, QueryColumnRole.Dimension, column.Kind)
                 {
                     Source = facet?.Key ?? property!.Name,
@@ -294,32 +318,30 @@ internal static class QueryRunner
             var plan = new Plan(dimensions, []);
             var readers = new List<Reader>();
             IReadOnlyList<QueryValue> values = requested.Count == 0 ? [QueryValue.Count()] : requested;
-            foreach (QueryValue value in values)
+            for (int v = 0; v < values.Count; v++)
             {
-                if (value is null)
-                {
-                    throw Error("The query's Values holds a null value.");
-                }
-
-                (Reader reader, QueryColumn column) = plan.ResolveValue(dashboard, value);
+                QueryValue value = values[v] ?? throw Error("The query's Values holds a null value.", $"values[{v}]");
+                (Reader reader, QueryColumn column) = At($"values[{v}]", () => plan.ResolveValue(dashboard, value));
                 readers.Add(reader);
                 columns.Add(column);
+                columnFacets.Add(null);
             }
 
             string? duplicate = columns.GroupBy(c => c.Key, StringComparer.Ordinal).FirstOrDefault(g => g.Count() > 1)?.Key;
             if (duplicate is not null)
             {
-                throw Error($"Two parts of the query have the key '{duplicate}'. Give one another key with As(...).");
+                throw Error($"Two parts of the query have the key '{duplicate}'. Give one another key with As(...).", DuplicatePath(groupBy, values, duplicate));
             }
 
             plan.Columns = columns.ToArray();
+            plan.ColumnFacets = columnFacets.ToArray();
             plan.Values = readers.ToArray();
             if (query.OrderBy is QueryOrder order)
             {
                 int position = Array.FindIndex(plan.Columns, c => c.Key == order.Key);
                 if (position < 0)
                 {
-                    throw Error($"The query orders by '{order.Key}', which is not one of its columns: {string.Join(", ", plan.Columns.Select(c => c.Key))}.");
+                    throw Error($"The query orders by '{order.Key}', which is not one of its columns: {string.Join(", ", plan.Columns.Select(c => c.Key))}.", "orderBy");
                 }
 
                 plan.OrderColumn = position;
@@ -327,6 +349,13 @@ internal static class QueryRunner
             }
 
             return plan;
+        }
+
+        /// <summary>The path of the second part with <paramref name="key"/>, the one to rename.</summary>
+        private static string DuplicatePath(IReadOnlyList<Dimension> groupBy, IReadOnlyList<QueryValue> values, string key)
+        {
+            var paths = groupBy.Select((d, i) => (d.Key, Path: $"groupBy[{i}]")).Concat(values.Select((v, i) => (v.Key, Path: $"values[{i}]")));
+            return paths.Where(p => p.Key == key).Skip(1).First().Path;
         }
 
         private (Reader Reader, QueryColumn Column) ResolveValue<T>(Dashboard<T> dashboard, QueryValue value)

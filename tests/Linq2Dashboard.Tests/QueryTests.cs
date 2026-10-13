@@ -570,41 +570,42 @@ public class QueryTests
     [MemberData(nameof(MistakeNames))]
     public void Query_is_strict_and_says_what_is_wrong(string mistake)
     {
-        (string expected, DashboardQuery<Order> query) = Mistakes[mistake];
+        (string expected, string? path, DashboardQuery<Order> query) = Mistakes[mistake];
 
-        var error = Assert.Throws<ArgumentException>(() => Ask(query));
+        var error = Assert.Throws<DashboardQueryException>(() => Ask(query));
         Assert.Contains(expected, error.Message);
+        Assert.Equal(path, error.Path);
     }
 
     public static TheoryData<string> MistakeNames() => new(Mistakes.Keys);
 
-    private static readonly Dictionary<string, (string Expected, DashboardQuery<Order> Query)> Mistakes = new()
+    private static readonly Dictionary<string, (string Expected, string? Path, DashboardQuery<Order> Query)> Mistakes = new()
     {
-        ["dimension in the wrong case"] = ("Did you mean 'Country'?", new() { GroupBy = [Dimension.Of("country")] }),
-        ["unknown dimension"] = ("'Customer' is neither a facet of this dashboard nor a property of Order. Facets: Country, Status", new() { GroupBy = [Dimension.Of("Customer")] }),
-        ["unknown property"] = ("'Customer' is not a property of Order. Properties: Id, Country", new() { GroupBy = [Dimension.Property("Customer")] }),
-        ["property in the wrong case"] = ("Did you mean 'Kind'?", new() { GroupBy = [Dimension.Of("kind")] }),
-        ["period on a property that is not a date"] = ("Property 'Kind' (OrderKind) is not a date", new() { GroupBy = [Dimension.Of("Kind", DateGranularity.Month)] }),
-        ["period on a collection property"] = ("Property 'Tags' (IReadOnlyList<String?>?) is a collection", new() { GroupBy = [Dimension.Property("Tags", DateGranularity.Month)] }),
-        ["sum of a property that is not a number"] = ("Sum needs numbers, and property 'Kind' (OrderKind) does not hold numbers", new() { Values = [QueryValue.Sum("Kind")] }),
-        ["metric as dimension"] = ("'revenue' is a metric", new() { GroupBy = [Dimension.Of("revenue")] }),
-        ["three dimensions"] = ("at most two dimensions", new() { GroupBy = [Dimension.Of("Country"), Dimension.Of("Status"), Dimension.Of("IsActive")] }),
-        ["period on a value facet"] = ("only a date can be grouped by Month", new() { GroupBy = [Dimension.Of("Country", DateGranularity.Month)] }),
-        ["text facet as dimension"] = ("Text facet; it has no values", new() { GroupBy = [Dimension.Of("search")] }),
-        ["duplicate keys"] = ("Two parts of the query have the key 'orders'", new() { Values = [QueryValue.Metric("orders"), QueryValue.Count().As("orders")] }),
-        ["order by unknown key"] = ("orders by 'revenue', which is not one of its columns", new() { GroupBy = [Dimension.Of("Country")], OrderBy = QueryOrder.Descending("revenue") }),
-        ["sum of text"] = ("Sum needs numbers, and facet 'Country'", new() { Values = [QueryValue.Sum("Country")] }),
-        ["distinct of a text facet"] = ("Distinct needs values; facet 'search'", new() { Values = [QueryValue.Distinct("search")] }),
-        ["misspelt metric"] = ("Did you mean 'revenue'?", new() { Values = [QueryValue.Metric("revnue")] }),
-        ["negative take"] = ("Take must be zero or more", new() { Take = -1 }),
-        ["unknown selection key"] = ("Unknown facet key 'Region'", new() { Selections = Selections.Empty.With("Region", ValueSelection.Of("North")) }),
-        ["row query with groups"] = ("Columns instead of GroupBy and Values", new() { Columns = [Dimension.Of("Id")], GroupBy = [Dimension.Of("Country")] }),
-        ["row query above the ceiling"] = ("A row query returns at most 10000 rows; this one asks for 10001", new() { Columns = [Dimension.Of("Id")], Take = 10_001 }),
-        ["object property as a column"] = ("Property 'Address' (Address?) holds an object", new() { Columns = [Dimension.Of("Address")] }),
-        ["text facet as a column"] = ("it reads nothing from a row", new() { Columns = [Dimension.Of("search")] }),
-        ["metric as a column"] = ("'revenue' is a metric, and a query cannot list a metric", new() { Columns = [Dimension.Of("revenue")] }),
-        ["order by a list column"] = ("orders by 'Tags', which holds several values per row", new() { Columns = [Dimension.Of("Tags")], OrderBy = QueryOrder.Ascending("Tags") }),
-        ["duplicate columns"] = ("Two columns of the query have the key 'Id'", new() { Columns = [Dimension.Of("Id"), Dimension.Property("Id")] }),
+        ["dimension in the wrong case"] = ("Did you mean 'Country'?", "groupBy[0]", new() { GroupBy = [Dimension.Of("country")] }),
+        ["unknown dimension"] = ("'Customer' is neither a facet of this dashboard nor a property of Order. Facets: Country, Status", "groupBy[0]", new() { GroupBy = [Dimension.Of("Customer")] }),
+        ["unknown property"] = ("'Customer' is not a property of Order. Properties: Id, Country", "groupBy[0]", new() { GroupBy = [Dimension.Property("Customer")] }),
+        ["property in the wrong case"] = ("Did you mean 'Kind'?", "groupBy[0]", new() { GroupBy = [Dimension.Of("kind")] }),
+        ["period on a property that is not a date"] = ("Property 'Kind' (OrderKind) is not a date", "groupBy[0]", new() { GroupBy = [Dimension.Of("Kind", DateGranularity.Month)] }),
+        ["period on a collection property"] = ("Property 'Tags' (IReadOnlyList<String?>?) is a collection", "groupBy[0]", new() { GroupBy = [Dimension.Property("Tags", DateGranularity.Month)] }),
+        ["sum of a property that is not a number"] = ("Sum needs numbers, and property 'Kind' (OrderKind) does not hold numbers", "values[0]", new() { Values = [QueryValue.Sum("Kind")] }),
+        ["metric as dimension"] = ("'revenue' is a metric", "groupBy[0]", new() { GroupBy = [Dimension.Of("revenue")] }),
+        ["three dimensions"] = ("at most two dimensions", null, new() { GroupBy = [Dimension.Of("Country"), Dimension.Of("Status"), Dimension.Of("IsActive")] }),
+        ["period on a value facet"] = ("only a date can be grouped by Month", "groupBy[0]", new() { GroupBy = [Dimension.Of("Country", DateGranularity.Month)] }),
+        ["text facet as dimension"] = ("Text facet; it has no values", "groupBy[0]", new() { GroupBy = [Dimension.Of("search")] }),
+        ["duplicate keys"] = ("Two parts of the query have the key 'orders'", "values[1]", new() { Values = [QueryValue.Metric("orders"), QueryValue.Count().As("orders")] }),
+        ["order by unknown key"] = ("orders by 'revenue', which is not one of its columns", "orderBy", new() { GroupBy = [Dimension.Of("Country")], OrderBy = QueryOrder.Descending("revenue") }),
+        ["sum of text"] = ("Sum needs numbers, and facet 'Country'", "values[0]", new() { Values = [QueryValue.Sum("Country")] }),
+        ["distinct of a text facet"] = ("Distinct needs values; facet 'search'", "values[0]", new() { Values = [QueryValue.Distinct("search")] }),
+        ["misspelt metric"] = ("Did you mean 'revenue'?", "values[0]", new() { Values = [QueryValue.Metric("revnue")] }),
+        ["negative take"] = ("Take must be zero or more", "take", new() { Take = -1 }),
+        ["unknown selection key"] = ("'Region' is not a facet of this dashboard, and selections name facets", "selections.Region", new() { Selections = Selections.Empty.With("Region", ValueSelection.Of("North")) }),
+        ["row query with groups"] = ("Columns instead of GroupBy and Values", "groupBy", new() { Columns = [Dimension.Of("Id")], GroupBy = [Dimension.Of("Country")] }),
+        ["row query above the ceiling"] = ("A row query returns at most 10000 rows; this one asks for 10001", "take", new() { Columns = [Dimension.Of("Id")], Take = 10_001 }),
+        ["object property as a column"] = ("Property 'Address' (Address?) holds an object", "columns[0]", new() { Columns = [Dimension.Of("Address")] }),
+        ["text facet as a column"] = ("it reads nothing from a row", "columns[0]", new() { Columns = [Dimension.Of("search")] }),
+        ["metric as a column"] = ("'revenue' is a metric, and a query cannot list a metric", "columns[0]", new() { Columns = [Dimension.Of("revenue")] }),
+        ["order by a list column"] = ("orders by 'Tags', which holds several values per row", "orderBy", new() { Columns = [Dimension.Of("Tags")], OrderBy = QueryOrder.Ascending("Tags") }),
+        ["duplicate columns"] = ("Two columns of the query have the key 'Id'", "columns[1]", new() { Columns = [Dimension.Of("Id"), Dimension.Property("Id")] }),
     };
 
     /// <summary>A facet's non-zero filtered counts keyed the way <see cref="GroupKey"/> keys a query's cells.</summary>
