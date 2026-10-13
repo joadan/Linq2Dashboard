@@ -13,6 +13,8 @@
     --l2d-bucket-label-width: 6rem;
     /* A cap on a facet's value or bucket list; the list scrolls inside itself past it. Set it here for every facet or on one facet's style attribute. */
     --l2d-facet-max-height: none;
+    /* How far a group's values sit in from the group's row in a value facet (concept §6). */
+    --l2d-group-indent: 1.25rem;
     --l2d-metric-min-width: 9rem;
     --l2d-metric-padding: 0.625rem 0.75rem;
 

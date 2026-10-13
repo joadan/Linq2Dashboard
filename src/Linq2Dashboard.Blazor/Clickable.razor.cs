@@ -37,9 +37,13 @@ public partial class Clickable
     [Parameter]
     public bool? Pressed { get; set; }
 
+    /// <summary>A toggle that is partly on, such as a group with some of its values selected: <c>aria-pressed="mixed"</c>, whatever <see cref="Pressed"/> says.</summary>
+    [Parameter]
+    public bool Mixed { get; set; }
+
     /// <summary>The content.</summary>
     [Parameter]
     public RenderFragment? ChildContent { get; set; }
 
-    private string? PressedAttribute => Pressed switch { true => "true", false => "false", null => null };
+    private string? PressedAttribute => Mixed ? "mixed" : Pressed switch { true => "true", false => "false", null => null };
 }

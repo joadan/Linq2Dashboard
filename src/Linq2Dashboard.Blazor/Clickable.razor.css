@@ -40,6 +40,13 @@
     color: var(--l2d-muted, #71717a);
 }
 
+/* A value facet's group row: the button shares the row with the fold chevron. */
+.l2d-group-button {
+    flex: 1 1 auto;
+    min-width: 0;
+    align-items: center;
+}
+
 /* Range and date facets: one bar per bucket, in either layout. */
 .l2d-bucket-button {
     display: flex;

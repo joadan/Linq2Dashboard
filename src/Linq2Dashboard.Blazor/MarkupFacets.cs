@@ -60,6 +60,12 @@ internal static class MarkupFacets
                     $"ValueFacet '{key}' is multi-valued, so a label reads the value, not the row: set it in Define, (MultiValueFacetBuilder<{typeof(T).Name}, {item.Name}> f) => f.Label(...).");
             }
 
+            if (options.GroupBy is not null)
+            {
+                throw new InvalidOperationException(
+                    $"ValueFacet '{key}' is multi-valued, and a multi-valued facet has no groups: a row with several values in one group would count once per value (concept §6).");
+            }
+
             Invoke(nameof(MultiValue), [typeof(T), item], builder, key, selector, options);
             return;
         }
@@ -106,6 +112,11 @@ internal static class MarkupFacets
         if (options.Label is not null)
         {
             facet.Label(options.Label);
+        }
+
+        if (options.GroupBy is not null)
+        {
+            facet.GroupBy(options.GroupBy);
         }
 
         ApplyDefine(options.Define, facet, key);
@@ -283,7 +294,7 @@ internal static class MarkupFacets
 }
 
 /// <summary>The definition parameters of a <see cref="ValueFacet{T}"/>, read when the facet is defined (design §9).</summary>
-internal sealed record ValueFacetParameters<T>(string? Name, int? Top, RankMode? RankBy, bool? Searchable, Func<T, string?>? Label, bool Multiple, Delegate? Define);
+internal sealed record ValueFacetParameters<T>(string? Name, int? Top, RankMode? RankBy, bool? Searchable, Func<T, string?>? Label, Func<T, string?>? GroupBy, bool Multiple, Delegate? Define);
 
 /// <summary>The definition parameters of a <see cref="RangeFacet{T}"/>, read when the facet is defined (design §9).</summary>
 internal sealed record RangeFacetParameters<T>(string? Name, double[]? Buckets, int? AutoBuckets, Action<RangeFacetBuilder<T>>? Define);

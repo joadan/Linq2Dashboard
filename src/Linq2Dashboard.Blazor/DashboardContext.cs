@@ -109,6 +109,9 @@ public sealed class DashboardContext<T>
     /// <summary>The click on a value facet: add the value if absent, remove it if present.</summary>
     public Task ToggleAsync(string key, object? value) => ApplyAsync(Selections.Toggle(key, value));
 
+    /// <summary>The click on a value facet's group: select all its values, or remove them all when all are selected (concept §6).</summary>
+    public Task ToggleGroupAsync(string key, ValueGroup group) => ApplyAsync(Selections.ToggleGroup(key, group));
+
     /// <summary>The click on a range facet's bar: add the interval if absent, remove it if present (concept §5).</summary>
     public Task ToggleIntervalAsync(string key, RangeInterval interval) => ApplyAsync(Selections.ToggleInterval(key, interval));
 

@@ -7,6 +7,8 @@ namespace Linq2Dashboard.Blazor;
 /// A value, boolean or multi-valued facet: each value with its counts, the null value, the "Other" remainder and an
 /// optional search box (concept §5, §6). A click toggles the value (concept §4.1). A multi-valued facet renders the
 /// same way, with the class <c>l2d-multi-value-facet</c> on the root and never an "Other" row, since its counts overlap.
+/// A facet with groups (concept §6) lists each group as a row that folds and selects all its values, then the ungrouped
+/// values and the null value.
 /// </summary>
 public partial class ValueFacet<T>
 {
@@ -18,6 +20,11 @@ public partial class ValueFacet<T>
     private bool collapsed;
     private bool? lastCollapsedParameter;
 
+    /// <summary>Groups the user folded or unfolded against <see cref="GroupsCollapsed"/>. UI state like the search text, never a selection.</summary>
+    private readonly HashSet<string> foldToggled = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>A group's <c>@key</c>, so a group never shares one with a value of the same text.</summary>
+    private readonly record struct GroupKey(string Name);
 
     /// <summary>
     /// Overrides the name given in the builder, which is only a default display name, for example with a localised string
@@ -45,6 +52,18 @@ public partial class ValueFacet<T>
     /// </summary>
     [Parameter]
     public Func<T, string?>? Label { get; set; }
+
+    /// <summary>
+    /// Items mode only: a named group per value, read from the first row that has it, as <c>GroupBy</c> in the builder
+    /// (concept §6, design §9), for example <c>GroupBy="o =&gt; o.Market"</c>. Code, so read when the facet is defined and not
+    /// watched. Not with <see cref="Top"/> or <see cref="Multiple"/>.
+    /// </summary>
+    [Parameter]
+    public Func<T, string?>? GroupBy { get; set; }
+
+    /// <summary>Start every group of a grouped facet folded, showing only the group rows. Off by default: groups start open (design §9).</summary>
+    [Parameter]
+    public bool GroupsCollapsed { get; set; }
 
     /// <summary>
     /// Items mode only: the selector returns a collection and the facet counts a row under each of its values, as
@@ -132,17 +151,75 @@ public partial class ValueFacet<T>
 
     private bool IsSearching => Facet.IsSearchable && searchText.Length > 0;
 
+    /// <summary>The facet has groups and the list shows them; a search shows its matches flat, each with its group (design §9).</summary>
+    private bool IsGrouped => Facet.Groups.Count > 0 && !IsSearching;
+
+    /// <summary>
+    /// The values listed outside any group: every value when the list is flat; under groups, the ungrouped ones followed by
+    /// the null value, which is never in a group (concept §6).
+    /// </summary>
     private IEnumerable<FacetValue> Displayed
     {
         get
         {
-            IEnumerable<FacetValue> values = IsSearching ? Facet.Search(searchText, SearchLimit) : Facet.Values;
-            if (HideZeroCounts)
+            if (IsSearching)
             {
-                values = values.Where(v => v.FilteredCount > 0 || v.Selected);
+                return Sorted(Shown(Facet.Search(searchText, SearchLimit)));
             }
 
-            return Sorted(values);
+            if (!IsGrouped)
+            {
+                return Sorted(Shown(Facet.Values));
+            }
+
+            var grouped = new HashSet<FacetValue>(Facet.Groups.SelectMany(g => g.Values), ReferenceEqualityComparer.Instance);
+            IEnumerable<FacetValue> ungrouped = Shown(Facet.Values.Where(v => !grouped.Contains(v)));
+            return Sorted(ungrouped.Where(v => !v.IsNull)).Concat(ungrouped.Where(v => v.IsNull));
+        }
+    }
+
+    /// <summary>
+    /// The groups in the order <see cref="Sort"/> asks for, rank or name, each with its shown values in the same order. A group
+    /// whose values <see cref="HideZeroCounts"/> hides entirely is left out.
+    /// </summary>
+    private IEnumerable<(ValueGroup Group, IReadOnlyList<FacetValue> Values)> DisplayedGroups
+    {
+        get
+        {
+            IEnumerable<ValueGroup> groups = Facet.Groups;
+            if (Sort == FacetSort.Rank)
+            {
+                groups = SortDescending ? groups.Reverse() : groups;
+            }
+            else
+            {
+                IComparer<string> names = Formatter.LabelComparer;
+                groups = SortDescending ? groups.OrderByDescending(g => g.Name, names) : groups.OrderBy(g => g.Name, names);
+            }
+
+            foreach (ValueGroup group in groups)
+            {
+                var values = Sorted(Shown(group.Values)).ToList();
+                if (values.Count > 0)
+                {
+                    yield return (group, values);
+                }
+            }
+        }
+    }
+
+    /// <summary>Applies <see cref="HideZeroCounts"/>; a selected value always stays.</summary>
+    private IEnumerable<FacetValue> Shown(IEnumerable<FacetValue> values) =>
+        HideZeroCounts ? values.Where(v => v.FilteredCount > 0 || v.Selected) : values;
+
+    /// <summary>Whether a group shows only its row. Never when clicks are links: nothing could unfold it there (design §9).</summary>
+    private bool IsFolded(string group) => !Context.Links && GroupsCollapsed != foldToggled.Contains(group);
+
+    private void ToggleFolded(string group)
+    {
+        if (!foldToggled.Add(group))
+        {
+            foldToggled.Remove(group);
         }
     }
 
@@ -181,12 +258,12 @@ public partial class ValueFacet<T>
 
     /// <inheritdoc />
     private protected override bool HasDefinitionParameters =>
-        Top is not null || RankBy is not null || Searchable is not null || Label is not null || Multiple || Define is not null;
+        Top is not null || RankBy is not null || Searchable is not null || Label is not null || GroupBy is not null || Multiple || Define is not null;
 
     /// <inheritdoc />
     private protected override MarkupDefinition<T> Definition(string key, LambdaExpression selector)
     {
-        var parameters = new ValueFacetParameters<T>(Name, Top, RankBy, Searchable, Label, Multiple, Define);
+        var parameters = new ValueFacetParameters<T>(Name, Top, RankBy, Searchable, Label, GroupBy, Multiple, Define);
         return new MarkupDefinition<T>(
             this, ComponentName, IsMetric: false, key, HasDefinitionParameters,
             [selector.ReturnType, Name, Top, RankBy, Searchable, Multiple],

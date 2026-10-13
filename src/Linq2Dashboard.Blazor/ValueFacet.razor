@@ -6,6 +6,27 @@
     return;
 }
 
+@{
+    RenderFragment<FacetValue> valueItem = value =>
+        @<li @key="value.Value ?? NullKey" class="l2d-facet-value @(value.Selected ? "l2d-selected" : null) @(value.FilteredCount == 0 ? "l2d-zero" : null) @(value.IsNull ? "l2d-null" : null)">
+            <Clickable Class="l2d-facet-value-button" Pressed="value.Selected"
+                       Title="@CountText.Tooltip(Formatter, Formatter.FormatValue(Facet, value.Value), value.FilteredCount, value.TotalCount)"
+                       Href="@LinkTo(s => s.Toggle(ResolvedKey, value.Value))" OnClick="() => Context.ToggleAsync(ResolvedKey, value.Value)">
+                @if (ValueTemplate is not null)
+                {
+                    @ValueTemplate(value)
+                }
+                else
+                {
+                    <span class="l2d-facet-value-label">@Formatter.FormatValue(Facet, value.Value)@if (IsSearching && Facet.GroupOf(value.Value) is string group) {<span class="l2d-facet-value-group">@group</span>}</span>
+                    <span class="l2d-facet-value-count">
+                        @Formatter.FormatCount(value.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> (@Formatter.FormatCount(value.TotalCount))</span>}
+                    </span>
+                }
+            </Clickable>
+        </li>;
+}
+
 <section @attributes="AdditionalAttributes" class="@RootClass($"l2d-facet l2d-value-facet{(Facet.IsMultiValued ? " l2d-multi-value-facet" : "")}{(collapsed ? " l2d-collapsed" : "")}")" data-key="@ResolvedKey">
     @if (HeaderTemplate is not null)
     {
@@ -26,25 +47,44 @@
         }
 
         <ul class="l2d-facet-values">
+            @if (IsGrouped)
+            {
+                @foreach ((ValueGroup group, IReadOnlyList<FacetValue> values) in DisplayedGroups)
+                {
+                    bool folded = IsFolded(group.Name);
+                    <li @key="new GroupKey(group.Name)" class="l2d-group @(folded ? "l2d-group-folded" : null)">
+                        <div class="l2d-group-row @(group.Selected ? "l2d-selected" : null) @(group.PartlySelected ? "l2d-group-partly" : null) @(group.FilteredCount == 0 ? "l2d-zero" : null)">
+                            @if (!Context.Links)
+                            {
+                                <button type="button" class="l2d-group-toggle" aria-expanded="@(folded ? "false" : "true")" aria-label="@group.Name" @onclick="() => ToggleFolded(group.Name)">
+                                    <svg class="l2d-group-chevron" viewBox="0 0 10 10" aria-hidden="true" focusable="false"><path d="M2 3.5 5 6.5 8 3.5" /></svg>
+                                </button>
+                            }
+                            <Clickable Class="l2d-facet-value-button l2d-group-button" Pressed="group.Selected" Mixed="group.PartlySelected"
+                                       Title="@CountText.Tooltip(Formatter, group.Name, group.FilteredCount, group.TotalCount)"
+                                       Href="@LinkTo(s => s.ToggleGroup(ResolvedKey, group))" OnClick="() => Context.ToggleGroupAsync(ResolvedKey, group)">
+                                <span class="l2d-group-mark" aria-hidden="true"></span>
+                                <span class="l2d-facet-value-label l2d-group-label">@group.Name</span>
+                                <span class="l2d-facet-value-count">
+                                    @Formatter.FormatCount(group.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> (@Formatter.FormatCount(group.TotalCount))</span>}
+                                </span>
+                            </Clickable>
+                        </div>
+                        @if (!folded)
+                        {
+                            <ul class="l2d-group-values">
+                                @foreach (FacetValue value in values)
+                                {
+                                    @valueItem(value)
+                                }
+                            </ul>
+                        }
+                    </li>
+                }
+            }
             @foreach (FacetValue value in Displayed)
             {
-                <li @key="value.Value ?? NullKey" class="l2d-facet-value @(value.Selected ? "l2d-selected" : null) @(value.FilteredCount == 0 ? "l2d-zero" : null) @(value.IsNull ? "l2d-null" : null)">
-                    <Clickable Class="l2d-facet-value-button" Pressed="value.Selected"
-                               Title="@CountText.Tooltip(Formatter, Formatter.FormatValue(Facet, value.Value), value.FilteredCount, value.TotalCount)"
-                               Href="@LinkTo(s => s.Toggle(ResolvedKey, value.Value))" OnClick="() => Context.ToggleAsync(ResolvedKey, value.Value)">
-                        @if (ValueTemplate is not null)
-                        {
-                            @ValueTemplate(value)
-                        }
-                        else
-                        {
-                            <span class="l2d-facet-value-label">@Formatter.FormatValue(Facet, value.Value)</span>
-                            <span class="l2d-facet-value-count">
-                                @Formatter.FormatCount(value.FilteredCount)@if (ShowTotals) {<span class="l2d-facet-value-total"> (@Formatter.FormatCount(value.TotalCount))</span>}
-                            </span>
-                        }
-                    </Clickable>
-                </li>
+                @valueItem(value)
             }
             @if (!IsSearching && Facet.Other is FacetCount other)
             {
