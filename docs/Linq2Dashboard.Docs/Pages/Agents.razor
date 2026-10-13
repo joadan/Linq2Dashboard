@@ -90,7 +90,7 @@ else
         <button type="button" class="agents-example" @onclick="RunDescribe">Describe</button>
     </div>
 
-    <div class="agents-form">
+    <form class="agents-form" @onsubmit="RunQuery">
         <label>selections <input @bind="selectionsText" placeholder="Status=Shipped&OrderDate=thisYear" /></label>
         <label>where <input @bind="whereText" placeholder="Amount>=1000" /></label>
         <label>groupBy <input @bind="groupByText" placeholder="Country, OrderDate:Quarter" /></label>
@@ -98,14 +98,14 @@ else
         <label>columns <input @bind="columnsText" placeholder="Id, Customer, Amount" /></label>
         <label>orderBy <input @bind="orderByText" placeholder="-revenue" /></label>
         <label>take <input @bind="takeText" placeholder="10" inputmode="numeric" /></label>
-        <button type="button" class="agents-run" @onclick="RunQuery">Run orders_query</button>
-    </div>
+        <button type="submit" class="agents-run">Run orders_query</button>
+    </form>
 
     @if (call is not null)
     {
         <p class="agents-muted">The call, as the agent sends it:</p>
         <pre><code>@call</code></pre>
-        <p class="agents-muted">What it gets back@(elapsed is null ? null : $", in {elapsed} ms"):</p>
+        <p class="agents-muted">What it gets back, run @runs@(elapsed is null ? null : $", in {elapsed} ms"):</p>
         <pre class="agents-result"><code>@result</code></pre>
     }
 }
