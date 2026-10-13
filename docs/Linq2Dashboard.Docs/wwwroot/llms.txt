@@ -1,6 +1,6 @@
 # Linq2Dashboard
 
-> .NET library for interactive exploration of large in-memory collections: facets with total and filtered counts, metrics and paged results that all update together on every selection. The core package (Linq2Dashboard, net10.0, no dependencies) is the engine; Linq2Dashboard.Blazor renders it. Both are on NuGet.
+> .NET library for interactive exploration of large in-memory collections: facets with total and filtered counts, metrics and paged results that all update together on every selection. The core package (Linq2Dashboard, net10.0, no dependencies) is the engine; Linq2Dashboard.Blazor renders it; Linq2Dashboard.AI offers a dashboard to AI agents as describe, query and show tools (Microsoft.Extensions.AI functions, Gridify filters). All are on NuGet.
 
 This site is a Blazor WebAssembly application and its pages are not readable without running it. Everything it shows is also available as plain text at the links below. The concept document is the specification: its rules are decisions, and the code follows them.
 
@@ -15,6 +15,7 @@ This site is a Blazor WebAssembly application and its pages are not readable wit
 
 - [Repository](https://github.com/joadan/Linq2Dashboard): MIT licence.
 - [Core library](https://github.com/joadan/Linq2Dashboard/tree/master/src/Linq2Dashboard): public types are in the `Linq2Dashboard` namespace; DashboardBuilder.cs is the fluent API.
+- [AI tools](https://github.com/joadan/Linq2Dashboard/tree/master/src/Linq2Dashboard.AI): namespace `Linq2Dashboard.AI`; DashboardTools.cs holds the tools, DashboardToolOptions.cs what an application sets. Usage is in the usage guide under Agents; the design in design section 10.10.
 - [Blazor components](https://github.com/joadan/Linq2Dashboard/tree/master/src/Linq2Dashboard.Blazor): namespace `Linq2Dashboard.Blazor`; each component is an X.razor file with an X.razor.cs partial class holding its parameters.
 - [Sample application](https://github.com/joadan/Linq2Dashboard/tree/master/samples/Linq2Dashboard.Sample): a Blazor Server app over 200 000 generated rows, the reference for host wiring.
 - [Tests](https://github.com/joadan/Linq2Dashboard/tree/master/tests/Linq2Dashboard.Tests): every behavioural rule in the concept has a named test.
@@ -23,3 +24,4 @@ This site is a Blazor WebAssembly application and its pages are not readable wit
 
 - [Linq2Dashboard on NuGet](https://www.nuget.org/packages/Linq2Dashboard/)
 - [Linq2Dashboard.Blazor on NuGet](https://www.nuget.org/packages/Linq2Dashboard.Blazor/)
+- [Linq2Dashboard.AI on NuGet](https://www.nuget.org/packages/Linq2Dashboard.AI/)

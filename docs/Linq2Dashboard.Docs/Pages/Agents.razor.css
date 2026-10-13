@@ -1,0 +1,67 @@
+.agents-muted {
+    color: var(--docs-muted);
+}
+
+.agents-examples {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.375rem;
+    margin: 1rem 0;
+}
+
+.agents-example {
+    font: inherit;
+    padding: 0.25rem 0.625rem;
+    border: 1px solid var(--docs-border);
+    border-radius: 999px;
+    background: var(--docs-surface);
+    color: var(--docs-text);
+    cursor: pointer;
+}
+
+.agents-example:hover {
+    border-color: var(--docs-accent);
+}
+
+.agents-form {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    gap: 0.5rem 1rem;
+    align-items: end;
+    margin: 1rem 0;
+}
+
+.agents-form label {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+    font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+    font-size: 0.8125rem;
+    color: var(--docs-muted);
+}
+
+.agents-form input {
+    font: inherit;
+    font-size: 0.875rem;
+    padding: 0.375rem 0.5rem;
+    border: 1px solid var(--docs-border);
+    border-radius: 0.25rem;
+    background: var(--docs-surface);
+    color: var(--docs-text);
+}
+
+.agents-run {
+    justify-self: start;
+    font: inherit;
+    font-weight: 600;
+    padding: 0.375rem 1rem;
+    border: none;
+    border-radius: 0.375rem;
+    background: var(--docs-accent);
+    color: #fff;
+    cursor: pointer;
+}
+
+.agents-result {
+    max-height: 32rem;
+}

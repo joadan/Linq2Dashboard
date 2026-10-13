@@ -164,7 +164,10 @@ public sealed partial class DashboardTools<T>
                 Description = summary + Texts.Describe(options.Name, QueryName),
             }),
             AIFunctionFactory.Create(
-                typeof(DashboardTools<T>).GetMethod(HasWhere ? nameof(Query) : nameof(QueryWithoutWhere), BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance)!,
+                // Two constant lookups rather than one with a computed name, so a trimmer keeps both methods.
+                HasWhere
+                    ? typeof(DashboardTools<T>).GetMethod(nameof(Query), BindingFlags.Public | BindingFlags.Instance)!
+                    : typeof(DashboardTools<T>).GetMethod(nameof(QueryWithoutWhere), BindingFlags.NonPublic | BindingFlags.Instance)!,
                 this,
                 new AIFunctionFactoryOptions
                 {

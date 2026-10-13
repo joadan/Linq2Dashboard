@@ -22,7 +22,7 @@ src/Linq2Dashboard.Blazor/     Razor class library: DashboardView<T>, DashboardC
 src/Linq2Dashboard.AI/         agent tools (design §10.10): DashboardTools<T> over Microsoft.Extensions.AI and Gridify
 samples/Linq2Dashboard.Sample/ Blazor Server sample over 200 000 generated rows
 samples/Linq2Dashboard.SampleData/  the generator both the sample and the docs site use
-docs/Linq2Dashboard.Docs/      Blazor WebAssembly docs site: demo, getting started, concept and design rendered from the root markdown; deployed to GitHub Pages by the CI workflow on every push to master
+docs/Linq2Dashboard.Docs/      Blazor WebAssembly docs site: demo, getting started, agents (runs the AI tools in the browser), concept and design rendered from the root markdown; deployed to GitHub Pages by the CI workflow on every push to master
 tests/Linq2Dashboard.Tests/    xUnit, InternalsVisibleTo
 tests/Linq2Dashboard.Blazor.Tests/   bUnit; tests pass an invariant-culture formatter so they do not depend on the machine
 tests/Linq2Dashboard.AI.Tests/ xUnit over the tool methods; links the core tests' TestModel.cs
