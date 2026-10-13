@@ -452,6 +452,7 @@ Because facets are identified by string keys and selections are serialisable, a 
 - Cross-filtering between multiple dashboards.
 - Remote/server-side data adapters.
 - Other UI adapters than Blazor.
+- Agent tools as a package of their own, `Linq2Dashboard.AI`: a dashboard turned into describe, query and show tools. Waits for a second application tool to prove the shape (design §10.9); until then the application writes them, as design §10.10 describes. The core stays without them (§4.11).
 
 ---
 

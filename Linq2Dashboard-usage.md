@@ -243,6 +243,48 @@ string json = dashboard.Serializer.ToJson(description);                // facets
 
 The description lists each facet with what helps a question (the values of a facet with at most `ValueLimit` of them, 25 by default, most common first; a range facet's bounds; a date facet's period, zone and presets), each metric, and each property of `T` with its kind and what a query can do with it. Write descriptions for every name whose value is not self-explanatory, an id with a label above all: in the first agent tool, the one wrong answer came from a value without a meaning.
 
+## Agents
+
+There is no `Linq2Dashboard.AI` package yet: write the tools in your application, as `Microsoft.Extensions.AI` functions, which Agent Framework, Semantic Kernel, a plain `IChatClient` and an MCP server all take. Describe and query are enough to answer; add show when a dashboard is on screen.
+
+```csharp
+string[] allowed = ["Country", "Status", "OrderDate", "Amount", "revenue"];
+JsonObject description = dashboard.Serializer.ToJsonObject(
+    dashboard.Describe(new DescribeOptions { Allowed = allowed, Descriptions = descriptions }));
+var read = new QueryJsonOptions<Order> { Where = ParseWhere, WhereHelp = "Fields: Amount, Status.", Allowed = allowed };
+
+AIFunction[] tools =
+[
+    AIFunctionFactory.Create(() => description, "orders_describe",
+        "What the orders dashboard can be asked: facets, metrics, properties, limits. Call once before orders_query."),
+    AIFunctionFactory.Create((string query, CancellationToken cancellationToken) =>
+    {
+        try
+        {
+            return dashboard.Serializer.ToJsonObject(dashboard.Query(dashboard.QueryFromJson(query, read), cancellationToken));
+        }
+        catch (DashboardQueryException e)
+        {
+            return new JsonObject { ["error"] = e.Message, ["path"] = e.Path };   // the model corrects itself from this
+        }
+    }, "orders_query",
+        """
+        One question, one table, as JSON: {"selections":"Country=SE,NO","groupBy":["OrderDate:Month"],"values":["revenue","count"],"orderBy":"-revenue","take":10}.
+        Selections are the page URL's query text. If "cut" is true the answer is not the whole; say so.
+        For shares, comparisons or a top N per group, ask several queries.
+        """),
+];
+```
+
+- **One `allowed` list** for `Describe` and `QueryFromJson`, so the agent is never told about a name it cannot use. It limits names, not rows: the agent sees exactly the rows of the dashboard you hand it, so give a user who may see only some rows a scope of their own, `dashboard.ScopeTo(...)`, as their screen has.
+- **Return errors, do not throw them.** A `DashboardQueryException`'s message names the mistake and the known names; passed back as the tool's result, it is all the model needs to retry. Anything else is a bug and should surface as one.
+- **Show** takes selections as query text, reads them with `Serializer.FromQueryString(text, "", strict: true)` so an invented key is an error, and puts them on the page with `dash.ApplyAsync(selections)`; under `SyncUrl` the URL follows. That runs on the page's renderer, so a chat component elsewhere calls it through the page's `InvokeAsync`. When the dashboard is on another page, navigate to that page with `Serializer.ToQueryString(selections)` instead.
+- **Gridify as the where:** turn on case-insensitive filtering and map nullable strings as `x => x.Country ?? ""`, or a null row throws.
+- **Several dashboards:** three tools each with a prefix, `orders_query` and `tickets_query`, rather than one tool with a dashboard parameter.
+- Cache the dashboard as the page does, never the answers; a query costs milliseconds.
+
+Parameters per part (`selections`, `groupBy`, `values`, ...) instead of one JSON string, the tool texts and when a package will come: design §10.10.
+
 ## Small datasets
 
 When the rows are the user's own and few, such as one customer's orders, build the dashboard in the page on every visit and cache nothing. A build costs about 2 ms of fixed overhead plus under 1 µs per row: about 3 ms at 1 000 rows, 10 ms at 10 000 and 100 ms at 100 000 (design §8). Up to tens of thousands of rows that is well inside a page request; above about 100 000, or when every user sees the same rows, build once and share it as in the wiring checklist.

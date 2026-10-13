@@ -873,7 +873,7 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 
 ## 10. Queries
 
-A query (§C4.11) asks one question of a dashboard's rows and returns one table. Designed one decision at a time on 2026-10-12; the build order and its checkpoint are in §10.8. All six steps are done: grouping by facets and properties, periods, metric values and aggregations, the where, row queries, order, take and cancellation, JSON both ways and the description, measured in §8. The checkpoint of §10.8 was held (§10.9).
+A query (§C4.11) asks one question of a dashboard's rows and returns one table. Designed one decision at a time on 2026-10-12; the build order and its checkpoint are in §10.8. All six steps are done: grouping by facets and properties, periods, metric values and aggregations, the where, row queries, order, take and cancellation, JSON both ways and the description, measured in §8. The checkpoint of §10.8 was held (§10.9). How an application turns a dashboard into agent tools, until a package does it, is in §10.10.
 
 ### 10.1 The query object
 
@@ -1176,6 +1176,46 @@ Both mistakes were about meaning, not query power, as the 2026-10-12 discussion 
 **Gridify, for the record.** With `CaseInsensitiveFiltering` on, Gridify throws a `NullReferenceException` on a null string property. Mapping it as `x => x.Country ?? ""` avoids it, and an empty value (`Country=`) then means "none". An adapter package must do this and test it.
 
 **On a `Linq2Dashboard.AI` package.** About two thirds of the plugin was generic: describing, reading the parts, reading selections strictly, writing the answer, and showing selections on a page. Most of that is steps 4 and 5. The rest was the application's: loading rows, the descriptions, the Gridify mapper, the wording and caching the built dashboard for two minutes per session (building was negligible beside loading the rows). The host allowed six tools per plugin, and three were enough. The decision is to wait: build steps 4 and 5 with the reshapes above, then write a second tool in the same application over a different dashboard as if it were the package. Extract the package (`dashboard.AsAITools(options)` returning describe, query and show as `AIFunction`s, with options for descriptions, `Allowed`, the where parser and the page URL) only if that second tool turns out to be mostly a copy of the first.
+
+### 10.10 Agent tools in the application
+
+Guidance, not code. Written 2026-10-13 after the checkpoint (§10.9) decided to wait with a `Linq2Dashboard.AI` package. Until there is one, an application that wants its agent to ask a dashboard writes the tools itself. This section says how, so that every such tool is also a draft of the package and the second one can show whether it is a copy of the first.
+
+**Three layers.** Each owns its part and none reaches past the next:
+
+| Layer | Owns |
+|---|---|
+| Core | `Query`, `QueryFromJson`, `Describe`, the strict selection readers, the answer's JSON, `DashboardQueryException` (§10.1 to §10.7) |
+| Tools (the application today, the package later) | One dashboard turned into describe, query and show tools: parameters, tool texts, errors returned as results |
+| Application | The agent, its prompts and chat UI, sign-in, loading and caching the rows, the descriptions, the where's parser, every other tool |
+
+The core stays free of AI dependencies and knows no agent (§C4.11); nothing in this section changes that.
+
+**Build on `Microsoft.Extensions.AI`.** Write each tool as an `AIFunction` (`AIFunctionFactory.Create`), not against one agent framework. Agent Framework, Semantic Kernel and a plain `IChatClient` with function invocation all take an `AIFunction`, and the MCP C# SDK wraps one as a server tool, so the same three tools serve a chat in the application, an agent host and an MCP server. The tools take and return text or JSON nodes; no core type crosses the tool boundary.
+
+**The three tools.**
+
+- **Describe** takes nothing and returns `Serializer.ToJsonObject(dashboard.Describe(options))`, with the where's field help beside it. The description is computed in microseconds (§8), so it needs no cache, but it does need the application's descriptions: write one for every name whose value is not self-explanatory, an id with a label above all, and for every pair the agent could confuse ("most recent" by date, "worst" by severity). The one wrong answer at the checkpoint was a value without a meaning, not a missing query feature.
+- **Query** takes the query, runs it and returns `Serializer.ToJsonObject(answer)`. Two shapes work: one parameter per part (`selections`, `where`, `groupBy`, `columns`, `values`, `orderBy`, `take`, each a string or a list of strings in the short text forms of §10.6), assembled into a `JsonObject` and read with `QueryFromJsonObject`; or one parameter holding the whole query JSON, read with `QueryFromJson`. The single JSON parameter is the least code and is what the usage guide shows. The checkpoint used parameters per part and a small model filled them without mistakes; prefer that shape for a small model, since the parameter list documents the query in the tool's schema. Take the `CancellationToken` the function is called with and pass it to `Query`.
+- **Show** (a UI with a dashboard on screen) takes selections in the query-string form, reads them with `FromQueryString(text, prefix, strict: true)` so a key the agent invented is an error rather than a silent no-op, and puts them on the page with `DashboardContext.ApplyAsync`, which the URL follows under `SyncUrl`. That runs on the page's renderer, so a tool called from a chat component elsewhere marshals the call with the page's `InvokeAsync`. When the dashboard is on another page, the tool navigates there with the query string `ToQueryString` writes, as the checkpoint's show tool did. Show changes the screen, never data; the agent asks with query and shows with show, because a query leaves nothing on screen (§C4.11).
+
+Three tools were enough at the checkpoint, and a host may limit the tools per plugin (that one allowed six). Resist a tool per question ("revenue per country"): query already answers it, and every extra tool is text the model reads on every turn.
+
+**Errors are results.** Catch `DashboardQueryException` and return `{ "error": message, "path": path }` as the tool's result instead of letting it escape. Its message names what is wrong and what is known, the nearest match included (§10.6), and at the checkpoint that was all the model needed to retry on its own. Any other exception is a bug in the tool or the application and should surface as one.
+
+**The tool texts.** The descriptions of the tools and their parameters are the agent's manual, so they say what the tools are for and how they combine, in a few lines:
+
+- describe first, once per conversation; names are case-sensitive;
+- selections are the page URL's query text, `Country=SE,NO&Status=Shipped`, and a date facet takes a preset, `OrderDate=last30Days`;
+- the short forms: `"OrderDate:Month"`, `"avg:Amount"`, `"-revenue"`;
+- `total` and `cut` say whether the answer is the whole; say so to the user when it is not;
+- a share of the total, a comparison of periods, the top N per group and a drill-down are several queries: query, read, query again with a cell put into the selections.
+
+**Options, the same in every tool.** One `Allowed` list for both `DescribeOptions` and `QueryJsonOptions`, so the agent is never told about a name it cannot use (§10.7). It decides which names are exposed, not which rows: an agent sees exactly the rows of the dashboard it is given, so a user who may see only some rows gets a dashboard scoped to them (§C4.10), as their own screen does. The where's parser is the application's (§10.6); with Gridify, turn on case-insensitive filtering and map nullable strings as `x => x.Country ?? ""`, or a null throws (§10.9), and put the mapper's field list in `WhereHelp`. When the application has several dashboards, give each its own three tools with a prefix in their names (`orders_query`, `tickets_query`) rather than one tool with a dashboard parameter: the descriptions differ per dashboard, and the model picks a tool more reliably than a parameter value.
+
+**What the tools do not do.** They cache no answers (a query is milliseconds, §8); the built dashboard is the one the screen uses, a singleton or a cached instance of the host's (the usage guide's wiring checklist), or a scope of it. They write nothing, since the core cannot. They do not format numbers: the answer holds values, and the agent writes them for the user in the user's language. They hold no conversation state; what is on screen is the page's.
+
+**When to extract the package.** As decided in §10.9: when a second tool, over a different dashboard in the same application, written to this section, turns out to be mostly a copy of the first. The package would then be `Linq2Dashboard.AI`, depending on the core and `Microsoft.Extensions.AI.Abstractions` only, with `dashboard.AsAITools(options)` returning the three `AIFunction`s and options for the tool name prefix, `Allowed`, the descriptions, `ValueLimit`, the where parser with its help, and show as a callback (`Func<Selections, Task>`) so the package needs no Blazor. A Gridify adapter, if any, would be a package of its own, so the AI package does not pick a filter language for the application. Until then, nothing here is a decision: what the second tool finds overrules it.
 
 ## 11. Open questions
 
