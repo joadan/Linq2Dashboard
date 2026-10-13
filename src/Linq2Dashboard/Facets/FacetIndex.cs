@@ -73,6 +73,12 @@ internal abstract class FacetIndex
     /// <summary>The facet as a query sees it (design §10.7); each kind adds what helps a question.</summary>
     public virtual FacetDescription Describe(int valueLimit) => new(Key, Name, Kind);
 
+    /// <summary>
+    /// For a selection read strictly (design §10.6): the value a token names by its label, as JSON, when the token is
+    /// not itself a value in the dataset; null when it is, or when no label matches. Only a labelled value facet has labels.
+    /// </summary>
+    public virtual JsonNode? ValueOfLabel(JsonNode? token) => null;
+
     /// <summary>A value of this facet as JSON (design §2.5): the defaults here, a value facet's own form where it has one.</summary>
     public virtual JsonNode? FormatValue(object? value) => Serialization.JsonValues.Format(value);
 

@@ -166,6 +166,55 @@ public class QueryJsonTests
             Shared.Serializer.FromJson("""{ "Amount": { "intervals": [{}] } }""", strict: true));
     }
 
+    // Ids 1 to 8 labelled by country: SE, NO, none, SE, DK, SE, none, NO. "reversed" labels each id with another id.
+    private static readonly Dashboard<Order> Labelled = Dashboard.Create(TestData.Orders(), b =>
+    {
+        b.ValueFacet("market", x => x.Id).Label(x => x.Country?.ToUpperInvariant() ?? "none");
+        b.ValueFacet("reversed", x => x.Id).Label(x => $"{9 - x.Id}");
+    });
+
+    [Fact]
+    public void Strict_selections_read_a_label_as_its_value()
+    {
+        var expected = Selections.Empty.With("market", ValueSelection.Of(5, 2));
+
+        Assert.Equal(expected, Labelled.Serializer.FromQueryString("market=dk,2", "", strict: true));
+        Assert.Equal(expected, Labelled.Serializer.FromJson("""{ "market": { "values": ["DK", 2] } }""", strict: true));
+    }
+
+    [Fact]
+    public void A_value_wins_over_a_label_that_reads_the_same()
+    {
+        Assert.Equal(Selections.Empty.With("reversed", ValueSelection.Of(3)), Labelled.Serializer.FromQueryString("reversed=3", "", strict: true));
+    }
+
+    [Fact]
+    public void A_label_of_several_values_is_an_error_naming_them()
+    {
+        var error = Assert.Throws<SelectionFormatException>(() => Labelled.Serializer.FromQueryString("market=SE", "", strict: true));
+
+        Assert.Equal("market", error.Key);
+        Assert.Equal("'SE' is the label of 3 values of facet 'market': 1, 4, 6. Select by value.", error.Message);
+        Assert.Throws<SelectionFormatException>(() => Labelled.Serializer.FromJson("""{ "market": { "values": ["se"] } }""", strict: true));
+    }
+
+    [Fact]
+    public void Lenient_selections_do_not_read_labels()
+    {
+        Assert.Equal(Selections.Empty, Labelled.Serializer.FromQueryString("market=DK"));
+    }
+
+    [Fact]
+    public void A_query_selects_by_label()
+    {
+        var query = Labelled.QueryFromJson("""{ "selections": "market=DK", "groupBy": ["market"] }""");
+
+        Assert.Equal(ValueSelection.Of(5), query.Selections["market"]);
+        var error = Assert.Throws<DashboardQueryException>(() => Labelled.QueryFromJson("""{ "selections": "market=NO" }"""));
+        Assert.Equal("selections.market", error.Path);
+        Assert.Contains("2, 8", error.Message);
+    }
+
     [Theory]
     [MemberData(nameof(MistakeNames))]
     public void Query_from_json_is_strict_and_names_the_part(string mistake)

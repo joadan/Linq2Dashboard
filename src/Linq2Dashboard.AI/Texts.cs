@@ -9,7 +9,7 @@ internal static class Texts
     public const string Selections =
         "Facet selections as URL query text: Country=SE,NO&Status=Shipped. Values of one facet are OR, facets are AND. " +
         "A range or date facet takes intervals, Amount=[100..500) or Amount=1000.., and a date facet a preset, OrderDate=last30Days. " +
-        "null selects the rows without a value. Facet keys and values as in describe.";
+        "null selects the rows without a value. Facet keys and values as in describe; a labelled value may be named by its label.";
 
     public const string Where =
         "A filter on plain properties in Gridify syntax, combined with the selections by AND: Amount>=1000,Status=Open|Closed. " +

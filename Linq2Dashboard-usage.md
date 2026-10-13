@@ -225,7 +225,7 @@ string answer = dashboard.Serializer.ToJson(dashboard.Query(query));
 { "selections": "Country=SE,NO", "groupBy": ["Status", "OrderDate:Month"], "values": ["revenue", "count", "avg:Amount"], "orderBy": "-revenue", "take": 10 }
 ```
 
-Every part has a short text form, as above, or an object form (`{ "name", "period" }`, `{ "property" }`, `{ "metric" }`, `{ "aggregation", "of", "as" }`, `{ "key", "descending" }`); selections are the URL's query-string text or the JSON of `Serializer.ToJson`. Reading is strict: an unknown name, a value that cannot be read or a name outside `Allowed` throws a `DashboardQueryException` whose `Path` names the part (`groupBy[1]`, `selections.Country`, `where`) and whose message can go back to the agent as it is. The C# API throws the same exception. The answer is a column header and rows as arrays; intervals are written as in a URL (`[100..500)`), periods as their start date, labelled values as `{ "value", "label" }`. `Serializer.FromQueryString(text, "", strict: true)` and `FromJson(json, strict: true)` read selections the same strict way for any input that must not lose part of itself.
+Every part has a short text form, as above, or an object form (`{ "name", "period" }`, `{ "property" }`, `{ "metric" }`, `{ "aggregation", "of", "as" }`, `{ "key", "descending" }`); selections are the URL's query-string text or the JSON of `Serializer.ToJson`. Reading is strict: a labelled value may be named by its label (one that several values carry is an error), and an unknown name, a value that cannot be read or a name outside `Allowed` throws a `DashboardQueryException` whose `Path` names the part (`groupBy[1]`, `selections.Country`, `where`) and whose message can go back to the agent as it is. The C# API throws the same exception. The answer is a column header and rows as arrays; intervals are written as in a URL (`[100..500)`), periods as their start date, labelled values as `{ "value", "label" }`. `Serializer.FromQueryString(text, "", strict: true)` and `FromJson(json, strict: true)` read selections the same strict way for any input that must not lose part of itself.
 
 Before it asks, tell the agent what it can ask:
 
@@ -273,6 +273,7 @@ var options = new ChatOptions { Tools = [.. tools.Functions] };
 - **Errors are results.** An unknown name, a selection or a where that does not read comes back as `{ "error", "path" }` with the known names in the message, so the model corrects itself; nothing is thrown at the agent. Mistakes in the options throw in `ToTools`.
 - `Allowed` limits names, not rows. The agent sees the rows of the dashboard you hand it, so give a user who may see only some rows tools over their own scope, `dashboard.ScopeTo(...)`. Build the tools where you would build the page's dashboard; they cost nothing to keep and hold no conversation state.
 - Write a description for every name whose value is not self-explanatory, an id with a label above all. With several dashboards, give each its own `Name`.
+- Give a facet and a property different names when their values differ, such as a `Severity` facet over a rank next to a `Severity` enum property: the facet's name hides the property, and a model mixes them up even though describe marks it `behindFacet`.
 
 ## Small datasets
 
