@@ -95,6 +95,7 @@ public partial class Agents
     private string? call;
     private string? result;
     private long? elapsed;
+    private int runs; // shown with the result, so a run that returns the same answer still visibly ran
 
     protected override async Task OnInitializedAsync()
     {
@@ -155,6 +156,7 @@ public partial class Agents
         var watch = Stopwatch.StartNew();
         JsonObject answer = tools.Query(selections, where, groupBy, values, columns, orderBy, take);
         elapsed = watch.ElapsedMilliseconds;
+        runs++;
         call = $"{tools.QueryName}({arguments.ToJsonString(Relaxed)})";
         result = Pretty(answer);
     }
@@ -169,6 +171,7 @@ public partial class Agents
         var watch = Stopwatch.StartNew();
         JsonObject description = tools.Describe();
         elapsed = watch.ElapsedMilliseconds;
+        runs++;
         call = $"{tools.DescribeName}()";
         result = Pretty(description);
     }
