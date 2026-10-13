@@ -466,6 +466,98 @@ public class QueryTests
     }
 
     [Fact]
+    public void Row_query_lists_what_each_column_reads_from_the_row()
+    {
+        var answer = Ask(new()
+        {
+            Columns = [Dimension.Of("Id"), Dimension.Of("Country"), Dimension.Of("Amount"), Dimension.Of("OrderDate"), Dimension.Of("Tags"), Dimension.Of("Shipped")],
+            Take = 2,
+        });
+
+        Assert.Equal(
+            [QueryColumnKind.Value, QueryColumnKind.Value, QueryColumnKind.Number, QueryColumnKind.Instant, QueryColumnKind.Value, QueryColumnKind.Instant],
+            answer.Columns.Select(c => c.Kind));
+        Assert.All(answer.Columns, c => Assert.Equal(QueryColumnRole.Dimension, c.Role));
+
+        QueryRow first = answer.Rows[0];
+        Assert.Equal(new QueryValueCell(1), first["Id"]);
+        Assert.Equal(new QueryValueCell("SE"), first["Country"]);
+        Assert.Equal(100.0, first["Amount"]);
+        Assert.Equal(TestData.Instant("2026-01-15T10:00:00+01:00"), first["OrderDate"]);
+        Assert.Equal(TimeSpan.FromHours(1), ((DateTimeOffset)first["OrderDate"]!).Offset);
+        Assert.Equal([new QueryValueCell("urgent"), new QueryValueCell("gift")], (IReadOnlyList<QueryValueCell>)first["Tags"]!);
+        Assert.Equal(TestData.Instant("2026-01-16T08:00:00Z"), first["Shipped"]);
+        Assert.Null(answer.Rows[1]["Shipped"]);
+        Assert.Equal(8, answer.Total);
+        Assert.True(answer.IsCut);
+    }
+
+    [Fact]
+    public void Row_query_returns_the_first_100_rows_in_the_dashboards_own_order_without_a_take()
+    {
+        var answer = Ask(new() { Columns = [Dimension.Of("Id")] });
+        Assert.Equal([1, 2, 3, 4, 5, 6, 7, 8], answer.Rows.Select(r => (int)ValueOf(r[0])!));
+        Assert.False(answer.IsCut);
+
+        var byAmount = Dashboard.Create(TestData.Orders(), b => b.OrderByDescending(x => x.Amount));
+        var ordered = byAmount.Query(new() { Columns = [Dimension.Of("Id")], Take = 3 });
+        Assert.Equal([6, 5, 4], ordered.Rows.Select(r => (int)ValueOf(r[0])!));
+    }
+
+    [Fact]
+    public void Row_query_orders_by_a_column_with_null_last_in_both_directions()
+    {
+        QueryResult Ordered(QueryOrder order, int take) =>
+            Ask(new() { Columns = [Dimension.Of("Id"), Dimension.Of("Discount")], OrderBy = order, Take = take });
+
+        Assert.Equal([4, 8, 1, 3, 6, 2, 5, 7], Ordered(QueryOrder.Ascending("Discount"), 8).Rows.Select(r => (int)ValueOf(r[0])!));
+        Assert.Equal([6, 3, 1, 8, 4, 2, 5, 7], Ordered(QueryOrder.Descending("Discount"), 8).Rows.Select(r => (int)ValueOf(r[0])!));
+        Assert.Equal([6, 3], Ordered(QueryOrder.Descending("Discount"), 2).Rows.Select(r => (int)ValueOf(r[0])!));
+
+        var largest = Ask(new() { Columns = [Dimension.Of("Id"), Dimension.Of("Amount")], OrderBy = QueryOrder.Descending("Amount"), Take = 3 });
+        Assert.Equal([(6, 2500.0), (5, 1000.0), (4, 999.5)], largest.Rows.Select(r => ((int)ValueOf(r[0])!, (double)r[1]!)));
+    }
+
+    [Fact]
+    public void Row_query_applies_the_selections_and_the_where()
+    {
+        var answer = Ask(new()
+        {
+            Selections = Selections.Empty.With("Status", ValueSelection.Of("Open")),
+            Where = x => x.Amount < 1000,
+            Columns = [Dimension.Of("Id")],
+        });
+
+        Assert.Equal([1, 2, 8], answer.Rows.Select(r => (int)ValueOf(r[0])!));
+        Assert.Equal(3, answer.Total);
+    }
+
+    [Fact]
+    public void Row_query_columns_can_name_a_period_and_a_collection_property()
+    {
+        var answer = Ask(new()
+        {
+            Columns = [Dimension.Of("Id"), Dimension.Of("OrderDate", DateGranularity.Month), Dimension.Property("Tags")],
+            OrderBy = QueryOrder.Ascending("Id"),
+        });
+
+        Assert.Equal(new DateTime(2026, 3, 1), ((QueryPeriod)answer.Rows[3]["Month(OrderDate)"]!).PeriodStart);
+        // The property's own items, repeats in another case dropped; no items, or only a null, is null.
+        Assert.Equal([new QueryValueCell("Urgent"), new QueryValueCell("b2b")], (IReadOnlyList<QueryValueCell>)answer.Rows[3]["Tags"]!);
+        Assert.Null(answer.Rows[4]["Tags"]);
+        Assert.Null(answer.Rows[6]["Tags"]);
+    }
+
+    [Fact]
+    public void Row_query_throws_when_cancelled()
+    {
+        using var cancelled = new CancellationTokenSource();
+        cancelled.Cancel();
+
+        Assert.Throws<OperationCanceledException>(() => Shared.Query(new() { Columns = [Dimension.Of("Id")] }, cancelled.Token));
+    }
+
+    [Fact]
     public void Query_throws_when_cancelled()
     {
         using var cancelled = new CancellationTokenSource();
@@ -506,6 +598,13 @@ public class QueryTests
         ["misspelt metric"] = ("Did you mean 'revenue'?", new() { Values = [QueryValue.Metric("revnue")] }),
         ["negative take"] = ("Take must be zero or more", new() { Take = -1 }),
         ["unknown selection key"] = ("Unknown facet key 'Region'", new() { Selections = Selections.Empty.With("Region", ValueSelection.Of("North")) }),
+        ["row query with groups"] = ("Columns instead of GroupBy and Values", new() { Columns = [Dimension.Of("Id")], GroupBy = [Dimension.Of("Country")] }),
+        ["row query above the ceiling"] = ("A row query returns at most 10000 rows; this one asks for 10001", new() { Columns = [Dimension.Of("Id")], Take = 10_001 }),
+        ["object property as a column"] = ("Property 'Address' (Address?) holds an object", new() { Columns = [Dimension.Of("Address")] }),
+        ["text facet as a column"] = ("it reads nothing from a row", new() { Columns = [Dimension.Of("search")] }),
+        ["metric as a column"] = ("'revenue' is a metric, and a query cannot list a metric", new() { Columns = [Dimension.Of("revenue")] }),
+        ["order by a list column"] = ("orders by 'Tags', which holds several values per row", new() { Columns = [Dimension.Of("Tags")], OrderBy = QueryOrder.Ascending("Tags") }),
+        ["duplicate columns"] = ("Two columns of the query have the key 'Id'", new() { Columns = [Dimension.Of("Id"), Dimension.Property("Id")] }),
     };
 
     /// <summary>A facet's non-zero filtered counts keyed the way <see cref="GroupKey"/> keys a query's cells.</summary>

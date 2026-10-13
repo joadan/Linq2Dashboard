@@ -188,7 +188,21 @@ Cells are the library's own types, so a cell goes straight back into a selection
 
 A name means the facet with that key, and otherwise the public property of `T` with that name, case-sensitive. A property groups by value with a value facet's rules (strings ignore case, null is a group, a collection groups by item); `Dimension.Property("Country")` asks for the property when a facet has the same key. `Dimension.Of("OrderDate", DateGranularity.Quarter)` groups a date by a period: a date facet in its own zone, a plain date property in UTC. Properties are read row by row in every query, so a property grouped often is cheaper as a facet.
 
-`QueryValue.Sum`, `Average`, `Min` and `Max` take a numeric facet or property, `Distinct` any facet with values or any property, and `Metric` any dashboard metric, calculated ones per group. `Where` is compiled once per query and called once per row the selections match; it must be pure and thread-safe. To let users or an agent write filters as text, turn the text into the expression yourself, for example with Gridify. A name that is not known, a metric used as a dimension, a third dimension or a period on something that is not a date throws an `ArgumentException` naming what is known and the nearest match. `.As(key)` renames a column. Row queries are being built (design §10.8).
+`QueryValue.Sum`, `Average`, `Min` and `Max` take a numeric facet or property, `Distinct` any facet with values or any property, and `Metric` any dashboard metric, calculated ones per group. `Where` is compiled once per query and called once per row the selections match; it must be pure and thread-safe. To let users or an agent write filters as text, turn the text into the expression yourself, for example with Gridify. A name that is not known, a metric used as a dimension, a third dimension or a period on something that is not a date throws an `ArgumentException` naming what is known and the nearest match. `.As(key)` renames a column.
+
+A row query lists rows instead of groups: give `Columns` and no `GroupBy` or `Values`.
+
+```csharp
+QueryResult largest = dashboard.Query(new DashboardQuery<Order>
+{
+    Selections = selections,
+    Columns = [Dimension.Of("Id"), Dimension.Of("Customer"), Dimension.Of("Amount"), Dimension.Of("OrderDate")],
+    OrderBy = QueryOrder.Descending("Amount"),
+    Take = 10,                                        // 100 without a take; more than 10 000 throws
+});
+```
+
+A facet column gives what the facet reads from the row: a value facet its value and label, a multi-valued facet a list of them, a range facet its number, a date facet its instant in the facet's zone, or its period when one is named. A property column gives the property's value in a `QueryValueCell`, a date as its instant in UTC, a collection as a list; a property holding an object is refused, so an answer is always flat. Without an order the rows come in the dashboard's own order. `Total` is the number of matching rows. For a grid or an export use `state.Items`, which has every row.
 
 ## Small datasets
 

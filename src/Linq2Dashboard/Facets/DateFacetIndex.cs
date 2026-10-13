@@ -143,6 +143,18 @@ internal sealed class DateFacetIndex : FacetIndex
         return new PeriodGroupColumn(row => column.UtcTicks[row] == long.MinValue ? null : column.UtcTicks[row], column.Zone, granularity);
     }
 
+    /// <summary>The row's instant in the facet's zone, or its period when one is named.</summary>
+    public override RowColumn RowColumn(DateGranularity? period)
+    {
+        if (period is not null)
+        {
+            return new CodedRowColumn(GroupColumn(period));
+        }
+
+        DateColumn column = Column;
+        return new InstantRowColumn(row => column.UtcTicks[row] == long.MinValue ? null : column.UtcTicks[row], column.Zone);
+    }
+
     /// <summary>The instants as UTC ticks.</summary>
     public override DistinctSource? DistinctKeys()
     {

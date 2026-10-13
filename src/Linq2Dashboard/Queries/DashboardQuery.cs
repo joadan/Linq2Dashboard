@@ -29,10 +29,24 @@ public sealed record DashboardQuery<T>
     /// <summary>What each group reports. Empty means a count per group.</summary>
     public IReadOnlyList<QueryValue> Values { get; init; } = [];
 
-    /// <summary>The column the groups are ordered by. Null orders them by their dimensions: intervals and periods ascending, other values by value, null last.</summary>
+    /// <summary>
+    /// The columns of a row query (concept §4.11): when given, the answer lists rows instead of groups, and
+    /// <see cref="GroupBy"/> and <see cref="Values"/> stay empty. Each column is a facet, giving what it reads from
+    /// the row (a value facet its value and label, a multi-valued facet its items, a range facet its number, a date
+    /// facet its instant or, with a period, its period), or a property of a simple type.
+    /// </summary>
+    public IReadOnlyList<Dimension> Columns { get; init; } = [];
+
+    /// <summary>
+    /// The column the answer is ordered by. Null orders groups by their dimensions (intervals and periods ascending,
+    /// other values by value, null last) and rows in the dashboard's own order.
+    /// </summary>
     public QueryOrder? OrderBy { get; init; }
 
-    /// <summary>How many groups to return at most. Null returns every group; the answer's <see cref="QueryResult.Total"/> says how many there were.</summary>
+    /// <summary>
+    /// How many groups or rows to return at most. Null returns every group, or the first 100 rows of a row query,
+    /// which never returns more than 10 000 (design §10.4). The answer's <see cref="QueryResult.Total"/> says how many there were.
+    /// </summary>
     public int? Take { get; init; }
 }
 

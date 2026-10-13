@@ -93,6 +93,25 @@ internal abstract class PropertyAccessor<T>(PropertyInfo property)
     /// <summary>Numbers for sum, average, min and max, or null when the property is not numeric.</summary>
     public abstract NumberSource? Numbers(T[] items);
 
+    /// <summary>The property as a column of a row query: simple types only, so an answer never holds an object graph (design §10.5).</summary>
+    public abstract RowColumn RowColumn(T[] items, DateGranularity? period);
+
+    /// <summary>
+    /// A type a row query may return (design §10.5): the primitives, <see cref="string"/>, <see cref="decimal"/>,
+    /// enums, <see cref="Guid"/> and the date and time types, nullable or not.
+    /// </summary>
+    protected static bool IsSimple(Type type)
+    {
+        Type underlying = Nullable.GetUnderlyingType(type) ?? type;
+        return underlying.IsPrimitive || underlying.IsEnum || NumericConversion.IsNumeric(underlying)
+            || underlying == typeof(string) || underlying == typeof(decimal) || underlying == typeof(Guid)
+            || underlying == typeof(DateTime) || underlying == typeof(DateTimeOffset) || underlying == typeof(DateOnly)
+            || underlying == typeof(TimeOnly) || underlying == typeof(TimeSpan);
+    }
+
+    protected ArgumentException NotSimple() =>
+        Error("holds an object, and a row query returns simple values only: numbers, text, enums, dates and lists of them. Flatten what you want listed into the row, or define a facet.");
+
     /// <summary>Keys for a distinct count, with the value facet's equality.</summary>
     public abstract DistinctSource DistinctKeys(T[] items);
 
@@ -174,6 +193,29 @@ internal sealed class ValueAccessor<T, TProp> : PropertyAccessor<T>
     }
 
     public override DistinctSource DistinctKeys(T[] items) => new PropertyKeys<T, TProp>(this, items, getter.Value);
+
+    /// <summary>The value as it is, a date as its instant in UTC, or a period when one is named.</summary>
+    public override RowColumn RowColumn(T[] items, DateGranularity? period)
+    {
+        if (!IsSimple(typeof(TProp)))
+        {
+            throw NotSimple();
+        }
+
+        if (period is not null)
+        {
+            return new CodedRowColumn(GroupColumn(items, period));
+        }
+
+        if (DateConversion.IsSupported(typeof(TProp)))
+        {
+            Func<TProp, TimeZoneInfo, DateTimeOffset?> convert = DateConversion.For<TProp>();
+            Func<T, TProp> read = getter.Value;
+            return new InstantRowColumn(row => convert(read(items[row]), TimeZoneInfo.Utc) is DateTimeOffset instant ? instant.UtcTicks : null, TimeZoneInfo.Utc);
+        }
+
+        return new CodedRowColumn(GroupColumn(items, null));
+    }
 }
 
 /// <summary>A collection property other than a string: a row counts under each distinct item, like a multi-valued facet (concept §5).</summary>
@@ -195,6 +237,36 @@ internal sealed class ItemsAccessor<T, TItem> : PropertyAccessor<T>
     public override NumberSource? Numbers(T[] items) => null;
 
     public override DistinctSource DistinctKeys(T[] items) => new ItemKeys<T, TItem>(this, items, getter.Value);
+
+    /// <summary>The row's distinct non-null items as a list, as a multi-valued facet holds them.</summary>
+    public override RowColumn RowColumn(T[] items, DateGranularity? period)
+    {
+        if (!IsSimple(typeof(TItem)))
+        {
+            throw NotSimple();
+        }
+
+        if (period is DateGranularity granularity)
+        {
+            throw Error($"is a collection, so it cannot be grouped by {granularity}.");
+        }
+
+        Func<T, IEnumerable<TItem>?> read = getter.Value;
+        return new ListRowColumn(row =>
+        {
+            var cells = new List<QueryValueCell>();
+            var seen = new HashSet<ValueKey<TItem>>(ValueKeyComparer<TItem>.Default);
+            foreach (TItem item in read(items[row]) ?? [])
+            {
+                if (item is not null && seen.Add(new ValueKey<TItem>(item)))
+                {
+                    cells.Add(new QueryValueCell(item));
+                }
+            }
+
+            return cells;
+        });
+    }
 }
 
 /// <summary>
