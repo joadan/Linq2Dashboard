@@ -189,9 +189,9 @@ internal sealed class ValueAccessor<T, TProp> : PropertyAccessor<T>
             throw Error($"is not a date, so it cannot be grouped by {granularity}.");
         }
 
-        Func<TProp, TimeZoneInfo, DateTimeOffset?> convert = DateConversion.For<TProp>();
+        Func<TProp, long?> ticks = DateConversion.UtcTicks<TProp>();
         Func<T, TProp> read = getter.Value;
-        return new PeriodGroupColumn(row => convert(read(items[row]), TimeZoneInfo.Utc) is DateTimeOffset instant ? instant.UtcTicks : null, TimeZoneInfo.Utc, granularity);
+        return new PeriodGroupColumn(row => ticks(read(items[row])), TimeZoneInfo.Utc, granularity);
     }
 
     public override NumberSource? Numbers(T[] items)
@@ -254,9 +254,9 @@ internal sealed class ValueAccessor<T, TProp> : PropertyAccessor<T>
 
         if (DateConversion.IsSupported(typeof(TProp)))
         {
-            Func<TProp, TimeZoneInfo, DateTimeOffset?> convert = DateConversion.For<TProp>();
+            Func<TProp, long?> ticks = DateConversion.UtcTicks<TProp>();
             Func<T, TProp> read = getter.Value;
-            return new InstantRowColumn(row => convert(read(items[row]), TimeZoneInfo.Utc) is DateTimeOffset instant ? instant.UtcTicks : null, TimeZoneInfo.Utc);
+            return new InstantRowColumn(row => ticks(read(items[row])), TimeZoneInfo.Utc);
         }
 
         return new CodedRowColumn(GroupColumn(items, null));
@@ -411,10 +411,22 @@ internal sealed class ItemsGroupColumn<T, TItem>(T[] items, Func<T, IEnumerable<
 /// Instants grouped by calendar period in a zone (concept §4.11): a plain date property in UTC, or a date facet
 /// grouped by another period than its own, in the facet's zone. Codes are period starts in first-seen order.
 /// </summary>
+/// <remarks>
+/// A period starts at a local midnight, and every zone's offset in use since about 1900 is a whole number of quarter
+/// hours, so all instants in one UTC quarter hour fall in the same local period. The code is therefore worked out once
+/// per quarter hour seen and looked up for the rest: one zone conversion per quarter hour instead of one per row (design
+/// §8, Measured, queries). In UTC, where nothing needs converting, the slot is a whole day, which keeps the lookup small.
+/// An instant whose offset is not a whole quarter hour, such as a local mean time before 1900, is converted on its own
+/// and not cached.
+/// </remarks>
 internal sealed class PeriodGroupColumn(Func<int, long?> utcTicksAt, TimeZoneInfo zone, DateGranularity granularity)
     : GroupColumn(int.MaxValue, QueryColumnKind.Period)
 {
+    private const long QuarterHour = 15 * TimeSpan.TicksPerMinute;
+
+    private readonly long slot = zone == TimeZoneInfo.Utc ? TimeSpan.TicksPerDay : QuarterHour;
     private readonly Dictionary<long, int> codes = [];
+    private readonly Dictionary<long, int> codeOfSlot = [];
     private readonly List<long> starts = [];
 
     public override DateGranularity? Granularity => granularity;
@@ -426,6 +438,12 @@ internal sealed class PeriodGroupColumn(Func<int, long?> utcTicksAt, TimeZoneInf
             return 0;
         }
 
+        long slotOfRow = ticks / slot;
+        if (codeOfSlot.TryGetValue(slotOfRow, out int cached))
+        {
+            return cached;
+        }
+
         DateTime local = zone == TimeZoneInfo.Utc
             ? new DateTime(ticks, DateTimeKind.Unspecified)
             : TimeZoneInfo.ConvertTime(new DateTimeOffset(ticks, TimeSpan.Zero), zone).DateTime;
@@ -435,6 +453,11 @@ internal sealed class PeriodGroupColumn(Func<int, long?> utcTicksAt, TimeZoneInf
             starts.Add(start);
             code = starts.Count;
             codes.Add(start, code);
+        }
+
+        if ((local.Ticks - ticks) % QuarterHour == 0)
+        {
+            codeOfSlot.Add(slotOfRow, code);
         }
 
         return code;

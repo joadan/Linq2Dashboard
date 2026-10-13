@@ -76,6 +76,27 @@ internal static class DateConversion
         return (Func<TDate, TimeZoneInfo, DateTimeOffset?>)converter;
     }
 
+    /// <summary>
+    /// The UTC ticks of a date in UTC, without a zone lookup: what <see cref="For{TDate}"/> gives for
+    /// <see cref="TimeZoneInfo.Utc"/>, for a query reading a plain date property per row (design §10.3). A
+    /// <see cref="DateTime"/> of any kind keeps its ticks, since Local and Unspecified are taken as being in the zone.
+    /// </summary>
+    public static Func<TDate, long?> UtcTicks<TDate>()
+    {
+        object ticks = typeof(TDate) switch
+        {
+            Type t when t == typeof(DateTimeOffset) => new Func<DateTimeOffset, long?>(d => d.UtcTicks),
+            Type t when t == typeof(DateTimeOffset?) => new Func<DateTimeOffset?, long?>(d => d?.UtcTicks),
+            Type t when t == typeof(DateTime) => new Func<DateTime, long?>(d => d.Ticks),
+            Type t when t == typeof(DateTime?) => new Func<DateTime?, long?>(d => d?.Ticks),
+            Type t when t == typeof(DateOnly) => new Func<DateOnly, long?>(d => d.DayNumber * TimeSpan.TicksPerDay),
+            Type t when t == typeof(DateOnly?) => new Func<DateOnly?, long?>(d => d is DateOnly v ? v.DayNumber * TimeSpan.TicksPerDay : null),
+            _ => throw new ArgumentException($"'{typeof(TDate)}' is not a supported date type."),
+        };
+
+        return (Func<TDate, long?>)ticks;
+    }
+
     private static DateTimeOffset FromDateTime(DateTime value, TimeZoneInfo zone) =>
         value.Kind == DateTimeKind.Utc
             ? new DateTimeOffset(value)

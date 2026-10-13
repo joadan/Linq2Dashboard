@@ -226,12 +226,52 @@ internal abstract class DistinctSource
 {
     public abstract object Identity { get; }
 
+    /// <summary>When the keys are codes 1..<c>CodeCount - 1</c> known before the scan, as a facet's are; null otherwise.</summary>
+    public virtual int? CodeCount => null;
+
     public abstract void AddTo(int row, int group, HashSet<(int Group, long Key)> seen);
+
+    /// <summary>Marks the row's codes in a group's bits; only called when <see cref="CodeCount"/> is known.</summary>
+    public virtual void MarkTo(int row, int group, DistinctBits bits) => throw new NotSupportedException();
 }
 
-internal sealed class CodeKeys(object identity, Func<int, int> codeAt) : DistinctSource
+/// <summary>
+/// Distinct codes per group as one bit per (group, code), with a running count per group (design §10.3): the query's
+/// counterpart of the distinct metric's bit set (§4.6), used when the groups times the codes fit in a few megabytes.
+/// </summary>
+internal sealed class DistinctBits(long groups, int codeCount)
+{
+    /// <summary>The most bits a query sets aside for one distinct value: 8 MB.</summary>
+    public const long MaxBits = 1L << 26;
+
+    private readonly ulong[] words = new ulong[(groups * codeCount + 63) >> 6];
+    private int[] counts = new int[16];
+
+    public void Mark(int group, int code)
+    {
+        long bit = (long)group * codeCount + code;
+        ref ulong word = ref words[bit >> 6];
+        ulong mask = 1UL << (int)(bit & 63);
+        if ((word & mask) == 0)
+        {
+            word |= mask;
+            if (group >= counts.Length)
+            {
+                Array.Resize(ref counts, Math.Max(counts.Length * 2, group + 1));
+            }
+
+            counts[group]++;
+        }
+    }
+
+    public int Count(int group) => group < counts.Length ? counts[group] : 0;
+}
+
+internal sealed class CodeKeys(object identity, Func<int, int> codeAt, int codeCount) : DistinctSource
 {
     public override object Identity => identity;
+
+    public override int? CodeCount => codeCount;
 
     public override void AddTo(int row, int group, HashSet<(int Group, long Key)> seen)
     {
@@ -241,17 +281,36 @@ internal sealed class CodeKeys(object identity, Func<int, int> codeAt) : Distinc
             seen.Add((group, code));
         }
     }
+
+    public override void MarkTo(int row, int group, DistinctBits bits)
+    {
+        int code = codeAt(row);
+        if (code != 0)
+        {
+            bits.Mark(group, code);
+        }
+    }
 }
 
 internal sealed class MultiCodeKeys<TValue>(MultiValueColumn<TValue> column) : DistinctSource
 {
     public override object Identity => column;
 
+    public override int? CodeCount => column.DistinctCount + 1;
+
     public override void AddTo(int row, int group, HashSet<(int Group, long Key)> seen)
     {
         foreach (int code in column.CodesOf(row))
         {
             seen.Add((group, code));
+        }
+    }
+
+    public override void MarkTo(int row, int group, DistinctBits bits)
+    {
+        foreach (int code in column.CodesOf(row))
+        {
+            bits.Mark(group, code);
         }
     }
 }

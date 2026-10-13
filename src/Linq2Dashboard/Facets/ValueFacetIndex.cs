@@ -248,7 +248,7 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
     /// <summary>The value codes, so equality is the facet's own (strings ignoring case by default).</summary>
     public override DistinctSource? DistinctKeys() => Column switch
     {
-        ValueColumn<TValue> single => new CodeKeys(single, single.CodeAt),
+        ValueColumn<TValue> single => new CodeKeys(single, single.CodeAt, single.DistinctCount + 1),
         MultiValueColumn<TValue> multi => new MultiCodeKeys<TValue>(multi),
         _ => null,
     };
