@@ -34,6 +34,14 @@ public sealed class SampleOrder
 public static class SampleOrders
 {
     private static readonly string[] Countries = ["Sweden", "Norway", "Denmark", "Finland", "Germany", "Netherlands", "Poland", "France", "Spain", "Italy", "United Kingdom", "Ireland"];
+    // The market each country is sold through: the country facet groups by it (concept §6), from a lookup rather than a property of the order.
+    private static readonly Dictionary<string, string> Markets = new()
+    {
+        ["Sweden"] = "Nordics", ["Norway"] = "Nordics", ["Denmark"] = "Nordics", ["Finland"] = "Nordics",
+        ["Germany"] = "Central Europe", ["Netherlands"] = "Central Europe", ["Poland"] = "Central Europe",
+        ["France"] = "Southern Europe", ["Spain"] = "Southern Europe", ["Italy"] = "Southern Europe",
+        ["United Kingdom"] = "UK & Ireland", ["Ireland"] = "UK & Ireland",
+    };
     private static readonly string[] Statuses = ["Open", "Pending", "Shipped", "Closed", "Cancelled"];
     // Order channels, most common first so the skewed pick makes EDI dominant; twelve values, so Top(10) still folds the tail into Other.
     private static readonly string[] Channels = ["EDI", "E-Com", "Quote", "Mail", "Phone", "Portal", "Sales rep", "Fax", "Marketplace", "API", "Counter", "Punch-out"];
@@ -75,7 +83,7 @@ public static class SampleOrders
     public static Dashboard<SampleOrder> BuildDashboard(SampleOrder[] orders) =>
         Dashboard.Create(orders, b =>
         {
-            b.ValueFacet(x => x.Country);
+            b.ValueFacet(x => x.Country).GroupBy(x => Markets[x.Country]);   // a click on a market selects its countries
             b.ValueFacet(x => x.Status);
             b.ValueFacet(x => x.Channel).Top(10);
             b.MultiValueFacet(x => x.Tags);   // a row counts under every tag it has; counts overlap, no Other

@@ -56,9 +56,12 @@ public partial class ActiveSelections<T>
             case null:
                 return [];
 
+            case ValueSelection values when facet is ValueFacetState { Groups.Count: > 0 } grouped:
+                return ValueParts(grouped, values);
+
             case ValueSelection values:
                 return values.Values
-                    .Select(value => new ChipPart(Formatter.FormatValue(facet, value), () => Context.ToggleAsync(key, value), LinkTo(s => s.Toggle(key, value))))
+                    .Select(value => ValuePart(facet, value))
                     .ToList();
 
             case RangeSelection range when facet is RangeFacetState state:
@@ -89,6 +92,37 @@ public partial class ActiveSelections<T>
             default:
                 return [new ChipPart(facet.Selection?.ToString() ?? string.Empty, () => Context.ClearAsync(key), LinkTo(s => s.Clear(key)))];
         }
+    }
+
+    private ChipPart ValuePart(FacetState facet, object? value) =>
+        new(Formatter.FormatValue(facet, value), () => Context.ToggleAsync(facet.Key, value), LinkTo(s => s.Toggle(facet.Key, value)));
+
+    /// <summary>
+    /// A grouped facet's values (design §9): a fully selected group is one part named after the group, placed where its first
+    /// value is in the selection, whose removal toggles the group off; every other value is a part of its own.
+    /// </summary>
+    private List<ChipPart> ValueParts(ValueFacetState facet, ValueSelection values)
+    {
+        string key = facet.Key;
+        Dictionary<string, ValueGroup> selected = facet.Groups.Where(g => g.Selected).ToDictionary(g => g.Name, StringComparer.OrdinalIgnoreCase);
+        var shown = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var parts = new List<ChipPart>();
+        foreach (object? value in values.Values)
+        {
+            if (facet.GroupOf(value) is string name && selected.TryGetValue(name, out ValueGroup? group))
+            {
+                if (shown.Add(name))
+                {
+                    parts.Add(new ChipPart(group.Name, () => Context.ToggleGroupAsync(key, group), LinkTo(s => s.ToggleGroup(key, group))));
+                }
+
+                continue;
+            }
+
+            parts.Add(ValuePart(facet, value));
+        }
+
+        return parts;
     }
 
     /// <summary>The bucket's own label when the interval is exactly that bucket, otherwise the formatter's interval text.</summary>
