@@ -228,6 +228,7 @@ The property has a discrete set of values: country, status, category, brand, cus
 - Selection: a set of values (multi-select).
 - Each row has exactly one value (or null) in a value facet. A collection-valued property such as tags is a *multi-valued facet*, below.
 - Label: optionally, a text per value read from the row, for facets whose value is an identity rather than a name. A Customer facet counts and selects by customer id, so a renamed customer keeps its saved selections, but shows "Acme (Malmö)". The label is read once per distinct value, from the first row that has it, and is what search (§4.5) matches. A value without a label is shown by the UI as the value itself. The null value never has a label; how it is shown stays with the UI (§4.8).
+- Groups: optionally, a named group per value read from the row, such as the market of a country; a click on a group selects its values. See *Groups of values* below.
 - Concerns: high cardinality. A Customer facet with 100 000 values must not show 100 000 rows. See *Top N* and *Search* below.
 
 ### Boolean facet
@@ -317,6 +318,31 @@ Other           87 421
 - Ranking mode is part of the facet definition (§4.9), not of the selection. The UI does not change it at runtime.
 - Ranking decides *which* values are presented. The order they appear in on screen is the UI's choice: the rank order by default, or alphabetically by label, or by the value itself, in either direction. Reordering never changes the set of presented values or the "Other" remainder, and null stays last.
 
+### Groups of values
+
+A value facet may put its values in named groups: countries in markets, products in categories, cities in regions. The user sees the groups with their counts and can select a whole group with one click. Added 2026-10-13.
+
+```text
+Country
+
+▾ ☑ Nordics        5 210
+      ☑ Sweden     3 104
+      ☑ Norway     1 288
+      ☑ Denmark      818
+▸ ◪ DACH           4 377
+  ☐ Brazil           412     no group
+  ☐ (none)            37     null
+```
+
+- **A group is read from the row,** once per distinct value, from the first row that has it, the way a label is (§5). The application's function gets the row, so the group can be a property of the row (`o => o.Market`) or a lookup by the value (`o => markets[o.Country]`). First row wins and rows that disagree are not an error: the group decides only where a value is shown, never what is counted or selected. Group names compare as strings do in a value facet, ignoring case, and the first spelling is the one shown.
+- **A value without a group stays ungrouped.** A null group leaves the value at the top level, after the groups. The null value is never in a group and stays last (§4.8).
+- **A group's counts are the sums of its values' counts.** Every row has one value in a value facet, so the sums are exact: a group's filtered count is how many rows in the facet's context (§4.2) have one of its values. A group whose values all have a zero filtered count stays, as its values do (§4.3); a group with no value in the dataset or scope (§4.10) does not appear.
+- **Selecting a group selects its values.** The selection is still a set of values (§4.1): a click on a group adds all its values when any of them is unselected and removes them all when every one is selected. No group name ever enters a selection, so the selection rules, the JSON and the URL forms, bookmarks and queries are unchanged, and a value can still be deselected on its own. A group is *selected* when all its values are and *partly selected* when some are.
+- **A group lists all its values.** Top N cannot be combined with groups: a cut list would hide values inside a group a click selects, and "Other" would have to be split by group. A facet with groups and a top N is an error when the dashboard is built.
+- **One level only.** A group holds values, never other groups.
+- **Value facets only.** A multi-valued facet has no groups: a row with several values in one group would count once per value, so the sums would no longer be the group's rows.
+- Search (§4.5) still finds values, each with its group. Ranking picks nothing when every value is listed, so the groups and the values inside each follow the facet's rank order by default, and the UI may order them by label or value as in Top N above.
+
 ### Search within a facet
 
 A facet may expose a search over its values. The result is a filtered list of values, each with its counts under the current context (§4.2). Per §4.5 this does not change the matching rows.
@@ -367,6 +393,7 @@ FacetState
     Values         presented values with total/filtered counts and selected flag
     Selection      the current selection in a serialisable form
     Other          remainder count when top N applies, otherwise absent
+    Groups         named groups of values with summed counts, when the facet has them (§6)
     Configuration  kind-specific hints (min/max for range, bucket size, etc.)
 ```
 
@@ -416,7 +443,7 @@ Because facets are identified by string keys and selections are serialisable, a 
 
 ### Later
 
-- Grouping and hierarchical facets, including metrics per facet value (revenue per country). Grouping arrives as queries, whose boundary is set in §4.11 (2026-10-12) and which are not yet built.
+- Grouping and hierarchical facets, including metrics per facet value (revenue per country). Grouping arrives as queries, whose boundary is set in §4.11 (2026-10-12) and which are not yet built. One level of groups inside a value facet is planned since 2026-10-13 (§6); deeper hierarchies, groups on multi-valued facets and a query dimension by group remain later.
 - ~~Multi-valued facets over collection properties (tags, categories).~~ Added 2026-09-20 with OR within the facet; see §5. AND within the facet ("has all of these tags") remains later, as a selection mode: it makes a value's count depend on the facet's own selection, against §4.2.
 - ~~Distinct count, percentage-of-total, calculated metrics.~~ All three were added on 2026-09-14; see §4.4.
 - Exclusion selections ("everything except Sweden") as an additional mode on value facets.
@@ -474,3 +501,4 @@ Decisions still to be made, roughly in order of how much they shape everything e
 - **A query can group dates by period; it does not bucket numbers.** "Per month" is among the most asked questions and the date facet's period rules already exist, so a date dimension names day, week, month, quarter or year, on a plain property (in UTC, which has no zone of its own) or on a date facet (in the facet's zone, overriding the period it shows). Number buckets on plain properties were considered and left until asked for; a range facet covers amount bands. Decided 2026-10-12. See §4.11.
 - **A query can list rows as well as groups.** Questions such as "the ten largest orders" ask for rows, and grouping by an id to get them is clumsy and builds a group per row. A row query has columns instead of groups and values, follows the same naming, ordering and strictness, reports how many rows matched, and is capped by the core; the matching rows for grids and exports stay with the state. Decided 2026-10-12. See §4.11.
 - **A query's answer describes its columns; it suggests no chart.** Each column says whether it is a dimension or a value and of what kind, which is what a client needs to draw it and an agent to describe it. Cells are values, not text, and "no value" is null. A chart type in the answer was considered and rejected as presentation, which the core does not do. Decided 2026-10-12. See §4.11.
+- **A value facet can group its values, and a group selects its values.** Asked for as countries grouped in markets. A group is read from the row once per distinct value, first row wins, like a label; its counts are the sums of its values' counts; a click on it adds or removes all its values, so the selection stays a set of values and nothing about selections, JSON, URLs or queries changes. Two alternatives were rejected: a Market facet beside the Country facet, which works today but cannot say "Nordics or Germany" and shows no country under its market, and the group name as a selection of its own, which would follow a market whose countries change but adds a selection kind and needs exclusion to say "Nordics except Norway". One level, value facets only, no top N. Decided 2026-10-13. See §6.
