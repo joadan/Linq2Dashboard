@@ -61,6 +61,14 @@ public class QueryDescribeTests
     }
 
     [Fact]
+    public void Describe_lists_only_the_enum_values_in_the_rows()
+    {
+        // OrderKind.Phone is declared but in no row; a scope narrows the list as it narrows a facet's values.
+        Assert.Equal(["Web", "Store"], Shared.Describe().Properties.Single(p => p.Name == "Kind").Values!);
+        Assert.Equal(["Store"], Shared.ScopeTo(x => x.Kind == OrderKind.Store).Describe().Properties.Single(p => p.Name == "Kind").Values!);
+    }
+
+    [Fact]
     public void Describe_says_what_each_property_allows()
     {
         var properties = Shared.Describe().Properties.ToDictionary(p => p.Name);

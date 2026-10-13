@@ -6,6 +6,9 @@ public enum OrderKind
 {
     Web,
     Store,
+
+    // No row has it, so a description leaves it out.
+    Phone,
 }
 
 public sealed record Address(string City);

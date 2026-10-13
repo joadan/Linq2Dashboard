@@ -93,8 +93,8 @@ internal abstract class PropertyAccessor<T>(PropertyInfo property)
     /// <summary>Numbers for sum, average, min and max, or null when the property is not numeric.</summary>
     public abstract NumberSource? Numbers(T[] items);
 
-    /// <summary>What the property holds and what a query can do with it (design §10.5, §10.7).</summary>
-    public abstract PropertyDescription Describe();
+    /// <summary>What the property holds and what a query can do with it, over the <paramref name="rows"/> of the dataset (design §10.5, §10.7).</summary>
+    public abstract PropertyDescription Describe(T[] items, RowSet rows);
 
     /// <summary>The kind of a single value of <paramref name="type"/>, in the vocabulary of JSON.</summary>
     protected static PropertyKind KindOf(Type type)
@@ -209,7 +209,7 @@ internal sealed class ValueAccessor<T, TProp> : PropertyAccessor<T>
     public override DistinctSource DistinctKeys(T[] items) => new PropertyKeys<T, TProp>(this, items, getter.Value);
 
     /// <inheritdoc />
-    public override PropertyDescription Describe()
+    public override PropertyDescription Describe(T[] items, RowSet rows)
     {
         PropertyKind kind = KindOf(typeof(TProp));
         var uses = new List<PropertyUse> { PropertyUse.GroupBy };
@@ -230,7 +230,27 @@ internal sealed class ValueAccessor<T, TProp> : PropertyAccessor<T>
         }
 
         Type underlying = Nullable.GetUnderlyingType(typeof(TProp)) ?? typeof(TProp);
-        return new PropertyDescription(Name, kind, uses) { Values = underlying.IsEnum ? Enum.GetNames(underlying) : null };
+        return new PropertyDescription(Name, kind, uses) { Values = underlying.IsEnum ? EnumValues(items, rows) : null };
+    }
+
+    /// <summary>
+    /// The enum values that occur in the rows, in the enum's order, as the JSON writes them: only what a filter or a
+    /// group can find, like a value facet's values (design §10.7). Null is not a name and is left out.
+    /// </summary>
+    private string[] EnumValues(T[] items, RowSet rows)
+    {
+        Func<T, TProp> read = getter.Value;
+        var seen = new HashSet<TProp>();
+        foreach (int row in rows)
+        {
+            TProp value = read(items[row]);
+            if (value is not null)
+            {
+                seen.Add(value);
+            }
+        }
+
+        return seen.Order().Select(value => value!.ToString()!).ToArray();
     }
 
     /// <summary>The value as it is, a <see cref="DateOnly"/> as a date, another date type as its instant in UTC, or a period when one is named.</summary>
@@ -284,7 +304,7 @@ internal sealed class ItemsAccessor<T, TItem> : PropertyAccessor<T>
     public override DistinctSource DistinctKeys(T[] items) => new ItemKeys<T, TItem>(this, items, getter.Value);
 
     /// <inheritdoc />
-    public override PropertyDescription Describe() => new(
+    public override PropertyDescription Describe(T[] items, RowSet rows) => new(
         Name,
         PropertyKind.Collection,
         IsSimple(typeof(TItem)) ? [PropertyUse.GroupBy, PropertyUse.Distinct, PropertyUse.Column] : [PropertyUse.GroupBy, PropertyUse.Distinct]);
