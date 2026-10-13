@@ -5,10 +5,11 @@
 [![CI](https://github.com/joadan/Linq2Dashboard/actions/workflows/ci.yml/badge.svg)](https://github.com/joadan/Linq2Dashboard/actions/workflows/ci.yml)
 [![NuGet](https://img.shields.io/nuget/v/Linq2Dashboard.svg?label=Linq2Dashboard)](https://www.nuget.org/packages/Linq2Dashboard/)
 [![NuGet](https://img.shields.io/nuget/v/Linq2Dashboard.Blazor.svg?label=Linq2Dashboard.Blazor)](https://www.nuget.org/packages/Linq2Dashboard.Blazor/)
+[![NuGet](https://img.shields.io/nuget/v/Linq2Dashboard.AI.svg?label=Linq2Dashboard.AI)](https://www.nuget.org/packages/Linq2Dashboard.AI/)
 
 Interactive exploration of large in-memory collections for .NET: facets with counts, metrics, and the matching rows that all update together on every click. The faceted-search experience of an e-commerce site, applied to any collection, with a LINQ-flavoured API.
 
-The core library has no UI dependency. A Blazor package renders it. **Docs and a live demo:** [joadan.github.io/Linq2Dashboard](https://joadan.github.io/Linq2Dashboard/), a Blazor WebAssembly site that builds the dashboard in your browser.
+The core library has no UI dependency. A Blazor package renders it, and an AI package offers it to agents as tools. **Docs and a live demo:** [joadan.github.io/Linq2Dashboard](https://joadan.github.io/Linq2Dashboard/), a Blazor WebAssembly site that builds the dashboard in your browser.
 
 ## Status
 
@@ -19,6 +20,7 @@ The core engine is complete for the first version and meets its performance targ
 ```powershell
 dotnet add package Linq2Dashboard.Blazor   # the components; depends on the engine, so this is all a Blazor app needs
 dotnet add package Linq2Dashboard          # the engine alone, no UI dependency
+dotnet add package Linq2Dashboard.AI       # a dashboard as tools an agent can call (Microsoft.Extensions.AI)
 ```
 
 Versions come from [Nerdbank.GitVersioning](https://github.com/dotnet/Nerdbank.GitVersioning): `version.json` holds the major.minor and the prerelease tag, the build height supplies the patch. Releases are cut manually from the **Create Release** workflow, which tests, packs, pushes to NuGet through [Trusted Publishing](https://learn.microsoft.com/en-us/nuget/nuget-org/trusted-publishing) and tags the commit. No API key is stored anywhere.
@@ -192,11 +194,13 @@ Every facet is a dictionary-encoded column; counting is one pass over the rows i
 ```text
 src/Linq2Dashboard/              the core library, net10.0, no dependencies
 src/Linq2Dashboard.Blazor/       Blazor components
+src/Linq2Dashboard.AI/           agent tools: describe, query and show as Microsoft.Extensions.AI functions
 samples/Linq2Dashboard.Sample/   Blazor Server sample app
 samples/Linq2Dashboard.SampleData/   generated sample data shared by the sample and the docs site
 docs/Linq2Dashboard.Docs/        Blazor WebAssembly docs site with the live demo, deployed to GitHub Pages by the CI workflow on every push to master
 tests/Linq2Dashboard.Tests/      xUnit; every behavioural rule has a named test
 tests/Linq2Dashboard.Blazor.Tests/   bUnit component tests
+tests/Linq2Dashboard.AI.Tests/   xUnit tests of the agent tools
 benchmarks/Linq2Dashboard.Benchmarks/   BenchmarkDotNet suite and a --memory report
 Linq2Dashboard-usage.md          the guide for using it in another project; paste it into that project's instructions
 Linq2Dashboard-concept.md        what it is and how it behaves

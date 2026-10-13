@@ -1,6 +1,6 @@
 name: Create Release
 
-# Run by hand from the Actions tab. Tests, packs both packages, pushes them to NuGet and tags the commit.
+# Run by hand from the Actions tab. Tests, packs the three packages, pushes them to NuGet and tags the commit.
 # The version is version.json's major.minor, the git height as patch, and version.json's prerelease tag if it
 # has one: "0.1-beta" gives 0.1.<height>-beta, "1.0" gives 1.0.<height>. The GitHub release is marked
 # prerelease exactly when the version carries a tag. Only master and release/v* branches are public-release
@@ -48,11 +48,13 @@ jobs:
         run: |
           dotnet test tests/Linq2Dashboard.Tests/Linq2Dashboard.Tests.csproj -c Release
           dotnet test tests/Linq2Dashboard.Blazor.Tests/Linq2Dashboard.Blazor.Tests.csproj -c Release
+          dotnet test tests/Linq2Dashboard.AI.Tests/Linq2Dashboard.AI.Tests.csproj -c Release
 
       - name: Pack libraries
         run: |
           dotnet pack src/Linq2Dashboard/Linq2Dashboard.csproj -c Release -o artifacts
           dotnet pack src/Linq2Dashboard.Blazor/Linq2Dashboard.Blazor.csproj -c Release -o artifacts
+          dotnet pack src/Linq2Dashboard.AI/Linq2Dashboard.AI.csproj -c Release -o artifacts
 
       - name: NuGet login (Trusted Publishing, OIDC to a one-hour API key)
         id: login

@@ -19,11 +19,13 @@ src/Linq2Dashboard/            core, net10.0, no dependencies, package id Linq2D
   Facets/                      definitions, builders, indexes, state
   Metrics/  Selections/  State/  Serialization/  Calculation/
 src/Linq2Dashboard.Blazor/     Razor class library: DashboardView<T>, DashboardContext<T>, IDashboardFormatter, components
+src/Linq2Dashboard.AI/         agent tools (design §10.10): DashboardTools<T> over Microsoft.Extensions.AI and Gridify
 samples/Linq2Dashboard.Sample/ Blazor Server sample over 200 000 generated rows
 samples/Linq2Dashboard.SampleData/  the generator both the sample and the docs site use
 docs/Linq2Dashboard.Docs/      Blazor WebAssembly docs site: demo, getting started, concept and design rendered from the root markdown; deployed to GitHub Pages by the CI workflow on every push to master
 tests/Linq2Dashboard.Tests/    xUnit, InternalsVisibleTo
 tests/Linq2Dashboard.Blazor.Tests/   bUnit; tests pass an invariant-culture formatter so they do not depend on the machine
+tests/Linq2Dashboard.AI.Tests/ xUnit over the tool methods; links the core tests' TestModel.cs
 benchmarks/Linq2Dashboard.Benchmarks/   BenchmarkDotNet, plus a --memory report
 ```
 
@@ -36,7 +38,7 @@ dotnet build Linq2Dashboard.slnx          # must finish with 0 warnings
 dotnet test Linq2Dashboard.slnx
 dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --memory
 dotnet run -c Release --project benchmarks/Linq2Dashboard.Benchmarks -- --job short --filter *
-dotnet pack src/Linq2Dashboard/Linq2Dashboard.csproj -c Release -o artifacts   # version from version.json + git height (Nerdbank.GitVersioning)
+dotnet pack src/Linq2Dashboard/Linq2Dashboard.csproj -c Release -o artifacts   # version from version.json + git height (Nerdbank.GitVersioning); likewise the Blazor and AI packages
 ```
 
 `.claude/launch.json` defines the `docs` preview for Claude Code: it runs the built docs site on http://localhost:5199 with `--no-build`, so build `docs/Linq2Dashboard.Docs` first. Building inside the preview would collide with a Visual Studio build of the same project.
