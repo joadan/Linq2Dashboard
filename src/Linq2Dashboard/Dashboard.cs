@@ -192,6 +192,15 @@ public sealed class Dashboard<T>
         return QueryJsonReader.Read(this, json, options);
     }
 
+    /// <summary>
+    /// What a query can ask of this dashboard (design §10.7): facets with what helps a question (the values of a small
+    /// facet, a range facet's bounds, a date facet's period, zone and presets), metrics, and the properties of
+    /// <typeparamref name="T"/> with what each allows, plus the periods and the limits. For a client or an agent before
+    /// it asks; write it with <see cref="SelectionSerializer.ToJson(DashboardDescription, bool)"/>. Give it the same
+    /// <see cref="DescribeOptions.Allowed"/> list as the query reader, and the application's descriptions of what values mean.
+    /// </summary>
+    public DashboardDescription Describe(DescribeOptions? options = null) => QueryDescriber.Describe(this, options ?? new DescribeOptions());
+
     /// <summary>Reads a query from a JSON object, as <see cref="QueryFromJson(string, QueryJsonOptions{T}?)"/> does, for callers that embed it in a larger document.</summary>
     /// <param name="json">The query as a JSON object.</param>
     /// <param name="options">The where's parser and the names the caller may use; null allows every name and no where.</param>

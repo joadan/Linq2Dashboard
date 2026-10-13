@@ -84,6 +84,21 @@ public sealed class SelectionSerializer
         return Queries.QueryJsonWriter.Write(result);
     }
 
+    /// <summary>
+    /// Writes what a query can ask (design §10.7) as JSON for a client or an agent: facets with their kind and what helps a
+    /// question, metrics, properties with their kind and uses, the periods and the limits. Values are in each facet's own
+    /// form; members without a value are left out, so the text stays short.
+    /// </summary>
+    public string ToJson(DashboardDescription description, bool indented = false) =>
+        ToJsonObject(description).ToJsonString(indented ? Indented : Compact);
+
+    /// <summary>Writes what a query can ask as a JSON object, for embedding in a larger document such as a tool's description.</summary>
+    public JsonObject ToJsonObject(DashboardDescription description)
+    {
+        ArgumentNullException.ThrowIfNull(description);
+        return Queries.DescriptionJsonWriter.Write(description, facets);
+    }
+
     /// <summary>Reads selections from JSON text. Throws <see cref="JsonException"/> only when the text is not valid JSON.</summary>
     public Selections FromJson(string json)
     {

@@ -827,7 +827,7 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 
 ## 10. Queries
 
-A query (§C4.11) asks one question of a dashboard's rows and returns one table. Designed one decision at a time on 2026-10-12; the build order and its checkpoint are in §10.8. Steps 1 to 4 are built: grouping by facets and properties, periods, metric values and aggregations, the where, row queries, order, take and cancellation, and JSON both ways. The checkpoint of §10.8 was held (§10.9); `Describe` comes next.
+A query (§C4.11) asks one question of a dashboard's rows and returns one table. Designed one decision at a time on 2026-10-12; the build order and its checkpoint are in §10.8. Steps 1 to 5 are built: grouping by facets and properties, periods, metric values and aggregations, the where, row queries, order, take and cancellation, JSON both ways and the description. The checkpoint of §10.8 was held (§10.9); the benchmarks of step 6 remain.
 
 ### 10.1 The query object
 
@@ -1032,39 +1032,50 @@ DashboardQuery<Order> query = dashboard.QueryFromJson(json, new QueryJsonOptions
 
 ### 10.7 Describing what can be asked
 
-Before a client or an agent asks, it needs the dashboard's vocabulary: the names it may use and what each allows. `Facets` and `Metrics` on the dashboard give keys, names and kinds only, so the core describes the rest, because the rules of §10.5 are the core's.
+Before a client or an agent asks, it needs the dashboard's vocabulary: the names it may use and what each allows. `Facets` and `Metrics` on the dashboard give keys, names and kinds only, so the core describes the rest, because the rules of §10.5 are the core's. Built 2026-10-13 (§10.8 step 5), with the checkpoint's changes 3 and 4 (§10.9).
 
 ```csharp
-DashboardDescription description = dashboard.Describe(allowed);   // optional; the Allowed list of §10.6
+DashboardDescription description = dashboard.Describe(new DescribeOptions
+{
+    Allowed = allowed,                                     // the same list as QueryJsonOptions.Allowed (§10.6)
+    Descriptions = new Dictionary<string, string>
+    {
+        ["customer"] = "The customer's number; the label is its name.",
+        ["revenue"] = "Order value in SEK, excluding VAT.",
+    },
+    ValueLimit = 25,                                       // list the values of facets with at most this many
+});
 string json = dashboard.Serializer.ToJson(description);
 ```
 
 ```json
 {
   "facets": [
-    { "key": "Country", "name": "Country", "kind": "value", "values": 20 },
-    { "key": "Customer", "name": "Customer", "kind": "value", "values": 100000, "labelled": true },
+    { "key": "Country", "name": "Country", "kind": "value", "valueCount": 4, "values": ["SE", "NO", null, "DK"] },
+    { "key": "customer", "name": "Customer", "kind": "value", "description": "The customer's number; the label is its name.", "valueCount": 100000, "labelled": true },
     { "key": "Amount", "name": "Amount", "kind": "range", "buckets": 9, "min": 0, "max": 48250 },
-    { "key": "OrderDate", "name": "Order date", "kind": "date", "granularity": "month", "timeZone": "Europe/Stockholm" }
+    { "key": "OrderDate", "name": "Order date", "kind": "date", "granularity": "month", "timeZone": "Europe/Stockholm", "presets": ["last7Days", "thisYear"] }
   ],
   "metrics": [
     { "key": "orders", "name": "Orders", "aggregation": "count" },
-    { "key": "revenue", "name": "Revenue", "aggregation": "sum" }
+    { "key": "revenue", "name": "Revenue", "aggregation": "sum", "description": "Order value in SEK, excluding VAT." }
   ],
   "properties": [
-    { "name": "DeliveryDays", "type": "number", "uses": ["groupBy", "aggregate", "distinct", "column"] },
-    { "name": "Country", "type": "text", "uses": ["groupBy", "distinct", "column"], "behindFacet": true }
+    { "name": "Country", "kind": "text", "uses": ["groupBy", "distinct", "column"], "behindFacet": true },
+    { "name": "DeliveryDays", "kind": "number", "uses": ["groupBy", "aggregate", "distinct", "column"] },
+    { "name": "Kind", "kind": "text", "uses": ["groupBy", "distinct", "column"], "values": ["Web", "Store"] }
   ],
-  "periods": ["day", "week", "month", "quarter", "year"],
-  "limits": { "rows": 10000, "dimensions": 2 }
+  "periods": ["year", "quarter", "month", "week", "day"],
+  "limits": { "rows": 10000, "defaultRows": 100, "dimensions": 2 }
 }
 ```
 
-- A facet carries what helps a question: the number of values in the dataset (or the scope) for a value facet, so an agent knows whether grouping by it is small, the bucket count and bounds of a range facet, the period and zone of a date facet, and whether values have labels.
-- A property carries a type in the vocabulary of JSON (`text`, `number`, `boolean`, `date`, `collection`, `other`) and the uses §10.5 allows it. `behindFacet` marks a property whose name a facet also has, reached only through `{ "property" }` (§10.6).
-- The `Allowed` list filters the description exactly as it filters the reader, so a client is never told about a name it cannot use.
-- The values of a small facet are listed, with their labels, up to a limit; a larger facet gives only its count, and a query grouped by it discovers its values with counts (§C4.11). This keeps the description small and fixed for the life of the dashboard; it is built once per `Allowed` list and is cheap to call again. Until 2026-10-13 no values were listed; the checkpoint (§10.9) changed that.
-- What the where's parser accepts is the parser's to describe; a Gridify mapper knows its own fields.
+- A facet carries what helps a question: the number of values in the dataset (or the scope) for a value facet, so an agent knows whether grouping by it is small; the values themselves when there are no more than `ValueLimit`, most common first, with their labels; the bucket count and bounds of a range facet; the period, zone and presets of a date facet, since an agent can name a preset in a selection (`OrderDate=last30Days`); and whether values have labels. A member without a value is left out of the JSON.
+- **Descriptions come from the application** (§10.9), as a map in the options keyed by facet key, metric key or property name: what a value means, its unit, how it differs from a similar one. A name the dashboard does not know is an error, so a renamed facet does not leave its description behind silently. A `.Description(...)` on the builder was considered and left out: the text is wording for one caller, often an agent's, and may differ per caller or language, while the builder defines the dashboard everyone shares. A description of a name both a facet and a property have applies to both.
+- A property carries a kind in the vocabulary of JSON (`text`, `number`, `boolean`, `date`, `collection`, `other`) and the uses §10.5 allows it; an enum property also lists its names, which an agent can group by or filter on directly. `behindFacet` marks a property whose name a facet also has, reached only through `{ "property" }` (§10.6). Properties are listed in name order.
+- The `Allowed` list filters the description exactly as it filters the reader, so a client is never told about a name it cannot use. A name allows the facet and the property behind it alike.
+- The values of a small facet are listed, with their labels, up to a limit; a larger facet gives only its count, and a query grouped by it discovers its values with counts (§C4.11). Until 2026-10-13 no values were listed; the checkpoint (§10.9) changed that. The description is computed on each call from the indexes, with one sort per listed facet and no pass over the rows, so nothing is cached.
+- What the where's parser accepts is the parser's to describe; a Gridify mapper knows its own fields, and `QueryJsonOptions.WhereHelp` carries that text into the where's errors (§10.6).
 - The state as JSON (counts, selections and metrics of the current view) is not part of this. A client learns the current view from the selections' JSON (§2.5) and from queries, and a state JSON stays with the parked plan for non-Blazor clients.
 
 ### 10.8 Build plan
@@ -1075,7 +1086,7 @@ One pull request per step, each with its tests and the usage guide brought up to
 2. **Where and plain properties.** The compiled where, property getters, grouping by value and by period, period overrides on date facets, aggregations over properties (§10.3, §10.5). Built 2026-10-12. The where scans the matching set word by word, on several cores under parallel counting. A property dimension codes its values per query in first-seen order behind a key that is never null, so the number of codes is unknown until the scan and its groups are always found through a hash. A date facet grouped by a coarser period its own periods nest in (a day in anything, a month in its quarter and year, a quarter in its year) maps its buckets once and reads the bucket codes; any other period converts each row's instant in the facet's zone. Errors name a property's type as C# writes it, `IReadOnlyList<String?>?`.
 3. **Row queries** (§C4.11, §10.2). Built 2026-10-12. A property column keeps its own type in a `QueryValueCell` rather than becoming a `double`, so an id stays an exact integer and a decimal keeps its digits; a range facet's column is its `double`, as the column stores it. Ties in the order column fall back to row order, not to the dashboard's sort, which would need the inverse of the sort order per query. A column holding several values per row (a multi-valued facet, a collection property) lists them and cannot be ordered by. The order key is read once per row into a heap of N, so a property column costs one read per row and none per comparison.
 4. **JSON.** The answer to JSON, `QueryFromJson` with the where parser and `Allowed`, `DashboardQueryException` (§10.6). Built 2026-10-13 with the checkpoint's changes 1, 2, 5 and 6 (§10.9): selections as query-string text and public strict readers, short text forms, dates kept as dates, the where parser's errors wrapped. `QueryFromJson` moved from the serializer to the dashboard, which knows the metrics and properties its names need.
-5. **`Describe`** and its JSON (§10.7).
+5. **`Describe`** and its JSON (§10.7). Built 2026-10-13 with the checkpoint's changes 3 and 4 (§10.9): the application's descriptions as a map in `DescribeOptions`, and the values of facets up to `ValueLimit`. `Describe` takes an options object rather than the `Allowed` list alone, since the descriptions and the limit joined it.
 6. **Benchmarks.** The estimates of §10.3 measured at a million rows and recorded in §8.
 
 **Checkpoint after step 3.** Steps 1 to 3 are the query itself; steps 4 and 5 exist to serve agents and HTTP clients. Before they are built, a hand-written agent tool in the first consuming application calls the C# API with real questions, and what it fails to ask or reads wrongly reshapes the JSON contract and the description, the parts hardest to change once published. The design grew past its intended size while it was written (JSON both ways, the description and row queries were added), and the checkpoint is where that is weighed against use. Held 2026-10-13; see §10.9.
@@ -1184,6 +1195,6 @@ Both mistakes were about meaning, not query power, as the 2026-10-12 discussion 
 - **A row query is capped by a constant; a group query is not; `Query` takes a token and stays synchronous.** A row query returns 100 rows without `Take` and refuses a `Take` above 10 000, since bulk rows come from `state.Items`; a builder option was left until a host needs one, because an option can be added but not taken back. Groups are bounded by the codes of two dimensions and charts want all of them, so a ceiling on groups was rejected. The token is checked between steps and every 65 536 rows. Decided 2026-10-12. See §10.4.
 - **A query reaches public top-level properties of `T` by case-sensitive name, and a row query returns simple types only.** Grouping and distinct use the value facet's equality, periods take the date types, aggregations the numeric ones; object-valued properties are refused as row columns so an answer is never an object graph. Case-insensitive names were rejected because facet keys are case-sensitive and one rule should hold for every name; the error suggests near matches instead. No allowlist in the core, since `Where` already reads anything on the code path; exposure is decided where outside input is read. Decided 2026-10-12. See §10.5.
 - **Queries and answers both have a JSON form in the core, on `dashboard.Serializer`.** The answer writes rows as arrays under a column header, intervals in the query-string notation and values in each facet's own form. A query is read strictly, selections included, with the where handed as a string to a parser the application supplies, so the core reads no filter language and takes no dependency, and an optional `Allowed` list decides which names outside input may use. Answer-only JSON was rejected because every tool layer and HTTP endpoint would write the same mapping and the same error messages. Decided 2026-10-12. See §10.6. **Amended 2026-10-13 (§10.8 step 4):** the answer is written by the serializer as decided, but a query is read by the dashboard, `dashboard.QueryFromJson`, because checking its names needs the metrics and properties, which the serializer shared by every scope does not know.
-- **The core describes what can be asked; it does not write the state as JSON.** `Describe(allowed)` lists facets with what helps a question (value count, buckets, period, labels), metrics, and properties with their type and the uses §10.5 allows, filtered by the same `Allowed` list as the query reader, so a client is never told about a name it cannot use. Leaving the description to each tool layer was rejected because only the core knows the property rules; facet value lists stay out because a query discovers them. State JSON was left with the parked plan for non-Blazor clients, since the current view is the selections plus queries. Decided 2026-10-12. See §10.7. **Amended 2026-10-13 (§10.9):** the values of a small facet are listed after all, up to a limit, with only the count above it. The first agent took listed values straight into selections, which a discovering query would have cost a call for, and it matters most where a value and its label differ (a severity stored as a rank). A large facet still gives only its count.
+- **The core describes what can be asked; it does not write the state as JSON.** `Describe(allowed)` lists facets with what helps a question (value count, buckets, period, labels), metrics, and properties with their type and the uses §10.5 allows, filtered by the same `Allowed` list as the query reader, so a client is never told about a name it cannot use. Leaving the description to each tool layer was rejected because only the core knows the property rules; facet value lists stay out because a query discovers them. State JSON was left with the parked plan for non-Blazor clients, since the current view is the selections plus queries. Decided 2026-10-12. See §10.7. **Amended 2026-10-13 (§10.9):** the values of a small facet are listed after all, up to a limit, with only the count above it. The first agent took listed values straight into selections, which a discovering query would have cost a call for, and it matters most where a value and its label differ (a severity stored as a rank). A large facet still gives only its count. **Amended 2026-10-13 (§10.8 step 5):** `Describe` takes `DescribeOptions` (the `Allowed` list, the application's descriptions as a map, and the value limit) rather than the list alone; descriptions are a map for the caller rather than a builder method, since they are one caller's wording.
 - **Queries are built in six steps with a checkpoint after the third.** The query core, where and properties, and row queries come first; then a hand-written agent tool in the first consuming application tries real questions before the JSON contract and the description are built, since those are the hardest to change once published and the design grew past its intended size while it was written. Decided 2026-10-12. See §10.8.
 - **The checkpoint held, and an agent package waits for a second tool.** A hand-written tool over the C# API answered real questions in one or two queries; its failures were about meaning, not query power. Steps 4 and 5 take its findings first: selections also as query-string text and a strict reader for it, short text forms for parts, application descriptions and small facets' values in the description, dates kept as dates, and the where parser's errors wrapped. A `Linq2Dashboard.AI` package is extracted only if a second tool in the same application turns out to be mostly a copy of the first. Decided 2026-10-13. See §10.9.

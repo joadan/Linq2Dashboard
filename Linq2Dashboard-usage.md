@@ -222,6 +222,23 @@ string answer = dashboard.Serializer.ToJson(dashboard.Query(query));
 
 Every part has a short text form, as above, or an object form (`{ "name", "period" }`, `{ "property" }`, `{ "metric" }`, `{ "aggregation", "of", "as" }`, `{ "key", "descending" }`); selections are the URL's query-string text or the JSON of `Serializer.ToJson`. Reading is strict: an unknown name, a value that cannot be read or a name outside `Allowed` throws a `DashboardQueryException` whose `Path` names the part (`groupBy[1]`, `selections.Country`, `where`) and whose message can go back to the agent as it is. The C# API throws the same exception. The answer is a column header and rows as arrays; intervals are written as in a URL (`[100..500)`), periods as their start date, labelled values as `{ "value", "label" }`. `Serializer.FromQueryString(text, "", strict: true)` and `FromJson(json, strict: true)` read selections the same strict way for any input that must not lose part of itself.
 
+Before it asks, tell the agent what it can ask:
+
+```csharp
+DashboardDescription description = dashboard.Describe(new DescribeOptions
+{
+    Allowed = allowed,                                                  // the same list as the query reader's
+    Descriptions = new Dictionary<string, string>
+    {
+        ["customer"] = "The customer's number; the label is its name.",   // what a value means: the agent cannot guess it
+        ["revenue"] = "Order value in SEK, excluding VAT.",
+    },
+});
+string json = dashboard.Serializer.ToJson(description);                // facets, metrics, properties, periods, limits
+```
+
+The description lists each facet with what helps a question (the values of a facet with at most `ValueLimit` of them, 25 by default, most common first; a range facet's bounds; a date facet's period, zone and presets), each metric, and each property of `T` with its kind and what a query can do with it. Write descriptions for every name whose value is not self-explanatory, an id with a label above all: in the first agent tool, the one wrong answer came from a value without a meaning.
+
 ## Small datasets
 
 When the rows are the user's own and few, such as one customer's orders, build the dashboard in the page on every visit and cache nothing. A build costs about 2 ms of fixed overhead plus under 1 µs per row: about 3 ms at 1 000 rows, 10 ms at 10 000 and 100 ms at 100 000 (design §8). Up to tens of thousands of rows that is well inside a page request; above about 100 000, or when every user sees the same rows, build once and share it as in the wiring checklist.

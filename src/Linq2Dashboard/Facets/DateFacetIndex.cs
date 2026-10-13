@@ -143,6 +143,14 @@ internal sealed class DateFacetIndex : FacetIndex
         return new PeriodGroupColumn(row => column.UtcTicks[row] == long.MinValue ? null : column.UtcTicks[row], column.Zone, granularity);
     }
 
+    /// <inheritdoc />
+    public override FacetDescription Describe(int valueLimit) => new(Key, Name, Kind)
+    {
+        Granularity = Column.Granularity,
+        TimeZone = Column.Zone.Id,
+        Presets = Presets,
+    };
+
     /// <summary>The row's instant in the facet's zone, or its period when one is named.</summary>
     public override RowColumn RowColumn(DateGranularity? period)
     {
