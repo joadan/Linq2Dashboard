@@ -193,7 +193,7 @@ The same definitions are often wanted over several subsets of the data: one tab 
 
 ### 4.11 A query asks one question and changes nothing
 
-Planned 2026-10-12 and being built in steps (design §10.8): groups, rows, plain properties, periods, metric and property values, the where, JSON both ways and the description of what can be asked are in. This section set the boundary before any code: what a query can ask, and what it cannot.
+Planned 2026-10-12 and built in steps by 2026-10-13 (design §10.8): groups, rows, plain properties, periods, metric and property values, the where, JSON both ways and the description of what can be asked. This section set the boundary before any code: what a query can ask, and what it cannot.
 
 The state answers "what does the current view look like". A **query** answers one question about the dashboard's rows in the dashboard's own terms: revenue per sales rep in Sweden this year, the top ten. One question goes in, one table comes out.
 

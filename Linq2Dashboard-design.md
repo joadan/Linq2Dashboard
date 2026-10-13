@@ -728,6 +728,40 @@ Recorded 2026-09-26, same machine and toolchain, BenchmarkDotNet medium job. The
 - **Above that the build is linear, at 0.8 to 0.9 µs per row**, a little under the rate at a million rows (1 087 ms, where the sort's n log n weighs more). Up to about 10 000 rows a build per visit is around 10 ms, well inside a page request; at 100 000 it is about 100 ms, noticeable but not by itself a reason to cache.
 - **A click stays proportionally cheap**: a cold three-facet calculation is 3 to 4 % of a build at every size.
 
+
+### Measured, queries
+
+Recorded 2026-10-13 (§10.8 step 6), same machine and toolchain as above, BenchmarkDotNet short job, 1 000 000 rows with the dashboard above, every row matching unless a scenario selects. Run with `-- --job short --inProcess --filter *QueryBenchmarks*`: in process, because BenchmarkDotNet looks the benchmark project up by name under the repository and a Claude Code worktree under `.claude/worktrees` holds a second copy of it. The short job's error bars were wide in this run, up to half the mean for the fastest scenarios, so the numbers say which scenarios are cheap and which are not, not the exact cost.
+
+| Scenario | Mean | Allocated | Estimate (§10.3) |
+|---|---|---|---|
+| Group by two facets (Country × Status), two metrics | 24 ms | 45 KB | 5 to 10 ms ✗ |
+| The same under three selections (about 10 % of the rows) | 2.7 ms | 250 KB | |
+| The same with a where (`Quantity > 5`) | 25 ms | 172 KB | 2 to 10 ms more ✓ |
+| The same with a where, parallel counting on | 15 ms | 175 KB | |
+| Group by a plain `int` property, 20 values | 40 ms | 14 KB | 20 to 40 ms ✓ |
+| Group by a plain `string` property, 100 000 values, top 10 | 506 ms | 25 MB | ✗ |
+| Group by the facet over the same 100 000 values, top 10 | 28 ms | 7 MB | |
+| Distinct customers (100 000 values) per country | 196 ms | 36 MB | about 30 ms more ✗ |
+| The monthly date facet by quarter, through its buckets | 18 ms | 8 KB | |
+| The monthly date facet by week, converted per row in its zone | 210 ms | 75 KB | ✗ |
+| A plain date property by month, in UTC | 85 ms | 20 KB | ✗ |
+| The ten largest by a range facet's number | 9.5 ms | 7 KB | 5 to 20 ms ✓ |
+| The ten largest by a plain property | 30 ms | 9 KB | 5 to 20 ms ✗ |
+| The first 100 rows in the dashboard's order | 11 µs | 29 KB | |
+| An agent's round trip: query from JSON (three selections, two dimensions, three values), answer, answer to JSON | 15 ms | 148 KB | |
+| `Describe` to JSON | 27 µs | 44 KB | |
+
+What the numbers say:
+
+- **Facets are the fast path, as designed.** Grouping through code columns, metric columns and nested periods costs 10 to 30 ms over a million rows and less under selections; a row query by a facet's number is under 10 ms; JSON both ways and the description cost nothing next to the query. An agent's typical question is answered in 15 ms.
+- **Grouping by facets is two to three times the estimate.** The estimate assumed the counting loop of §4.3, about 1 ns per row; the query's group loop calls each dimension and number source through a virtual method and keeps per-group accumulators, about 24 ns per row. Reading the code arrays directly for the common single-valued case would bring it near the estimate. Not needed for an answer, but the first candidate if queries become frequent.
+- **Three costs are well above their estimates, and all three are known shapes.**
+  - *A distinct count per group* keeps one hash set of (group, value) pairs: a million inserts and 36 MB. With the value's code count known, as it is for every facet, a bit set per group would make it a pass like the distinct metric's (§4.6).
+  - *A plain string property with many values* hashes every row's string ignoring case: 506 ms against 28 ms for a facet over the same values. This is the case the cached property column of §10.3 is for; until it exists, the advice is a facet for any property grouped by often.
+  - *Periods converted per row* pay one time zone conversion per row (210 ms in Stockholm, 85 ms even in UTC through the general conversion). Caching the offset per calendar day, as noted for the date facet's build above, would remove most of it; a monthly facet grouped by quarter or year already avoids it through the buckets.
+- **Nothing here is a click.** A query is asked, not toggled, and the slow scenarios are seconds of an agent's thinking at most; the 50 ms target of §1 is for `Calculate`. The three costs above are recorded as optimisations to make when a host's questions need them, not as defects.
+
 ---
 
 ## 9. Blazor package plan
@@ -827,7 +861,7 @@ Every component is a `.razor` file holding markup and directives only, with a `.
 
 ## 10. Queries
 
-A query (§C4.11) asks one question of a dashboard's rows and returns one table. Designed one decision at a time on 2026-10-12; the build order and its checkpoint are in §10.8. Steps 1 to 5 are built: grouping by facets and properties, periods, metric values and aggregations, the where, row queries, order, take and cancellation, JSON both ways and the description. The checkpoint of §10.8 was held (§10.9); the benchmarks of step 6 remain.
+A query (§C4.11) asks one question of a dashboard's rows and returns one table. Designed one decision at a time on 2026-10-12; the build order and its checkpoint are in §10.8. All six steps are done: grouping by facets and properties, periods, metric values and aggregations, the where, row queries, order, take and cancellation, JSON both ways and the description, measured in §8. The checkpoint of §10.8 was held (§10.9).
 
 ### 10.1 The query object
 
@@ -936,7 +970,7 @@ A cell holds the library's own types, so what a query returns can go straight ba
 
 Scratch memory comes from `ArrayPool<T>` and is returned before the answer is published. Queries share nothing writable, so any number can run at once, also beside `Calculate`.
 
-**Estimated cost**, one million rows all matching, before measurement: grouped by facets with metric values 5 to 10 ms; a where adds 2 to 10 ms depending on the predicate; a plain property dimension 20 to 40 ms; a distinct count per group about 30 ms more; a top-ten row query 5 to 20 ms.
+**Estimated cost**, one million rows all matching, before measurement: grouped by facets with metric values 5 to 10 ms; a where adds 2 to 10 ms depending on the predicate; a plain property dimension 20 to 40 ms; a distinct count per group about 30 ms more; a top-ten row query 5 to 20 ms. **Measured 2026-10-13** (§8, Measured, queries): facets 24 ms, the where and a low-cardinality property within the estimate, a top ten by a facet 10 ms; a distinct count per group (196 ms), a string property with 100 000 values (506 ms) and periods converted per row (85 to 210 ms) well above it, each with a known remedy recorded there.
 
 ### 10.4 Limits and cancellation
 
@@ -1087,7 +1121,7 @@ One pull request per step, each with its tests and the usage guide brought up to
 3. **Row queries** (§C4.11, §10.2). Built 2026-10-12. A property column keeps its own type in a `QueryValueCell` rather than becoming a `double`, so an id stays an exact integer and a decimal keeps its digits; a range facet's column is its `double`, as the column stores it. Ties in the order column fall back to row order, not to the dashboard's sort, which would need the inverse of the sort order per query. A column holding several values per row (a multi-valued facet, a collection property) lists them and cannot be ordered by. The order key is read once per row into a heap of N, so a property column costs one read per row and none per comparison.
 4. **JSON.** The answer to JSON, `QueryFromJson` with the where parser and `Allowed`, `DashboardQueryException` (§10.6). Built 2026-10-13 with the checkpoint's changes 1, 2, 5 and 6 (§10.9): selections as query-string text and public strict readers, short text forms, dates kept as dates, the where parser's errors wrapped. `QueryFromJson` moved from the serializer to the dashboard, which knows the metrics and properties its names need.
 5. **`Describe`** and its JSON (§10.7). Built 2026-10-13 with the checkpoint's changes 3 and 4 (§10.9): the application's descriptions as a map in `DescribeOptions`, and the values of facets up to `ValueLimit`. `Describe` takes an options object rather than the `Allowed` list alone, since the descriptions and the limit joined it.
-6. **Benchmarks.** The estimates of §10.3 measured at a million rows and recorded in §8.
+6. **Benchmarks.** The estimates of §10.3 measured at a million rows and recorded in §8. Done 2026-10-13: sixteen scenarios in `QueryBenchmarks`; the fast path meets its purpose, and three costs above their estimates have known remedies, left until a host's questions need them.
 
 **Checkpoint after step 3.** Steps 1 to 3 are the query itself; steps 4 and 5 exist to serve agents and HTTP clients. Before they are built, a hand-written agent tool in the first consuming application calls the C# API with real questions, and what it fails to ask or reads wrongly reshapes the JSON contract and the description, the parts hardest to change once published. The design grew past its intended size while it was written (JSON both ways, the description and row queries were added), and the checkpoint is where that is weighed against use. Held 2026-10-13; see §10.9.
 
