@@ -381,6 +381,12 @@ When the view builds, the components inside it can define what they show (added 
 - Selections that name a facet the markup has yet to define, from the URL or the host, wait for it instead of being dropped.
 - Definition parameters on a component under a host-built dashboard are an error, since that dashboard is defined where it is built.
 
+### The AI library
+
+Added 2026-10-13. Understands: how to offer one dashboard to an agent as tools, describe, query and show; how to read a where written in a text syntax; how to hand an error back so the agent can correct itself.
+
+Does not understand: agents, prompts, chat, or what is on screen. It asks through queries (§4.11) and counts nothing itself; showing selections is a callback to the application. The agent sees the rows of the dashboard it is given and nothing else.
+
 ### The contract between them
 
 The UI consumes a **UI-friendly state** and produces **selections**. It never sees selectors, expressions, or indexes.
@@ -452,7 +458,7 @@ Because facets are identified by string keys and selections are serialisable, a 
 - Cross-filtering between multiple dashboards.
 - Remote/server-side data adapters.
 - Other UI adapters than Blazor.
-- Agent tools as a package of their own, `Linq2Dashboard.AI`: a dashboard turned into describe, query and show tools. Waits for a second application tool to prove the shape (design §10.9); until then the application writes them, as design §10.10 describes. The core stays without them (§4.11).
+- ~~Agent tools as a package of their own.~~ `Linq2Dashboard.AI` turns a dashboard into describe, query and show tools; decided 2026-10-13, design §10.10. The core stays without them (§4.11).
 
 ---
 
