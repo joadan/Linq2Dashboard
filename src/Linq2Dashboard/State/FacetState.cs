@@ -192,17 +192,20 @@ public sealed record FacetCount(int TotalCount, int FilteredCount);
 
 /// <summary>
 /// One bucket of a range facet, covering <c>[From, To)</c>; the last bucket also includes
-/// <c>To</c>. Bounds may be infinite. <see cref="Selected"/> is true when one of the selected
-/// intervals fully covers the bucket.
+/// <c>To</c>, which <see cref="ToInclusive"/> says when that edge is finite. Bounds may be infinite.
+/// <see cref="Selected"/> is true when one of the selected intervals fully covers the bucket.
 /// </summary>
-public sealed record RangeBucket(double From, double To, int TotalCount, int FilteredCount, bool Selected)
+public sealed record RangeBucket(double From, double To, int TotalCount, int FilteredCount, bool Selected, bool ToInclusive = false)
 {
-    /// <summary>The interval a click on this bucket toggles (design §2.2): <c>[From, To)</c>, unbounded where the bucket is open-ended.</summary>
+    /// <summary>
+    /// The interval a click on this bucket toggles (design §2.2): <c>[From, To)</c>, closed at a finite last
+    /// edge so it holds every row the bucket counts (design §3.3), unbounded where the bucket is open-ended.
+    /// </summary>
     public RangeInterval ToInterval() => new(
         double.IsInfinity(From) ? null : From,
         double.IsInfinity(To) ? null : To,
         fromInclusive: true,
-        toInclusive: false);
+        toInclusive: ToInclusive);
 
     /// <summary>A selection of this bucket's interval alone.</summary>
     public RangeSelection ToSelection() => new([ToInterval()]);

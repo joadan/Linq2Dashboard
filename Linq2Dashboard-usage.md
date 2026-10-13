@@ -139,7 +139,7 @@ country.Other;                                    // counts Top N left out, or n
 country.Search("swe", max: 20);                   // a UI operation, not a selection
 
 var amount = (RangeFacetState)state.Facet("Amount");
-amount.Buckets[1].ToInterval();                   // exactly the interval a click on that bar toggles; ToSelection() is that interval alone
+amount.Buckets[1].ToInterval();                   // exactly the interval a click on that bar toggles, [From, To), closed when ToInclusive (a last bar on a finite edge); ToSelection() is that interval alone
 
 var date = (DateFacetState)state.Facet("OrderDate");
 date.Presets[0].ToInterval();                     // DateInterval.Relative(preset); buckets give their [From, To)
