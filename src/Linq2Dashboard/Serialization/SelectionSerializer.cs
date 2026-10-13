@@ -294,8 +294,12 @@ public sealed class SelectionSerializer
             }
         }
 
-        if (shape["values"] is JsonArray values)
+        if (shape["values"] is JsonArray named)
         {
+            // A label stands for its value (design §10.6); the caller's object is left as it is.
+            var values = new JsonArray(named.Select(value => LabelledValue(facet, key, value) ?? value?.DeepClone()).ToArray());
+            shape = (JsonObject)shape.DeepClone();
+            shape["values"] = values;
             foreach (JsonNode? value in values)
             {
                 if (facet.Deserialize(new JsonObject { ["values"] = new JsonArray(value?.DeepClone()) }) is null)
@@ -332,18 +336,48 @@ public sealed class SelectionSerializer
 
         if (facet.Kind != FacetKind.Text)
         {
+            var parts = new List<string>();
+            bool labelled = false;
             foreach (string? token in QueryValues.SplitTokens(value))
             {
-                string part = token is null ? QueryValues.NullToken : QueryValues.EscapeToken(token);
+                // A label stands for its value (design §10.6), written as the value's own text.
+                string? text = LabelledValue(facet, key, token is null ? null : JsonValue.Create(token)) switch
+                {
+                    null => token,
+                    JsonValue named when named.GetValueKind() == System.Text.Json.JsonValueKind.String => named.GetValue<string>(),
+                    JsonNode named => named.ToJsonString(),
+                };
+                labelled |= text != token;
+                string part = text is null ? QueryValues.NullToken : QueryValues.EscapeToken(text);
                 if (facet.DeserializeQuery(part) is null)
                 {
                     throw new SelectionFormatException(key, $"'{token ?? QueryValues.NullToken}' is not a value of facet '{key}' ({facet.Kind}).");
                 }
+
+                parts.Add(part);
+            }
+
+            if (labelled)
+            {
+                value = string.Join(',', parts);
             }
         }
 
         return facet.DeserializeQuery(value)
             ?? throw new SelectionFormatException(key, $"'{value}' cannot be read as a selection of facet '{key}' ({facet.Kind}).");
+    }
+
+    /// <summary>The value a token names by its label, or null; a label of several values is an error at the facet.</summary>
+    private static JsonNode? LabelledValue(FacetIndex facet, string key, JsonNode? token)
+    {
+        try
+        {
+            return facet.ValueOfLabel(token);
+        }
+        catch (FormatException e)
+        {
+            throw new SelectionFormatException(key, e.Message);
+        }
     }
 
     private FacetIndex FacetOrThrow(string key) =>

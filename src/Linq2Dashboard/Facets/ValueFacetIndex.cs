@@ -444,6 +444,37 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         }
     }
 
+    /// <summary>
+    /// The value whose label is the token, ignoring case, when the token is not a value in the dataset (design §10.6):
+    /// an agent writes the word it read in a description, which is the label. A value always wins over a label, and a
+    /// label that several values carry is a <see cref="FormatException"/> naming them, since guessing would select the wrong rows.
+    /// </summary>
+    public override JsonNode? ValueOfLabel(JsonNode? token)
+    {
+        if (labels is null || token is not JsonValue json || json.GetValueKind() != System.Text.Json.JsonValueKind.String)
+        {
+            return null;
+        }
+
+        if (TryParseValue(token, out object? parsed) && parsed is not null && Column.TryGetCode(ConvertValue(parsed), out _))
+        {
+            return null;
+        }
+
+        string text = json.GetValue<string>();
+        int[] codes = Enumerable.Range(1, labels.Length)
+            .Where(code => string.Equals(labels[code - 1], text, StringComparison.OrdinalIgnoreCase))
+            .ToArray();
+        return codes.Length switch
+        {
+            0 => null,
+            1 => FormatValue(Column.ValueOf(codes[0])),
+            _ => throw new FormatException(
+                $"'{text}' is the label of {codes.Length} values of facet '{Key}': " +
+                $"{string.Join(", ", codes.Take(10).Select(code => FormatValue(Column.ValueOf(code))?.ToJsonString()))}{(codes.Length > 10 ? ", ..." : string.Empty)}. Select by value."),
+        };
+    }
+
     /// <summary>Design §4.4 search: values whose label contains the text, ranked, limited. Never the null value.</summary>
     private IReadOnlyList<FacetValue> Search(string text, int max, int[] counts, HashSet<int> selected)
     {
