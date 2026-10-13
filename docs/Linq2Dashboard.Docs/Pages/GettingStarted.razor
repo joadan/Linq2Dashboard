@@ -7,13 +7,15 @@
 <p>In a hurry? <a href="five-minutes">Try it in five minutes</a> walks through a fresh app step by step, with the dashboard defined in the page markup. <a href="cached-dashboard">Cache a shared dashboard</a> turns that app into one dashboard built once and shared by every user, the way the builder below is meant for large data. This page is the fuller tour.</p>
 
 <p>
-    Two packages on NuGet: <code>Linq2Dashboard</code> is the engine and has no UI dependency; <code>Linq2Dashboard.Blazor</code>
-    renders it and depends on the engine, so a Blazor app adds only the Blazor package. Both target .NET 10. Versions are
+    Three packages on NuGet: <code>Linq2Dashboard</code> is the engine and has no UI dependency; <code>Linq2Dashboard.Blazor</code>
+    renders it and depends on the engine, so a Blazor app adds only the Blazor package; <code>Linq2Dashboard.AI</code> offers a
+    dashboard to an AI agent as tools, see <a href="agents">Ask it with an agent</a>. All target .NET 10. Versions are
     prerelease while the API settles.
 </p>
 
 <pre><code>dotnet add package Linq2Dashboard.Blazor --prerelease   # a Blazor app; the engine comes with it
-dotnet add package Linq2Dashboard --prerelease          # the engine alone, for a host without the components</code></pre>
+dotnet add package Linq2Dashboard --prerelease          # the engine alone, for a host without the components
+dotnet add package Linq2Dashboard.AI --prerelease       # agent tools over a dashboard, for Microsoft.Extensions.AI</code></pre>
 
 <h2>1. Build a dashboard</h2>
 

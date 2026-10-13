@@ -21,6 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\src\Linq2Dashboard.Blazor\Linq2Dashboard.Blazor.csproj" />
+    <ProjectReference Include="..\..\src\Linq2Dashboard.AI\Linq2Dashboard.AI.csproj" />
     <ProjectReference Include="..\..\samples\Linq2Dashboard.SampleData\Linq2Dashboard.SampleData.csproj" />
   </ItemGroup>
 

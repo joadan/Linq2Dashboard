@@ -1,0 +1,111 @@
+@page "/agents"
+
+<PageTitle>Ask it with an agent · Linq2Dashboard</PageTitle>
+
+<h1>Ask it with an agent</h1>
+
+<p>
+    <code>Linq2Dashboard.AI</code> lets an AI agent answer questions about a dashboard's rows: "which country had the most revenue
+    this year", "the five largest open orders", "show me the cancelled orders in Norway". It turns one dashboard into three tools,
+    describe, query and show, as <code>Microsoft.Extensions.AI</code> functions. Agent Framework, Semantic Kernel, a plain
+    <code>IChatClient</code> and the MCP C# SDK all take them. The answers come from the same facets and metrics the screen uses, so
+    the agent's numbers agree with the counts the user sees.
+</p>
+
+<p>This page continues the <a href="cached-dashboard">cached dashboard</a> app. At the bottom you can run the tools yourself, in your browser.</p>
+
+<h2>1. The packages</h2>
+
+<p>The AI package, and <code>Microsoft.Extensions.AI</code> for the chat client that calls the tools. Add your model provider's package as well.</p>
+
+<pre><code>@PackageExample</code></pre>
+
+<h2>2. The tools</h2>
+
+<p>
+    Make the tools from the dashboard the page already uses. <code>Name</code> prefixes the tool names, <code>Summary</code> tells the agent
+    what the rows are, and <code>Allowed</code> is the list of facets, metrics and properties the agent may use. The descriptions matter
+    most: the agent cannot know what a status means or what currency an amount is in unless you tell it.
+</p>
+
+<pre><code>@ToolsExample</code></pre>
+
+<table>
+    <thead>
+        <tr><th>Tool</th><th>What it does</th></tr>
+    </thead>
+    <tbody>
+        <tr><td><code>orders_describe</code></td><td>Lists what can be asked: facets with their values when there are few, metrics, properties, date periods, limits, and the fields a where can filter on. The agent calls it once, first.</td></tr>
+        <tr><td><code>orders_query</code></td><td>Asks one question and returns one table. One parameter per part: <code>selections</code>, <code>where</code>, <code>groupBy</code>, <code>values</code>, <code>columns</code>, <code>orderBy</code>, <code>take</code>. Reads only; nothing changes on screen.</td></tr>
+        <tr><td><code>orders_show</code></td><td>Puts selections on the user's dashboard. Only there when you give <code>Show</code>, below.</td></tr>
+    </tbody>
+</table>
+
+<h2>3. Give them to a chat client</h2>
+
+<p>
+    Function invocation runs the loop: the model asks for a tool, the client calls it and hands the result back, until the model
+    answers. A question usually takes two or three calls.
+</p>
+
+<pre><code>@ChatExample</code></pre>
+
+<h2>4. Show the answer on screen</h2>
+
+<p>
+    With <code>Show</code>, the agent can also filter the user's dashboard, for "show me" rather than "tell me". Bind the view's selections
+    and set them from the callback. The selections are checked before your callback runs, so a facet the agent made up never reaches the page.
+</p>
+
+<pre><code>@ShowExample</code></pre>
+
+<h2>What the agent needs from you</h2>
+
+<ul>
+    <li><strong>Descriptions</strong> for every name whose value is not self-explanatory. An id with a label above all: without a description, the agent gives the user the number when they asked for the name.</li>
+    <li><strong>Allowed</strong> keeps internal fields away from the agent. It limits names, not rows: the agent sees every row of the dashboard you give it. A user who may see only some rows gets tools over their own scope, <code>dashboard.ScopeTo(...)</code>, as their screen does.</li>
+    <li><strong>One <code>Name</code> per dashboard</strong> when an app has several, so the agent picks <code>orders_query</code> or <code>tickets_query</code> by name.</li>
+    <li><strong>Nothing else.</strong> The tools cache nothing, hold no conversation and write nothing. Errors in what the agent asked come back to it as results with the known names, and it corrects itself.</li>
+</ul>
+
+<h2>Try the tools</h2>
+
+<p>
+    The panel calls the query tool exactly as an agent would, over @(Rows.ToString("N0", System.Globalization.CultureInfo.InvariantCulture))
+    generated orders built in your browser (the <a href="demo">demo</a>'s data). Pick an example or write your own; the where is
+    Gridify syntax, such as <code>Amount&gt;=1000,Channel=EDI|Portal</code>.
+</p>
+
+@if (tools is null)
+{
+    <p class="agents-muted">Building the dashboard...</p>
+}
+else
+{
+    <div class="agents-examples">
+        @foreach (Example example in Examples)
+        {
+            <button type="button" class="agents-example" @onclick="() => Load(example)">@example.Title</button>
+        }
+        <button type="button" class="agents-example" @onclick="RunDescribe">Describe</button>
+    </div>
+
+    <div class="agents-form">
+        <label>selections <input @bind="selectionsText" placeholder="Status=Shipped&OrderDate=thisYear" /></label>
+        <label>where <input @bind="whereText" placeholder="Amount>=1000" /></label>
+        <label>groupBy <input @bind="groupByText" placeholder="Country, OrderDate:Quarter" /></label>
+        <label>values <input @bind="valuesText" placeholder="revenue, orders, avg:Amount" /></label>
+        <label>columns <input @bind="columnsText" placeholder="Id, Customer, Amount" /></label>
+        <label>orderBy <input @bind="orderByText" placeholder="-revenue" /></label>
+        <label>take <input @bind="takeText" placeholder="10" inputmode="numeric" /></label>
+        <button type="button" class="agents-run" @onclick="RunQuery">Run orders_query</button>
+    </div>
+
+    @if (call is not null)
+    {
+        <p class="agents-muted">The call, as the agent sends it:</p>
+        <pre><code>@call</code></pre>
+        <p class="agents-muted">What it gets back@(elapsed is null ? null : $", in {elapsed} ms"):</p>
+        <pre class="agents-result"><code>@result</code></pre>
+    }
+}
