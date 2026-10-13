@@ -182,6 +182,23 @@ internal sealed class ValueFacetIndex<TValue> : FacetIndex
         };
     }
 
+    /// <summary>The number of values, and the values themselves, most common first, when there are no more than <paramref name="valueLimit"/>.</summary>
+    public override FacetDescription Describe(int valueLimit)
+    {
+        IReadOnlyList<QueryValueCell>? values = null;
+        if (valueCount <= valueLimit)
+        {
+            values = Enumerable.Range(0, totals.Length)
+                .Where(code => totals[code] > 0)
+                .OrderByDescending(code => totals[code])
+                .ThenBy(code => code == 0 ? int.MaxValue : code)
+                .Select(code => code == 0 ? new QueryValueCell(null) : new QueryValueCell(Column.ValueOf(code), labels?[code - 1]))
+                .ToArray();
+        }
+
+        return new FacetDescription(Key, Name, Kind) { ValueCount = valueCount, HasLabels = HasLabels, Values = values };
+    }
+
     /// <summary>The row's value with its label, or a multi-valued row's items as a list.</summary>
     public override RowColumn RowColumn(DateGranularity? period)
     {

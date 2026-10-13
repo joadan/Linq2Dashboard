@@ -115,6 +115,119 @@ namespace Linq2Dashboard.Queries
     }
 
     /// <summary>
+    /// Writes a <see cref="DashboardDescription"/> as JSON (design §10.7): facets, metrics and properties with only the
+    /// members that have a value, values in each facet's own form, enum names in camel case like the rest of the JSON.
+    /// </summary>
+    internal static class DescriptionJsonWriter
+    {
+        public static JsonObject Write(DashboardDescription description, IReadOnlyDictionary<string, FacetIndex> facets)
+        {
+            var facetArray = new JsonArray();
+            foreach (FacetDescription facet in description.Facets)
+            {
+                var json = new JsonObject { ["key"] = facet.Key, ["name"] = facet.Name, ["kind"] = JsonValues.CamelCase(facet.Kind) };
+                Add(json, "description", facet.Description);
+                Add(json, "valueCount", facet.ValueCount);
+                if (facet.HasLabels)
+                {
+                    json["labelled"] = true;
+                }
+
+                if (facet.Values is IReadOnlyList<QueryValueCell> values)
+                {
+                    FacetIndex index = facets[facet.Key];
+                    json["values"] = new JsonArray(values
+                        .Select(v => v.Label is null
+                            ? index.FormatValue(v.Value)
+                            : new JsonObject { ["value"] = index.FormatValue(v.Value), ["label"] = v.Label })
+                        .ToArray());
+                }
+
+                Add(json, "buckets", facet.BucketCount);
+                Add(json, "min", facet.Min);
+                Add(json, "max", facet.Max);
+                Add(json, "granularity", facet.Granularity is DateGranularity g ? JsonValues.CamelCase(g) : null);
+                Add(json, "timeZone", facet.TimeZone);
+                if (facet.Presets is { Count: > 0 } presets)
+                {
+                    json["presets"] = new JsonArray(presets.Select(p => (JsonNode?)JsonValues.CamelCase(p)).ToArray());
+                }
+
+                facetArray.Add(json);
+            }
+
+            var metricArray = new JsonArray();
+            foreach (MetricDescription metric in description.Metrics)
+            {
+                var json = new JsonObject { ["key"] = metric.Key, ["name"] = metric.Name, ["aggregation"] = JsonValues.CamelCase(metric.Aggregation) };
+                Add(json, "description", metric.Description);
+                metricArray.Add(json);
+            }
+
+            var propertyArray = new JsonArray();
+            foreach (PropertyDescription property in description.Properties)
+            {
+                var json = new JsonObject
+                {
+                    ["name"] = property.Name,
+                    ["kind"] = JsonValues.CamelCase(property.Kind),
+                    ["uses"] = new JsonArray(property.Uses.Select(u => (JsonNode?)JsonValues.CamelCase(u)).ToArray()),
+                };
+                if (property.BehindFacet)
+                {
+                    json["behindFacet"] = true;
+                }
+
+                Add(json, "description", property.Description);
+                if (property.Values is IReadOnlyList<string> names)
+                {
+                    json["values"] = new JsonArray(names.Select(n => (JsonNode?)n).ToArray());
+                }
+
+                propertyArray.Add(json);
+            }
+
+            return new JsonObject
+            {
+                ["facets"] = facetArray,
+                ["metrics"] = metricArray,
+                ["properties"] = propertyArray,
+                ["periods"] = new JsonArray(description.Periods.Select(p => (JsonNode?)JsonValues.CamelCase(p)).ToArray()),
+                ["limits"] = new JsonObject
+                {
+                    ["rows"] = description.MaxRows,
+                    ["defaultRows"] = description.DefaultRows,
+                    ["dimensions"] = description.MaxDimensions,
+                },
+            };
+        }
+
+        private static void Add(JsonObject json, string name, string? value)
+        {
+            if (value is not null)
+            {
+                json[name] = value;
+            }
+        }
+
+        private static void Add(JsonObject json, string name, int? value)
+        {
+            if (value is int number)
+            {
+                json[name] = number;
+            }
+        }
+
+        private static void Add(JsonObject json, string name, double? value)
+        {
+            if (value is double number)
+            {
+                json[name] = number;
+            }
+        }
+    }
+
+    /// <summary>
     /// Reads a query from JSON strictly (design §10.6, amended by §10.9): every part as an object or a short text form,
     /// selections as an object or as query-string text, the where through the application's parser, names limited to
     /// <see cref="QueryJsonOptions{T}.Allowed"/>. Anything that cannot be read throws a <see cref="DashboardQueryException"/>

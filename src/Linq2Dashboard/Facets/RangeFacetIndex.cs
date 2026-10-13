@@ -67,6 +67,14 @@ internal sealed class RangeFacetIndex : FacetIndex
     public override GroupColumn GroupColumn(DateGranularity? period) =>
         period is DateGranularity named ? throw NotADate(named) : new RangeGroupColumn(Column);
 
+    /// <inheritdoc />
+    public override FacetDescription Describe(int valueLimit) => new(Key, Name, Kind)
+    {
+        BucketCount = Column.BucketCount,
+        Min = double.IsNaN(Column.Min) ? null : Column.Min,
+        Max = double.IsNaN(Column.Max) ? null : Column.Max,
+    };
+
     /// <summary>The row's number, not its bucket.</summary>
     public override RowColumn RowColumn(DateGranularity? period) =>
         period is DateGranularity named ? throw NotADate(named) : new NumberRowColumn(Column.ValuesArray);

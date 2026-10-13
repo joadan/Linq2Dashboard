@@ -70,6 +70,9 @@ internal abstract class FacetIndex
     public virtual GroupColumn GroupColumn(DateGranularity? period) =>
         throw new DashboardQueryException($"Facet '{Key}' is a {Kind} facet; it has no values a query can group by.");
 
+    /// <summary>The facet as a query sees it (design §10.7); each kind adds what helps a question.</summary>
+    public virtual FacetDescription Describe(int valueLimit) => new(Key, Name, Kind);
+
     /// <summary>A value of this facet as JSON (design §2.5): the defaults here, a value facet's own form where it has one.</summary>
     public virtual JsonNode? FormatValue(object? value) => Serialization.JsonValues.Format(value);
 

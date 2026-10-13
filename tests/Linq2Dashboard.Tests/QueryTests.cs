@@ -583,7 +583,7 @@ public class QueryTests
     {
         ["dimension in the wrong case"] = ("Did you mean 'Country'?", "groupBy[0]", new() { GroupBy = [Dimension.Of("country")] }),
         ["unknown dimension"] = ("'Customer' is neither a facet of this dashboard nor a property of Order. Facets: Country, Status", "groupBy[0]", new() { GroupBy = [Dimension.Of("Customer")] }),
-        ["unknown property"] = ("'Customer' is not a property of Order. Properties: Id, Country", "groupBy[0]", new() { GroupBy = [Dimension.Property("Customer")] }),
+        ["unknown property"] = ("'Customer' is not a property of Order. Properties: Address, Amount", "groupBy[0]", new() { GroupBy = [Dimension.Property("Customer")] }),
         ["property in the wrong case"] = ("Did you mean 'Kind'?", "groupBy[0]", new() { GroupBy = [Dimension.Of("kind")] }),
         ["period on a property that is not a date"] = ("Property 'Kind' (OrderKind) is not a date", "groupBy[0]", new() { GroupBy = [Dimension.Of("Kind", DateGranularity.Month)] }),
         ["period on a collection property"] = ("Property 'Tags' (IReadOnlyList<String?>?) is a collection", "groupBy[0]", new() { GroupBy = [Dimension.Property("Tags", DateGranularity.Month)] }),

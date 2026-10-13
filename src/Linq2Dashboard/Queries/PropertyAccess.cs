@@ -14,9 +14,9 @@ namespace Linq2Dashboard.Queries;
 internal sealed class PropertyCatalog<T>
 {
     private readonly ConcurrentDictionary<string, PropertyAccessor<T>?> accessors = new(StringComparer.Ordinal);
-    private readonly Lazy<string[]> names = new(() => Readable().Select(p => p.Name).Distinct(StringComparer.Ordinal).ToArray());
+    private readonly Lazy<string[]> names = new(() => Readable().Select(p => p.Name).Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal).ToArray());
 
-    /// <summary>Every reachable name, for error messages.</summary>
+    /// <summary>Every reachable name, in name order, for error messages and descriptions.</summary>
     public IReadOnlyList<string> Names => names.Value;
 
     public bool TryGet(string name, out PropertyAccessor<T> accessor)
@@ -92,6 +92,20 @@ internal abstract class PropertyAccessor<T>(PropertyInfo property)
 
     /// <summary>Numbers for sum, average, min and max, or null when the property is not numeric.</summary>
     public abstract NumberSource? Numbers(T[] items);
+
+    /// <summary>What the property holds and what a query can do with it (design §10.5, §10.7).</summary>
+    public abstract PropertyDescription Describe();
+
+    /// <summary>The kind of a single value of <paramref name="type"/>, in the vocabulary of JSON.</summary>
+    protected static PropertyKind KindOf(Type type)
+    {
+        Type underlying = Nullable.GetUnderlyingType(type) ?? type;
+        return underlying == typeof(bool) ? PropertyKind.Boolean
+            : NumericConversion.IsNumeric(underlying) ? PropertyKind.Number
+            : DateConversion.IsSupported(underlying) ? PropertyKind.Date
+            : underlying == typeof(string) || underlying == typeof(char) || underlying == typeof(Guid) || underlying.IsEnum ? PropertyKind.Text
+            : PropertyKind.Other;
+    }
 
     /// <summary>The property as a column of a row query: simple types only, so an answer never holds an object graph (design §10.5).</summary>
     public abstract RowColumn RowColumn(T[] items, DateGranularity? period);
@@ -194,6 +208,31 @@ internal sealed class ValueAccessor<T, TProp> : PropertyAccessor<T>
 
     public override DistinctSource DistinctKeys(T[] items) => new PropertyKeys<T, TProp>(this, items, getter.Value);
 
+    /// <inheritdoc />
+    public override PropertyDescription Describe()
+    {
+        PropertyKind kind = KindOf(typeof(TProp));
+        var uses = new List<PropertyUse> { PropertyUse.GroupBy };
+        if (kind == PropertyKind.Date)
+        {
+            uses.Add(PropertyUse.Period);
+        }
+
+        if (kind == PropertyKind.Number)
+        {
+            uses.Add(PropertyUse.Aggregate);
+        }
+
+        uses.Add(PropertyUse.Distinct);
+        if (IsSimple(typeof(TProp)))
+        {
+            uses.Add(PropertyUse.Column);
+        }
+
+        Type underlying = Nullable.GetUnderlyingType(typeof(TProp)) ?? typeof(TProp);
+        return new PropertyDescription(Name, kind, uses) { Values = underlying.IsEnum ? Enum.GetNames(underlying) : null };
+    }
+
     /// <summary>The value as it is, a <see cref="DateOnly"/> as a date, another date type as its instant in UTC, or a period when one is named.</summary>
     public override RowColumn RowColumn(T[] items, DateGranularity? period)
     {
@@ -243,6 +282,12 @@ internal sealed class ItemsAccessor<T, TItem> : PropertyAccessor<T>
     public override NumberSource? Numbers(T[] items) => null;
 
     public override DistinctSource DistinctKeys(T[] items) => new ItemKeys<T, TItem>(this, items, getter.Value);
+
+    /// <inheritdoc />
+    public override PropertyDescription Describe() => new(
+        Name,
+        PropertyKind.Collection,
+        IsSimple(typeof(TItem)) ? [PropertyUse.GroupBy, PropertyUse.Distinct, PropertyUse.Column] : [PropertyUse.GroupBy, PropertyUse.Distinct]);
 
     /// <summary>The row's distinct non-null items as a list, as a multi-valued facet holds them.</summary>
     public override RowColumn RowColumn(T[] items, DateGranularity? period)
