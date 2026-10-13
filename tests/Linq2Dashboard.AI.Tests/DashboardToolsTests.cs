@@ -189,6 +189,20 @@ public class DashboardToolsTests
         Assert.Contains("Fields: Amount (number)", (string?)answer["error"]);
     }
 
+    [Theory]
+    [InlineData("Status=*pen*")]
+    [InlineData("Status=pen*")]
+    [InlineData("Status^pen*")]
+    [InlineData("Amount>100,Status=**pen")]
+    public void A_wildcard_in_the_where_is_an_error_not_an_empty_answer(string where)
+    {
+        JsonObject answer = Tools().Query(where: where);
+
+        Assert.Equal("where", (string?)answer["path"]);
+        Assert.Contains("'*' is not a wildcard", (string?)answer["error"]);
+        Assert.Contains("for text containing 'pen' write Status=*pen: =*text means contains", (string?)answer["error"]);
+    }
+
     [Fact]
     public void Filterable_chooses_the_where_fields()
     {

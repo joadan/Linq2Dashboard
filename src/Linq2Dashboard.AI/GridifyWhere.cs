@@ -12,6 +12,8 @@ internal sealed record WhereField(string Name, PropertyKind Kind);
 /// The where in Gridify syntax over plain properties of <typeparamref name="T"/> (design §10.10), with the value facets'
 /// semantics: strings compare ignoring case, and a null string is the empty one, so <c>Country=</c> and
 /// <c>Country=null</c> find it and no filter throws on it, the trap Gridify has with case-insensitive filtering (design §10.9).
+/// Text that starts or ends with <c>*</c> is refused: Gridify has no wildcard, so <c>Message=*text*</c> would look for a
+/// literal <c>text*</c> and find nothing without a word, where an error lets the agent ask again (design §10.10).
 /// </summary>
 internal sealed class GridifyWhere<T>
 {
@@ -98,7 +100,9 @@ internal sealed class GridifyWhere<T>
         if (property.PropertyType == typeof(string))
         {
             value = Expression.Coalesce(value, Expression.Constant(string.Empty));
-            convert = text => text.Equals("null", StringComparison.OrdinalIgnoreCase) ? string.Empty : text;
+            convert = text => text.StartsWith('*') || text.EndsWith('*')
+                ? throw new FormatException($"'*' is not a wildcard; for text containing '{text.Trim('*')}' write {property.Name}=*{text.Trim('*')}: =*text means contains, ^text starts with, $text ends with")
+                : text.Equals("null", StringComparison.OrdinalIgnoreCase) ? string.Empty : text;
         }
         else if (KindOf(property.PropertyType) == PropertyKind.Number)
         {

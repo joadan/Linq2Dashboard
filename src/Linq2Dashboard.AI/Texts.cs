@@ -13,7 +13,8 @@ internal static class Texts
 
     public const string Where =
         "A filter on plain properties in Gridify syntax, combined with the selections by AND: Amount>=1000,Status=Open|Closed. " +
-        "Operators = != < > <= >= =* (contains) ^ (starts with) $ (ends with); ',' is AND, '|' is OR, parentheses group. " +
+        "Operators = != < > <= >= =* (contains) ^ (starts with) $ (ends with), as in Message=*timeout; there are no wildcards. " +
+        "',' is AND, '|' is OR, parentheses group. " +
         "Text ignores case; Field=null finds rows without a value. The fields are under where in describe.";
 
     public const string GroupBy =
