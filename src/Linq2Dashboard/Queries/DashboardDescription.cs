@@ -93,7 +93,7 @@ public sealed record PropertyDescription(string Name, PropertyKind Kind, IReadOn
     /// <summary>True when a facet has the same name: the name then means the facet, and the property is reached with <see cref="Dimension.Property(string)"/>.</summary>
     public bool BehindFacet { get; init; }
 
-    /// <summary>The names of an enum property's values; null for every other type.</summary>
+    /// <summary>The names of an enum property's values that occur in the dataset, or in the scope, in the enum's order; null for every other type.</summary>
     public IReadOnlyList<string>? Values { get; init; }
 }
 

@@ -34,7 +34,7 @@ internal static class QueryDescriber
             .Select(name =>
             {
                 dashboard.Properties.TryGet(name, out PropertyAccessor<T> property);
-                return property.Describe() with { Description = Text(name), BehindFacet = dashboard.TryGetFacetIndex(name, out _) };
+                return property.Describe(dashboard.ItemArray, dashboard.All) with { Description = Text(name), BehindFacet = dashboard.TryGetFacetIndex(name, out _) };
             })
             .ToArray();
 
