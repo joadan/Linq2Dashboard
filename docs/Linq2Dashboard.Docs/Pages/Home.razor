@@ -1,57 +1,151 @@
 @page "/"
 
-<PageTitle>Linq2Dashboard</PageTitle>
+<PageTitle>Linq2Dashboard · faceted exploration for .NET</PageTitle>
 
-<h1>Linq2Dashboard</h1>
+<section class="hero">
+    <div class="hero-inner">
+        <div class="hero-text">
+            <a class="hero-badge" href="agents"><span class="hero-badge-tag">New</span>Ask your dashboard with an AI agent<span aria-hidden="true">→</span></a>
 
-<p class="lead">
-    Interactive exploration of large in-memory collections for .NET: facets with counts, metrics and paged
-    results that all update together on every click. The faceted-search experience of an e-commerce site,
-    applied to any collection, with a LINQ-flavoured API and Blazor components on top.
-</p>
+            <h1>Faceted exploration for any <span class="hero-gradient">.NET collection</span></h1>
 
-<p>
-    <a class="button" href="demo">Try the demo</a>
-    <a class="button secondary" href="five-minutes">Try it in five minutes</a>
-</p>
+            <p class="hero-lead">
+                Facets with counts, metrics and rows that all update together on every click. The faceted search of an
+                e-commerce site, over your own in-memory data, with a LINQ-flavoured API and Blazor components on top.
+            </p>
 
-<h2>What you get</h2>
+            <div class="hero-actions">
+                <a class="button" href="demo">Open the live demo <span aria-hidden="true">→</span></a>
+                <a class="button secondary" href="five-minutes">Start in five minutes</a>
+            </div>
 
-<div class="cards">
-    <div class="card">
-        <h3>Facets that explain themselves</h3>
-        <p>Every value shows how many rows it would give you. A facet's own selection is excluded from its own counts, so picking Sweden never zeroes out Norway.</p>
-    </div>
-    <div class="card">
-        <h3>Null is a value</h3>
-        <p>Missing values are shown, counted and selectable like any other. Filtered counts always add up to the rows in context.</p>
-    </div>
-    <div class="card">
-        <h3>Fast at a million rows</h3>
-        <p>Columnar indexes and a single counting pass per facet. About a second to build, 5 to 20 ms per click on a server, measured.</p>
-    </div>
-    <div class="card">
-        <h3>No UI in the core</h3>
-        <p>The engine is a pure function from selections to state. The Blazor package renders that state and never counts anything itself.</p>
-    </div>
-    <div class="card">
-        <h3>Ask it with an agent</h3>
-        <p>The AI package turns a dashboard into tools an agent calls: describe, query and show. Its answers come from the same facets, so they agree with the screen. <a href="agents">Try the tools</a>.</p>
-    </div>
-    <div class="card">
-        <h3>Bookmarkable</h3>
-        <p>Selections serialise to JSON, so a filtered view can be stored, put in a URL and restored later. The demo does exactly that.</p>
-    </div>
-    <div class="card">
-        <h3>Decisions, written down</h3>
-        <p>The <a href="concept">concept</a> says how it behaves and the <a href="design">design</a> says how it is built. Both are rendered here from the repository.</p>
-    </div>
-</div>
+            <div class="code-block hero-install">
+                <pre><code>dotnet add package Linq2Dashboard.Blazor --prerelease</code></pre>
+                @((MarkupString)CodeLanguages.CopyButton)
+            </div>
 
-<h2>Runs where .NET runs</h2>
+            <dl class="hero-stats">
+                <div><dt>1M rows</dt><dd>built in about a second</dd></div>
+                <div><dt>5–20 ms</dt><dd>per click, measured</dd></div>
+                <div><dt>0</dt><dd>dependencies in the core</dd></div>
+            </dl>
+        </div>
 
-<p>
-    This site is Blazor WebAssembly. The dashboard behind the demo is generated, built and recalculated in your
-    browser with the same library a server would use. Blazor Server is the primary target for large datasets;
-    in the browser the dataset size is bounded by memory rather than by the library.
-</p>
+        <div class="hero-demo">
+            <div class="hero-window">
+                <div class="hero-window-bar">
+                    <span class="hero-window-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                    <span class="hero-window-title">@HeroRows.ToString("N0", System.Globalization.CultureInfo.InvariantCulture) orders · running in your browser</span>
+                </div>
+                <div class="hero-window-body">
+                    @if (dashboard is null)
+                    {
+                        <div class="hero-skeleton" aria-label="Building the dashboard">
+                            <div class="hero-skeleton-tiles"><i></i><i></i></div>
+                            <div class="hero-skeleton-columns"><i></i><i></i></div>
+                        </div>
+                    }
+                    else
+                    {
+                        <DashboardView T="SampleOrder" Dashboard="dashboard" Formatter="DemoFormatter.Instance">
+                            <div class="hero-metrics">
+                                <Metric Key="@SampleOrderKeys.Orders" Name="Orders">
+                                    <MetricTemplate Context="tile"><DemoTile Content="tile" Icon="cart" /></MetricTemplate>
+                                </Metric>
+                                <Metric Key="@SampleOrderKeys.Revenue">
+                                    <MetricTemplate Context="tile"><DemoTile Content="tile" Icon="banknote" /></MetricTemplate>
+                                </Metric>
+                            </div>
+                            <div class="hero-facets">
+                                <ValueFacet For="x => x.Status">
+                                    <ValueTemplate Context="value"><DemoStatus Value="value" /></ValueTemplate>
+                                </ValueFacet>
+                                <RangeFacet For="x => x.Amount" />
+                            </div>
+                        </DashboardView>
+                    }
+                </div>
+            </div>
+            <p class="hero-demo-hint">This is the library, not a picture. Click a status or a bar.</p>
+        </div>
+    </div>
+</section>
+
+<section class="home-section">
+    <div class="home-section-head">
+        <p class="home-eyebrow">What you get</p>
+        <h2>Answers that add up, on every click</h2>
+    </div>
+
+    <div class="features">
+        <div class="feature">
+            <span class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18M7 12h10M10 18h4" /></svg></span>
+            <h3>Facets that explain themselves</h3>
+            <p>Every value shows how many rows it would give you. A facet's own selection is left out of its own counts, so picking Sweden never zeroes out Norway.</p>
+        </div>
+        <div class="feature">
+            <span class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M5.6 18.4L18.4 5.6" /></svg></span>
+            <h3>Null is a value</h3>
+            <p>Missing values are shown, counted and selectable like any other. Filtered counts always add up to the rows in context.</p>
+        </div>
+        <div class="feature">
+            <span class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></svg></span>
+            <h3>Fast at a million rows</h3>
+            <p>Columnar indexes and a single counting pass per facet. About a second to build, 5 to 20 ms per click on a server.</p>
+        </div>
+        <div class="feature">
+            <span class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" /></svg></span>
+            <h3>No UI in the core</h3>
+            <p>The engine is a pure function from selections to state. The Blazor package renders that state and never counts anything itself.</p>
+        </div>
+        <div class="feature">
+            <span class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l1.9 5.8L20 11l-6.1 2.2L12 19l-1.9-5.8L4 11l6.1-2.2L12 3z" /></svg></span>
+            <h3>Ask it with an agent</h3>
+            <p>The AI package turns a dashboard into tools an agent calls: describe, query and show. Its answers come from the same facets, so they agree with the screen.</p>
+        </div>
+        <div class="feature">
+            <span class="feature-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21l-7-5-7 5V5a2 2 0 012-2h10a2 2 0 012 2z" /></svg></span>
+            <h3>Bookmarkable</h3>
+            <p>Selections serialise to JSON or a readable URL query, so a filtered view can be stored, shared and restored. The demo keeps its selections in the URL.</p>
+        </div>
+    </div>
+</section>
+
+<section class="home-section home-code">
+    <div class="home-code-text">
+        <p class="home-eyebrow">How it works</p>
+        <h2>Define it once. Click forever.</h2>
+        <p>
+            Build a dashboard from the collection you already have. Facets, metrics and the sort order are fixed at that
+            point; only the selections change afterwards, and the same selections always give the same state.
+        </p>
+        <ul class="home-checks">
+            <li>Value, range, date, boolean, text and multi-valued facets</li>
+            <li>Count, sum, average, distinct and calculated metrics</li>
+            <li>Rows for the grid you already use, QuickGrid included</li>
+            <li>Styled through <code>--l2d-*</code> custom properties</li>
+        </ul>
+        <a class="button secondary" href="getting-started">Read the guide <span aria-hidden="true">→</span></a>
+    </div>
+    <div class="home-code-samples">
+        <CodeBlock Language="csharp" Code="@BuildExample" />
+        <CodeBlock Language="razor" Code="@RenderExample" />
+    </div>
+</section>
+
+<section class="home-section">
+    <div class="home-band">
+        <div>
+            <h2>Runs where .NET runs</h2>
+            <p>
+                This site is Blazor WebAssembly: every dashboard on it is generated, built and recalculated in your browser
+                with the same library a server uses. Blazor Server is the primary target for large datasets. How it behaves
+                and how it is built are both written down, and rendered here from the repository.
+            </p>
+        </div>
+        <div class="home-band-actions">
+            <a class="button" href="demo">Try the demo</a>
+            <a class="button secondary" href="concept">Read the concept</a>
+        </div>
+    </div>
+</section>

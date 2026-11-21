@@ -13,15 +13,13 @@
     prerelease while the API settles.
 </p>
 
-<pre><code>dotnet add package Linq2Dashboard.Blazor --prerelease   # a Blazor app; the engine comes with it
-dotnet add package Linq2Dashboard --prerelease          # the engine alone, for a host without the components
-dotnet add package Linq2Dashboard.AI --prerelease       # agent tools over a dashboard, for Microsoft.Extensions.AI</code></pre>
+<CodeBlock Language="shell" Code="@InstallExample" />
 
 <h2>1. Build a dashboard</h2>
 
 <p>Build it once, from the collection you already have in memory. Facets, metrics and the sort order are fixed at this point; only selections change afterwards.</p>
 
-<pre><code>@BuilderExample</code></pre>
+<CodeBlock Language="csharp" Code="@BuilderExample" />
 
 <p>
     One thing to know before adding a <code>TextFacet</code>: it is the one potentially expensive operation. Every other facet
@@ -35,13 +33,13 @@ dotnet add package Linq2Dashboard.AI --prerelease       # agent tools over a das
 
 <p>The UI owns the selections. The dashboard is a pure function of them: same selections, same state.</p>
 
-<pre><code>@CalculateExample</code></pre>
+<CodeBlock Language="csharp" Code="@CalculateExample" />
 
 <h2>3. Render it in Blazor</h2>
 
 <p>Register the dashboard once, for example as a singleton, and put the components inside a <code>DashboardView</code>. Every component reads the cascaded state and turns clicks into selection changes; none of them counts anything.</p>
 
-<pre><code>@BlazorExample</code></pre>
+<CodeBlock Language="razor" Code="@BlazorExample" />
 
 <h2>What the components do</h2>
 
@@ -66,11 +64,7 @@ dotnet add package Linq2Dashboard.AI --prerelease       # agent tools over a das
     For a responsive row of tiles, wrap them in a grid:
 </p>
 
-<pre><code>.metrics {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(var(--l2d-metric-min-width, 9rem), 1fr));
-    gap: var(--l2d-gap, 0.375rem);
-}</code></pre>
+<CodeBlock Language="css" Code="@MetricsGridExample" />
 
 <h2>Formatting and styling</h2>
 

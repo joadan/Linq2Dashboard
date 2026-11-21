@@ -6,8 +6,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Linq2Dashboard</title>
     <meta name="description" content="Interactive exploration of large in-memory collections for .NET: facets, counts, metrics and paged results, with Blazor components." />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b0f17" media="(prefers-color-scheme: dark)" />
     <base href="/" />
+    <script>
+        // The theme is set before the first paint so a dark page never flashes light; js/site.js handles the toggle.
+        (() => {
+            let theme = null;
+            try { theme = localStorage.getItem("l2d-docs-theme"); } catch { }
+            document.documentElement.dataset.theme = theme === "dark" || theme === "light"
+                ? theme
+                : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+        })();
+    </script>
     <link rel="preload" id="webassembly" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400..800&family=JetBrains+Mono:wght@400;500&display=swap" />
     <link rel="stylesheet" href="css/app.css" />
     <link href="Linq2Dashboard.Docs.styles.css" rel="stylesheet" />
     <link rel="icon" sizes="16x16" href="favicon-16.png" />
@@ -20,11 +35,9 @@
 <body>
     <div id="app">
         <div class="boot">
-            <div class="boot-title">Linq2Dashboard</div>
-            <svg class="loading-progress">
-                <circle r="40%" cx="50%" cy="50%" />
-                <circle r="40%" cx="50%" cy="50%" />
-            </svg>
+            <img class="boot-logo" src="logo.svg" alt="" />
+            <div class="boot-title">Linq<span>2</span>Dashboard</div>
+            <div class="loading-progress"><div></div></div>
             <div class="loading-progress-text"></div>
             <div class="boot-hint">Loading the .NET runtime in your browser</div>
         </div>
@@ -35,6 +48,8 @@
         <a href="." class="reload">Reload</a>
         <span class="dismiss">x</span>
     </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.10.0/highlight.min.js" defer></script>
+    <script src="js/site.js" defer></script>
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
 </body>
 

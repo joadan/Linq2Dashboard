@@ -18,7 +18,7 @@
 
 <p>The AI package, and <code>Microsoft.Extensions.AI</code> for the chat client that calls the tools. Add your model provider's package as well.</p>
 
-<pre><code>@PackageExample</code></pre>
+<CodeBlock Language="shell" Code="@PackageExample" />
 
 <h2>2. The tools</h2>
 
@@ -28,7 +28,7 @@
     most: the agent cannot know what a status means or what currency an amount is in unless you tell it.
 </p>
 
-<pre><code>@ToolsExample</code></pre>
+<CodeBlock Language="csharp" Code="@ToolsExample" />
 
 <table>
     <thead>
@@ -48,7 +48,7 @@
     answers. A question usually takes two or three calls.
 </p>
 
-<pre><code>@ChatExample</code></pre>
+<CodeBlock Language="csharp" Code="@ChatExample" />
 
 <h2>4. Show the answer on screen</h2>
 
@@ -57,7 +57,7 @@
     and set them from the callback. The selections are checked before your callback runs, so a facet the agent made up never reaches the page.
 </p>
 
-<pre><code>@ShowExample</code></pre>
+<CodeBlock Language="razor" Code="@ShowExample" />
 
 <h2>What the agent needs from you</h2>
 
@@ -104,8 +104,8 @@ else
     @if (call is not null)
     {
         <p class="agents-muted">The call, as the agent sends it:</p>
-        <pre><code>@call</code></pre>
+        <CodeBlock Title="Call" Code="@call" />
         <p class="agents-muted">What it gets back, run @runs@(elapsed is null ? null : $", in {elapsed} ms"):</p>
-        <pre class="agents-result"><code>@result</code></pre>
+        <CodeBlock Title="Result" Code="@result" Class="agents-result" />
     }
 }

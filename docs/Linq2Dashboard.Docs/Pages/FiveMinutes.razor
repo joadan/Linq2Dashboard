@@ -14,19 +14,19 @@
 
 <p>A Blazor Web App with server interactivity, <code>Linq2Dashboard.Blazor</code>, which brings the <code>Linq2Dashboard</code> engine with it as a dependency, and QuickGrid for the rows. The commands are the same on Windows, macOS and Linux.</p>
 
-<pre><code>@CreateAppExample</code></pre>
+<CodeBlock Language="shell" Code="@CreateAppExample" />
 
 <h2>2. The rows</h2>
 
 <p>Add <code>Order.cs</code> at the project root. A record and a dozen rows are enough to see every facet do something. Note the order without a country: null is a value and shows up as one.</p>
 
-<pre><code>@RowsExample</code></pre>
+<CodeBlock Language="csharp" Title="Order.cs" Code="@RowsExample" />
 
 <h2>3. The usings</h2>
 
 <p>Append three lines to <code>Components/_Imports.razor</code> so every page sees the engine, the components and the grid.</p>
 
-<pre><code>@ImportsExample</code></pre>
+<CodeBlock Language="razor" Title="Components/_Imports.razor" Code="@ImportsExample" />
 
 <h2>4. The page</h2>
 
@@ -35,7 +35,7 @@
     <code>@@rendermode InteractiveServer</code> the page renders once and clicks do nothing.
 </p>
 
-<pre><code>@PageExample</code></pre>
+<CodeBlock Language="razor" Title="Components/Pages/Home.razor" Code="@PageExample" />
 
 <p>
     <code>Items</code> hands the view the rows, and the view builds the dashboard itself. Each component inside defines what it
@@ -59,7 +59,7 @@
 
 <h2>5. Run it</h2>
 
-<pre><code>dotnet run</code></pre>
+<CodeBlock Language="shell" Code="dotnet run" />
 
 <p>
     Open the address it prints. Click <em>SE</em> under Country: the other countries keep their counts, Status and Amount narrow to
