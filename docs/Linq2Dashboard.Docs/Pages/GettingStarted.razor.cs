@@ -4,6 +4,20 @@ namespace Linq2Dashboard.Docs.Pages;
 
 public partial class GettingStarted
 {
+    private const string InstallExample = """
+        dotnet add package Linq2Dashboard.Blazor --prerelease   # a Blazor app; the engine comes with it
+        dotnet add package Linq2Dashboard --prerelease          # the engine alone, for a host without the components
+        dotnet add package Linq2Dashboard.AI --prerelease       # agent tools over a dashboard, for Microsoft.Extensions.AI
+        """;
+
+    private const string MetricsGridExample = """
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(var(--l2d-metric-min-width, 9rem), 1fr));
+            gap: var(--l2d-gap, 0.375rem);
+        }
+        """;
+
     private const string BuilderExample = """
         using Linq2Dashboard;
 

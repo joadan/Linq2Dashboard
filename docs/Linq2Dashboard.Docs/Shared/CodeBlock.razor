@@ -1,0 +1,8 @@
+@* A code sample with its language or file name and a copy button. js/site.js highlights it and handles the copy. *@
+<div class="code-block @Class">
+    <div class="code-block-head">
+        <span class="code-block-label">@(Title ?? CodeLanguages.Label(Language))</span>
+        @((MarkupString)CodeLanguages.CopyButton)
+    </div>
+    <pre><code class="@CodeClass">@Code</code></pre>
+</div>

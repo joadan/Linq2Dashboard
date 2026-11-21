@@ -1,26 +1,92 @@
 @inherits LayoutComponentBase
 
-<div class="site">
+<div class="site site-@Mode.ToString().ToLowerInvariant() @(menuOpen ? "site-menu-open" : null)">
     <header class="site-header">
-        <a class="site-brand" href=""><img class="site-logo" src="logo.svg" alt="" /><span>Linq<span class="site-brand-accent">2</span>Dashboard</span></a>
-        <nav class="site-nav">
-            <NavLink href="" Match="NavLinkMatch.All">Overview</NavLink>
-            <NavLink href="demo">Demo</NavLink>
-            <NavLink href="five-minutes">Five minutes</NavLink>
-            <NavLink href="getting-started">Getting started</NavLink>
-            <NavLink href="agents">Agents</NavLink>
-            <NavLink href="usage">Usage</NavLink>
-            <NavLink href="concept">Concept</NavLink>
-            <NavLink href="design">Design</NavLink>
-            <a href="https://github.com/joadan/Linq2Dashboard" target="_blank" rel="noopener">GitHub</a>
-        </nav>
+        <div class="site-header-inner">
+            <button type="button" class="site-menu-button" aria-label="@(menuOpen ? "Close the menu" : "Open the menu")" aria-expanded="@(menuOpen ? "true" : "false")" @onclick="ToggleMenu">
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                    @if (menuOpen)
+                    {
+                        <path d="M6 6l12 12M18 6L6 18" />
+                    }
+                    else
+                    {
+                        <path d="M4 7h16M4 12h16M4 17h16" />
+                    }
+                </svg>
+            </button>
+            <a class="site-brand" href=""><img class="site-logo" src="logo.svg" alt="" /><span>Linq<span class="site-brand-accent">2</span>Dashboard</span></a>
+            <nav class="site-top-nav" aria-label="Main">
+                <a href="getting-started" class="@(Mode == LayoutMode.Doc ? "active" : null)">Docs</a>
+                <NavLink href="demo">Demo</NavLink>
+                <NavLink href="agents">Agents</NavLink>
+            </nav>
+            <div class="site-header-actions">
+                <a class="site-icon-button" href="https://github.com/joadan/Linq2Dashboard" target="_blank" rel="noopener" title="Linq2Dashboard on GitHub" aria-label="GitHub">
+                    <svg viewBox="0 0 16 16" class="site-icon-fill" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" /></svg>
+                </a>
+                @* The click is handled in js/site.js, which also sets the theme before the runtime loads so the page does not flash. *@
+                <button type="button" class="site-icon-button" data-theme-toggle title="Switch between light and dark" aria-label="Switch between light and dark">
+                    <svg viewBox="0 0 24 24" class="site-theme-sun" aria-hidden="true"><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" /></svg>
+                    <svg viewBox="0 0 24 24" class="site-theme-moon" aria-hidden="true"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" /></svg>
+                </button>
+            </div>
+        </div>
     </header>
 
-    <main class="site-main @(IsWide ? "site-main-wide" : null)">
-        @Body
-    </main>
+    <div class="site-body">
+        <aside class="site-sidebar" aria-label="Documentation">
+            <nav>
+                @foreach (DocsSection section in DocsNavigation.Sections)
+                {
+                    <div class="site-sidebar-section">
+                        <div class="site-sidebar-title">@section.Title</div>
+                        @foreach (DocsPage item in section.Pages)
+                        {
+                            <NavLink href="@item.Href" Match="NavLinkMatch.All">@item.Title</NavLink>
+                        }
+                    </div>
+                }
+                <div class="site-sidebar-section">
+                    <div class="site-sidebar-title">Elsewhere</div>
+                    <a href="https://github.com/joadan/Linq2Dashboard" target="_blank" rel="noopener">GitHub</a>
+                    <a href="https://www.nuget.org/packages/Linq2Dashboard.Blazor" target="_blank" rel="noopener">NuGet</a>
+                </div>
+            </nav>
+        </aside>
+        <div class="site-backdrop" @onclick="CloseMenu"></div>
+
+        <main class="site-main">
+            <div class="site-content">
+                @Body
+            </div>
+
+            @if (Mode == LayoutMode.Doc && (Previous is not null || Next is not null))
+            {
+                <nav class="site-pager" aria-label="Previous and next page">
+                    @if (Previous is { } previous)
+                    {
+                        <a class="site-pager-link site-pager-previous" href="@previous.Href"><span>Previous</span>@previous.Title</a>
+                    }
+                    @if (Next is { } next)
+                    {
+                        <a class="site-pager-link site-pager-next" href="@next.Href"><span>Next</span>@next.Title</a>
+                    }
+                </nav>
+            }
+        </main>
+
+        @if (Mode == LayoutMode.Doc)
+        {
+            @* Filled by js/site.js from the page's h2 and h3 once the page has rendered; Blazor renders it empty and never touches its children. *@
+            <aside class="site-toc" data-toc aria-label="On this page"></aside>
+        }
+    </div>
 
     <footer class="site-footer">
-        Linq2Dashboard is MIT licensed. This site runs on Blazor WebAssembly; the dashboard is built and recalculated in your browser.
+        <div class="site-footer-inner">
+            <span class="site-footer-brand"><img src="logo.svg" alt="" />Linq2Dashboard</span>
+            <span>MIT licensed. This site is Blazor WebAssembly: every dashboard on it is built and recalculated in your browser.</span>
+        </div>
     </footer>
 </div>

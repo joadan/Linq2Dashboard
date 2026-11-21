@@ -15,7 +15,7 @@
 
 <p>The service below caches the dashboard in <code>HybridCache</code>.</p>
 
-<pre><code>@PackageExample</code></pre>
+<CodeBlock Language="shell" Code="@PackageExample" />
 
 <h2>2. The service</h2>
 
@@ -29,11 +29,11 @@
     app later gets one.
 </p>
 
-<pre><code>@ServiceExample</code></pre>
+<CodeBlock Language="csharp" Code="@ServiceExample" />
 
 <p>Register the cache and the service in <code>Program.cs</code>, next to the existing service calls.</p>
 
-<pre><code>@ProgramExample</code></pre>
+<CodeBlock Language="csharp" Code="@ProgramExample" />
 
 <h2>3. The page</h2>
 
@@ -44,11 +44,11 @@
     itself, never both, so definition parameters under a <code>Dashboard</code> throw; they belong in the builder.
 </p>
 
-<pre><code>@PageExample</code></pre>
+<CodeBlock Language="razor" Code="@PageExample" />
 
 <h2>4. Run it</h2>
 
-<pre><code>dotnet run</code></pre>
+<CodeBlock Language="shell" Code="dotnet run" />
 
 <p>
     The first request waits a second for the stand-in load, then the dashboard appears. Reload the page: it is instant, because the
