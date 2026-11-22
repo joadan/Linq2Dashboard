@@ -244,9 +244,16 @@
 /* The grid grows with its rows up to a cap, then scrolls inside its own box rather than with the page. */
 .demo-grid {
     max-height: 32rem;
-    overflow-y: auto;
+    overflow: auto;
     border: 1px solid var(--l2d-border);
     border-radius: var(--l2d-radius);
+}
+
+/* One line per row: Virtualize places rows by a fixed ItemSize, and a cell that wraps in a narrow grid changes a row's
+   height under it, so it re-measures and re-renders without settling. A narrow grid scrolls sideways instead. */
+.demo-grid ::deep td,
+.demo-grid ::deep th {
+    white-space: nowrap;
 }
 
 .demo-grid ::deep td {
