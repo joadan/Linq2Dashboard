@@ -355,7 +355,29 @@ pre code {
     color: var(--hl-string);
 }
 
+/* Every table, the demo's QuickGrid included. */
 table {
+    border-collapse: collapse;
+    margin: 1rem 0;
+}
+
+th, td {
+    padding: 0.375rem 0.75rem;
+    text-align: left;
+    border-bottom: 1px solid var(--docs-border);
+    vertical-align: top;
+}
+
+th {
+    color: var(--docs-muted);
+    font-weight: 600;
+}
+
+/*
+ * Tables in the documentation pages' prose. Scoped to those pages: on the demo a block-level table with overflow is a
+ * scroll container of its own, and QuickGrid's Virtualize then measures against it and re-renders without end.
+ */
+.site-doc .site-content table {
     display: block;
     max-width: 100%;
     overflow-x: auto;
@@ -365,14 +387,15 @@ table {
     scrollbar-width: thin;
 }
 
-th, td {
+.site-doc .site-content th,
+.site-doc .site-content td {
     padding: 0.5rem 0.875rem;
     text-align: left;
     border-bottom: 1px solid var(--docs-border);
     vertical-align: top;
 }
 
-th {
+.site-doc .site-content th {
     color: var(--docs-muted);
     font-size: 0.75rem;
     font-weight: 600;
@@ -381,7 +404,7 @@ th {
     border-bottom-color: var(--docs-border-strong);
 }
 
-tbody tr:hover {
+.site-doc .site-content tbody tr:hover {
     background: var(--docs-surface-2);
 }
 
